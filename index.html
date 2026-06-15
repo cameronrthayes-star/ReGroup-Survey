@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReGroup Operations Platform</title>
+<style>
+:root {
+  --primary: #1a237e;
+  --primary-light: #283593;
+  --accent: #00bcd4;
+  --accent-dark: #0097a7;
+  --danger: #e53935;
+  --success: #43a047;
+  --warn: #fb8c00;
+  --purple: #7c4dff;
+  --bg: #f0f2f5;
+  --sidebar-w: 230px;
+  --text: #212121;
+  --text-muted: #757575;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);display:flex;min-height:100vh;color:var(--text);}
+
+/* === SIDEBAR === */
+#sidebar{width:var(--sidebar-w);background:var(--primary);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;overflow-y:auto;}
+.sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,0.12);}
+.sidebar-logo h1{font-size:1.25em;font-weight:800;letter-spacing:0.02em;}
+.sidebar-logo p{font-size:0.72em;opacity:0.6;margin-top:3px;text-transform:uppercase;letter-spacing:0.08em;}
+#sidebar nav{flex:1;padding:10px 0;}
+.nav-section{padding:14px 20px 5px;font-size:0.65em;text-transform:uppercase;letter-spacing:0.12em;opacity:0.45;font-weight:600;}
+#sidebar nav a{display:flex;align-items:center;gap:10px;padding:11px 20px;color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.875em;cursor:pointer;transition:all 0.15s;border-left:3px solid transparent;user-select:none;}
+#sidebar nav a:hover{background:rgba(255,255,255,0.08);color:#fff;}
+#sidebar nav a.active{background:rgba(255,255,255,0.13);color:#fff;border-left-color:var(--accent);}
+#sidebar nav a .nav-icon{font-size:1.1em;width:20px;text-align:center;}
+
+/* === MAIN === */
+#main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+#topbar{background:#fff;padding:15px 28px;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+#topbar-title{color:var(--primary);font-size:1.15em;font-weight:700;}
+#topbar-date{font-size:0.8em;color:var(--text-muted);}
+#content{padding:28px;flex:1;}
+
+/* === CARDS === */
+.card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin-bottom:20px;}
+.card h3{color:var(--primary);margin-bottom:18px;font-size:0.82em;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;}
+
+/* === STAT CARDS === */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:22px;}
+.stat-card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,0.06);border-top:4px solid var(--accent);}
+.stat-card .num{font-size:2.4em;font-weight:800;color:var(--primary);line-height:1;}
+.stat-card .lbl{font-size:0.75em;color:var(--text-muted);margin-top:6px;text-transform:uppercase;letter-spacing:0.06em;}
+
+/* === FORMS === */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.form-group{margin-bottom:16px;}
+.form-group.full{grid-column:1/-1;}
+.form-group label{display:block;font-weight:600;color:#333;margin-bottom:5px;font-size:0.875em;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;font-family:inherit;transition:border-color 0.2s;background:#fff;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px rgba(0,188,212,0.1);}
+.form-group textarea{min-height:80px;resize:vertical;}
+.checkbox-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px;background:#f8f9fa;border-radius:8px;padding:10px;}
+.checkbox-grid label,.radio-group label{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-weight:400;font-size:0.875em;color:#444;transition:background 0.15s;user-select:none;}
+.checkbox-grid label:hover,.radio-group label:hover{background:#e8eaf6;}
+.radio-group{display:flex;flex-wrap:wrap;gap:2px;background:#f8f9fa;border-radius:8px;padding:10px;}
+.form-section{background:#f5f7ff;border-radius:10px;padding:18px;margin-bottom:18px;border-left:4px solid var(--accent);}
+.form-section h4{color:var(--primary);margin-bottom:14px;font-size:0.875em;font-weight:700;}
+
+/* === BUTTONS === */
+.btn{padding:9px 18px;border:none;border-radius:8px;font-size:0.9em;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary-light);}
+.btn-accent{background:var(--accent);color:#fff;}
+.btn-accent:hover{background:var(--accent-dark);}
+.btn-success{background:var(--success);color:#fff;}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-outline{background:#fff;border:1.5px solid #ddd;color:#333;}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-lg{padding:13px 36px;font-size:1em;}
+
+/* === TABLES === */
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:0.875em;}
+table th{background:#f0f4ff;color:var(--primary);padding:10px 12px;text-align:left;font-weight:700;border-bottom:2px solid #e0e0e0;white-space:nowrap;font-size:0.8em;text-transform:uppercase;letter-spacing:0.04em;}
+table td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:top;}
+table tr:hover td{background:#fafbff;}
+
+/* === BADGES === */
+.badge{display:inline-block;padding:3px 8px;border-radius:12px;font-size:0.73em;font-weight:700;}
+.badge-success{background:#e8f5e9;color:#2e7d32;}
+.badge-warn{background:#fff3e0;color:#e65100;}
+.badge-danger{background:#ffebee;color:#c62828;}
+.badge-info{background:#e3f2fd;color:#1565c0;}
+.badge-purple{background:#ede7f6;color:#4527a0;}
+
+/* === TABS === */
+.tabs{display:flex;gap:2px;margin-bottom:20px;border-bottom:2px solid #e0e0e0;}
+.tab-btn{padding:10px 18px;border:none;background:none;cursor:pointer;font-size:0.875em;font-weight:600;color:#999;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all 0.2s;font-family:inherit;}
+.tab-btn:hover{color:var(--primary);}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* === ALERTS === */
+.alert{padding:13px 16px;border-radius:8px;margin-bottom:14px;font-size:0.9em;}
+.alert-success{background:#e8f5e9;color:#1b5e20;border-left:4px solid var(--success);}
+.alert-warn{background:#fff8e1;color:#e65100;border-left:4px solid var(--warn);}
+.alert-danger{background:#ffebee;color:#b71c1c;border-left:4px solid var(--danger);}
+
+/* === VIEWS === */
+.view{display:none;}
+.view.active{display:block;}
+
+/* === DASHBOARD SPECIFIC === */
+.dash-two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.mentor-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f5f5f5;}
+.mentor-row:last-child{border-bottom:none;}
+.mentor-bar-bg{flex:1;background:#e8eaf6;border-radius:4px;height:8px;}
+.mentor-bar{background:var(--accent);border-radius:4px;height:8px;transition:width 0.6s ease;}
+
+/* === STAFF SETTINGS === */
+.staff-card{display:flex;align-items:center;gap:12px;padding:14px;background:#f8f9fa;border-radius:10px;margin-bottom:10px;}
+.staff-avatar{width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1em;flex-shrink:0;}
+.staff-info{flex:1;}
+.staff-info .name{font-weight:600;font-size:0.95em;}
+.staff-info .meta{font-size:0.8em;color:var(--text-muted);margin-top:2px;}
+
+/* === TIMESHEET PRINT STYLES === */
+.ts-print-container{font-family:Arial,Helvetica,sans-serif;}
+.ts-logo-bar{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #00bcd4;}
+.ts-logo-text{font-size:13pt;font-weight:800;color:#1a237e;}
+.ts-logo-sub{font-size:8pt;color:#666;}
+.ts-meta-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px;background:#f0f4ff;padding:14px;border-radius:8px;}
+.ts-meta-item label{display:block;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#555;margin-bottom:3px;}
+.ts-meta-item span{font-size:11pt;font-weight:800;color:#1a237e;}
+.ts-main-table{width:100%;border-collapse:collapse;font-size:8.5pt;margin-bottom:16px;}
+.ts-main-table th{background:#1a237e;color:#fff;padding:6px 8px;text-align:center;border:1px solid #333;font-size:7.5pt;text-transform:uppercase;letter-spacing:0.04em;}
+.ts-main-table td{padding:5px 8px;border:1px solid #ddd;text-align:center;}
+.ts-main-table td.left{text-align:left;}
+.ts-main-table tr.data-row:nth-child(even) td{background:#fafafa;}
+.ts-main-table tr.total-row td{background:#1a237e;color:#fff;font-weight:800;border-color:#333;}
+.ts-footer-row{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;padding-top:12px;border-top:1px solid #ddd;}
+.ts-sig-line{border-top:1.5px solid #333;min-width:220px;padding-top:5px;font-size:8pt;color:#555;}
+.ts-total-box{text-align:right;}
+.ts-total-box .big-num{font-size:22pt;font-weight:800;color:#1a237e;line-height:1;}
+.ts-total-box .big-lbl{font-size:7pt;text-transform:uppercase;letter-spacing:0.08em;color:#666;}
+.ts-total-box .bill-num{font-size:15pt;font-weight:700;margin-top:8px;}
+.ts-finance-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.ts-finance-table{width:100%;border-collapse:collapse;font-size:8pt;}
+.ts-finance-table th{background:#e8eaf6;color:#1a237e;padding:5px 10px;border:1px solid #ccc;font-size:7.5pt;font-weight:700;}
+.ts-finance-table td{padding:4px 10px;border:1px solid #ddd;}
+.ts-finance-table td.right{text-align:right;}
+.ts-finance-table tr.total-row td{background:#1a237e;color:#fff;font-weight:800;}
+.ts-finance-title{font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;color:#555;}
+
+@media print{
+  #sidebar,#topbar,.no-print{display:none!important;}
+  #main{margin-left:0;}
+  #content{padding:0;}
+  body{background:#fff;}
+  .card{box-shadow:none;border:none;padding:4px 0;margin:0;}
+  #timesheet-output{display:block!important;}
+}
+
+@media(max-width:900px){
+  :root{--sidebar-w:0px;}
+  #sidebar{display:none;}
+  #main{margin-left:0;}
+  .form-grid{grid-template-columns:1fr;}
+  .dash-two-col{grid-template-columns:1fr;}
+  .ts-meta-row{grid-template-columns:repeat(2,1fr);}
+  .ts-finance-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sidebar-logo">
+    <h1>ReGroup</h1>
+    <p>Operations Platform</p>
+  </div>
+  <nav>
+    <div class="nav-section">Analytics</div>
+    <a onclick="navigate('dashboard')" data-view="dashboard"><span class="nav-icon">📊</span> Dashboard</a>
+
+    <div class="nav-section">Log Entry</div>
+    <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon">📝</span> Progress Note</a>
+    <a onclick="navigate('activity-log')" data-view="activity-log"><span class="nav-icon">📋</span> Activity Log</a>
+
+    <div class="nav-section">Reports</div>
+    <a onclick="navigate('data-view')" data-view="data-view"><span class="nav-icon">🗂</span> Data View</a>
+    <a onclick="navigate('timesheets')" data-view="timesheets"><span class="nav-icon">🕐</span> Timesheets</a>
+
+    <div class="nav-section">Admin</div>
+    <a onclick="navigate('settings')" data-view="settings"><span class="nav-icon">⚙️</span> Staff & Settings</a>
+  </nav>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <div id="topbar-title">Dashboard</div>
+    <div id="topbar-date"></div>
+  </div>
+  <div id="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="view-dashboard" class="view active">
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="dash-two-col">
+        <div class="card">
+          <h3>Hours by Mentor</h3>
+          <div id="mentor-hours-chart"></div>
+        </div>
+        <div class="card">
+          <h3>This Week</h3>
+          <div id="weekly-summary"></div>
+        </div>
+      </div>
+      <div class="dash-two-col">
+        <div class="card">
+          <h3>Sessions by Type</h3>
+          <div id="service-breakdown"></div>
+        </div>
+        <div class="card">
+          <h3>Safety Flags</h3>
+          <div id="safety-flags-dash"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PROGRESS NOTE ===== -->
+    <div id="view-progress-note" class="view">
+      <div class="card">
+        <h3>Progress Note — DAP Format</h3>
+        <p style="color:#666;margin-bottom:22px;font-size:0.88em;">Complete immediately after each client interaction or attempted interaction. Documentation must reflect objective observations, services delivered, client progress, and next steps.</p>
+        <div id="pn-success" class="alert alert-success" style="display:none;">✅ Progress note submitted successfully.</div>
+        <form id="progress-note-form">
+
+          <div class="form-section">
+            <h4>Mentor & Client Info</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Mentor Name *</label>
+                <input type="text" name="mentorName" required placeholder="Full name" list="staff-datalist">
+                <datalist id="staff-datalist"></datalist>
+              </div>
+              <div class="form-group">
+                <label>Email *</label>
+                <input type="email" name="email" required placeholder="your@email.com">
+              </div>
+              <div class="form-group">
+                <label>Role / Credential *</label>
+                <select name="role" required>
+                  <option value="">Select role…</option>
+                  <option>REP</option><option>Senior REP</option><option>ReGroup Director</option>
+                  <option>RJ Director</option><option>Program Manager</option><option>Facilitator</option><option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Client ID</label>
+                <input type="text" name="clientId" placeholder="Look up from contact sheet">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>Service Outcome *</h4>
+            <div class="radio-group" id="outcome-radio"></div>
+          </div>
+
+          <!-- Successful session fields -->
+          <div id="successful-fields">
+            <div class="form-section">
+              <h4>Session Details</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Date of Service</label>
+                  <input type="date" name="dateOfService">
+                </div>
+                <div class="form-group">
+                  <label>Location</label>
+                  <select name="location">
+                    <option value="">Select…</option>
+                    <option>ReGroup Office</option><option>Community Location</option>
+                    <option>Client Residence</option><option>Correctional Facility</option>
+                    <option>Virtual</option><option>Other</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Start Time</label>
+                  <input type="time" name="startTime">
+                </div>
+                <div class="form-group">
+                  <label>End Time</label>
+                  <input type="time" name="endTime">
+                </div>
+                <div class="form-group">
+                  <label>Grant *</label>
+                  <select name="grant">
+                    <option value="">Select grant…</option>
+                    <option>CVI</option><option>General Fund</option><option>BeBlac</option>
+                    <option>Collins Foundation</option><option>CJC</option><option>RISE</option>
+                    <option>WHC</option><option>Vital Project Funds</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Hours (auto-calculated)</label>
+                  <input type="text" id="pn-hours-preview" readonly placeholder="Enter start/end time" style="background:#f5f5f5;color:var(--primary);font-weight:700;">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Type of Mentorship / Support Provided (check all that apply)</h4>
+              <div class="checkbox-grid" id="support-types-check"></div>
+            </div>
+
+            <div class="form-section">
+              <h4>DAP Notes</h4>
+              <div class="form-group">
+                <label>D — Data (Objective Information)</label>
+                <textarea name="dataField" rows="4" placeholder="Observed behaviors, statements, and facts from the interaction. Include what the client reported and what you directly observed. Avoid interpretations."></textarea>
+              </div>
+              <div class="form-group">
+                <label>A — Assessment (Professional Interpretation)</label>
+                <textarea name="assessment" rows="4" placeholder="Based on today's interaction, what do you believe is most important about the client's current situation? Note progress, barriers, risk factors, engagement level, or changes since last contact."></textarea>
+              </div>
+              <div class="form-group">
+                <label>P — Plan (Next Actions)</label>
+                <textarea name="plan" rows="4" placeholder="What are the agreed-upon next steps? Include mentor actions, client responsibilities, referrals, and timeline if applicable."></textarea>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Client Status & Goals</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Primary Need Addressed Today</label>
+                  <select name="primaryNeed">
+                    <option value="">Select…</option>
+                    <option>Stability</option><option>Safety</option><option>Connection</option>
+                    <option>Accountability</option><option>Resource Access</option>
+                    <option>Personal Development</option><option>Crisis Response</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Client Status Since Last Meeting</label>
+                  <select name="clientStatus">
+                    <option value="">Select…</option>
+                    <option>Significant Progress</option><option>Moderate Progress</option>
+                    <option>Minimal Progress</option><option>No Change</option><option>Regression</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Was this meeting connected to a client goal?</label>
+                  <select name="connectedToGoal">
+                    <option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Which goal was addressed?</label>
+                  <input type="text" name="whichGoal" placeholder="Describe goal">
+                </div>
+                <div class="form-group">
+                  <label>RJ Service Type (if open RJ case)</label>
+                  <select name="rjServiceType">
+                    <option value="">N/A or select…</option>
+                    <option>Assessment</option><option>Service Plan Development</option>
+                    <option>One-on-One Session</option><option>Victim-Offender Dialogue (VoD)</option>
+                    <option>Debrief</option><option>Follow-Up</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Why was this service necessary at this time?</label>
+                  <input type="text" name="whyNecessary">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Describe Progress or Barriers</label>
+                <textarea name="progressDescription" rows="3"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Client Strengths Demonstrated Today</label>
+                <textarea name="clientStrengths" rows="2"></textarea>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Follow-Up</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Follow-Up Scheduled?</label>
+                  <select name="followUpScheduled">
+                    <option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>If yes, Date of Next Meeting</label>
+                  <input type="date" name="nextMeetingDate">
+                </div>
+                <div class="form-group full">
+                  <label>If no, Why is no follow-up planned?</label>
+                  <input type="text" name="noFollowUpReason">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Referrals Made Today (check all that apply)</h4>
+              <div class="checkbox-grid" id="referrals-check"></div>
+            </div>
+
+            <div class="form-section">
+              <h4>Primary Service Categories (check all that apply)</h4>
+              <div class="checkbox-grid" id="service-categories-check"></div>
+            </div>
+          </div>
+
+          <!-- Unsuccessful attempt fields -->
+          <div id="unsuccessful-fields" style="display:none;">
+            <div class="form-section">
+              <h4>Attempt Details</h4>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Date of Attempt</label>
+                  <input type="date" name="dateOfAttempt">
+                </div>
+                <div class="form-group">
+                  <label>Start Time</label>
+                  <input type="time" name="startTime">
+                </div>
+                <div class="form-group">
+                  <label>End Time</label>
+                  <input type="time" name="endTime">
+                </div>
+                <div class="form-group">
+                  <label>Grant</label>
+                  <select name="grant">
+                    <option value="">Select grant…</option>
+                    <option>CVI</option><option>General Fund</option><option>BeBlac</option>
+                    <option>Collins Foundation</option><option>CJC</option><option>RISE</option>
+                    <option>WHC</option><option>Vital Project Funds</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Attempt Method (check all that apply)</label>
+                <div class="checkbox-grid" id="attempt-methods-check"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>Supervisor Notification</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Was a supervisor notified?</label>
+                <select name="supervisorNotified">
+                  <option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>If yes — Supervisor Name + Time Notified</label>
+                <input type="text" name="supervisorNameTime">
+              </div>
+              <div class="form-group full">
+                <label>If no — Why not?</label>
+                <input type="text" name="noSupervisorReason">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>Safety Concerns</h4>
+            <div class="form-group">
+              <label>Flag any safety concerns identified?</label>
+              <div class="radio-group" id="safety-radio-pn"></div>
+            </div>
+            <div class="form-group">
+              <label>Describe concern and actions taken</label>
+              <textarea name="concernDescription" rows="3"></textarea>
+            </div>
+          </div>
+
+          <div style="text-align:center;padding:10px 0 6px;">
+            <button type="submit" class="btn btn-primary btn-lg">Submit Progress Note</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== ACTIVITY LOG ===== -->
+    <div id="view-activity-log" class="view">
+      <div class="card">
+        <h3>Activity Log — Non-Client Services</h3>
+        <p style="color:#666;margin-bottom:22px;font-size:0.88em;">Use this form to document professional activities that are not direct client mentorship. Complete as soon as possible after the activity.</p>
+        <div id="al-success" class="alert alert-success" style="display:none;">✅ Activity log submitted successfully.</div>
+        <form id="activity-log-form">
+
+          <div class="form-section">
+            <h4>Mentor Info</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Mentor Name *</label>
+                <input type="text" name="mentorName" required list="staff-datalist-al">
+                <datalist id="staff-datalist-al"></datalist>
+              </div>
+              <div class="form-group">
+                <label>Email *</label>
+                <input type="email" name="email" required>
+              </div>
+              <div class="form-group">
+                <label>Role *</label>
+                <select name="role" required>
+                  <option value="">Select role…</option>
+                  <option>REP</option><option>Senior REP</option><option>ReGroup Director</option>
+                  <option>RJ Director</option><option>Program Manager</option><option>Facilitator</option><option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Date of Activity *</label>
+                <input type="date" name="dateOfActivity" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>Activity Details</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Type of Activity *</label>
+                <select name="activityType" required>
+                  <option value="">Select…</option>
+                  <option>Community Outreach</option><option>Street Outreach</option>
+                  <option>Partner Meeting</option><option>Court Coordination</option>
+                  <option>Hospital Coordination</option><option>School Engagement</option>
+                  <option>Employer Engagement</option><option>Resource Navigation (non-client specific)</option>
+                  <option>Restorative Justice Coordination</option><option>Training Attended</option>
+                  <option>Training Delivered</option><option>Group Facilitation</option>
+                  <option>Event Support</option><option>Violence Prevention Strategy</option>
+                  <option>Case Staffing / Team Meeting</option><option>Administrative Support</option>
+                  <option>Travel Time</option><option>Attempted Client Outreach (multiple clients)</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Planned or Emergent?</label>
+                <select name="plannedOrEmergent">
+                  <option value="">Select…</option>
+                  <option>Planned</option><option>Emergent / Rapid Response</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Start Time *</label>
+                <input type="time" name="startTime" required>
+              </div>
+              <div class="form-group">
+                <label>End Time *</label>
+                <input type="time" name="endTime" required>
+              </div>
+              <div class="form-group">
+                <label>Hours (auto-calculated)</label>
+                <input type="text" id="al-hours-preview" readonly placeholder="Enter start/end time" style="background:#f5f5f5;color:var(--primary);font-weight:700;">
+              </div>
+              <div class="form-group">
+                <label>Grant *</label>
+                <select name="grant" required>
+                  <option value="">Select grant…</option>
+                  <option>CVI</option><option>General Fund</option><option>BeBlac</option>
+                  <option>Collins Foundation</option><option>CJC</option><option>RISE</option>
+                  <option>WHC</option><option>Vital Project Funds</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Primary Purpose</label>
+                <select name="primaryPurpose">
+                  <option value="">Select…</option>
+                  <option>Violence Prevention</option><option>Relationship Building</option>
+                  <option>Community Stabilization</option><option>Partnership Development</option>
+                  <option>Resource Development</option><option>Restorative Justice</option>
+                  <option>Crisis Response</option><option>Capacity Building</option>
+                  <option>Training / Skill Development</option><option>Operational Support</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Did this contribute to violence prevention?</label>
+                <select name="violencePrevention">
+                  <option value="">Select…</option>
+                  <option>Yes — Direct Impact</option><option>Yes — Indirect Impact</option>
+                  <option>No</option><option>Unsure</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Immediate Outcome</label>
+                <select name="immediateOutcome">
+                  <option value="">Select…</option>
+                  <option>Connection Established</option><option>Relationship Strengthened</option>
+                  <option>Conflict Reduced</option><option>Resources Identified</option>
+                  <option>Referral Pathway Created</option><option>Training Completed</option>
+                  <option>Information Shared</option><option>Follow-Up Needed</option>
+                  <option>No Immediate Outcome</option><option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Is follow-up required?</label>
+                <select name="followUpRequired">
+                  <option value="">Select…</option><option value="yes">Yes</option><option value="no">No</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Were any safety concerns observed?</label>
+                <select name="safetyConcerns">
+                  <option value="">Select…</option>
+                  <option>No concerns</option>
+                  <option>Yes — Situational concern</option>
+                  <option>Yes — Elevated risk observed</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Brief Description of Activity</label>
+              <textarea name="description" rows="4" placeholder="Focus on what was accomplished, who was engaged, and why the activity mattered."></textarea>
+            </div>
+            <div class="form-group">
+              <label>If follow-up required — describe:</label>
+              <input type="text" name="followUpDescription">
+            </div>
+            <div class="form-group">
+              <label>If safety concerns — describe:</label>
+              <textarea name="safetyDescription" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>Who Was Involved? (check all that apply)</h4>
+            <div class="checkbox-grid" id="who-involved-check"></div>
+          </div>
+
+          <div class="form-section">
+            <h4>Service Areas Supported (check all that apply)</h4>
+            <div class="checkbox-grid" id="service-areas-check"></div>
+          </div>
+
+          <div style="text-align:center;padding:10px 0 6px;">
+            <button type="submit" class="btn btn-primary btn-lg">Submit Activity Log</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== DATA VIEW ===== -->
+    <div id="view-data-view" class="view">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-timesheet',this)">Timesheet</button>
+        <button class="tab-btn" onclick="switchTab('tab-summary',this)">Summary</button>
+        <button class="tab-btn" onclick="switchTab('tab-pay-period',this)">Pay Period</button>
+        <button class="tab-btn" onclick="switchTab('tab-safety',this)">Safety Flags</button>
+        <button class="tab-btn" onclick="switchTab('tab-all-data',this)">All Entries</button>
+      </div>
+
+      <div id="tab-timesheet" class="tab-content active card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <h3 style="margin:0;">Timesheet — All Activity</h3>
+          <button class="btn btn-outline" onclick="exportTableCSV('timesheet-table','regroup-timesheet')">⬇ Export CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table id="timesheet-table">
+            <thead><tr><th>Mentor</th><th>Date</th><th>Start</th><th>End</th><th>Activity</th><th>Hours</th><th>Grant</th><th>Source</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-summary" class="tab-content card">
+        <h3>Timesheet Summary — By Mentor</h3>
+        <div class="table-wrap">
+          <table id="summary-table">
+            <thead><tr><th>Mentor</th><th>Total Sessions</th><th>Total Hours</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-pay-period" class="tab-content card">
+        <h3>Pay Period Filter</h3>
+        <div style="display:flex;gap:14px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
+          <div class="form-group" style="margin:0">
+            <label>Pay Period Start</label>
+            <input type="date" id="pp-start">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Pay Period End</label>
+            <input type="date" id="pp-end">
+          </div>
+          <button class="btn btn-primary" onclick="filterPayPeriod()">Apply Filter</button>
+        </div>
+        <div class="table-wrap">
+          <table id="pp-table">
+            <thead><tr><th>Mentor</th><th>Date</th><th>Start</th><th>End</th><th>Activity</th><th>Hours</th><th>Grant</th></tr></thead>
+            <tbody><tr><td colspan="7" style="text-align:center;color:#999;padding:20px;">Select a date range and click Apply Filter.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-safety" class="tab-content card">
+        <h3>Safety Concerns Log</h3>
+        <div class="table-wrap">
+          <table id="safety-table">
+            <thead><tr><th>Mentor</th><th>Date</th><th>Activity</th><th>Concern Level</th><th>Description / Actions</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tab-all-data" class="tab-content card">
+        <h3>All Entries</h3>
+        <div style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <input type="text" id="search-input" placeholder="🔍 Search entries…" oninput="renderAllData()" style="max-width:260px;padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.875em;">
+          <select id="filter-type" onchange="renderAllData()" style="padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.875em;">
+            <option value="">All types</option>
+            <option value="client">Client Sessions</option>
+            <option value="activity">Activities</option>
+          </select>
+          <select id="filter-mentor" onchange="renderAllData()" style="padding:8px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.875em;">
+            <option value="">All mentors</option>
+          </select>
+          <button class="btn btn-outline" onclick="exportTableCSV('all-data-table','regroup-all-data')">⬇ Export CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table id="all-data-table">
+            <thead><tr><th>Type</th><th>Mentor</th><th>Date</th><th>Activity / Service</th><th>Outcome</th><th>Hours</th><th>Grant</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TIMESHEETS ===== -->
+    <div id="view-timesheets" class="view">
+      <div class="card no-print">
+        <h3>Generate Official Timesheet</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:22px;">
+          <div class="form-group" style="margin:0">
+            <label>Employee (Mentor)</label>
+            <select id="ts-mentor" onchange="tsUpdateFromStaff()">
+              <option value="">Select mentor…</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Pay Period Start</label>
+            <input type="date" id="ts-start">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Pay Period End</label>
+            <input type="date" id="ts-end">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Hourly Rate ($)</label>
+            <input type="number" id="ts-rate" value="20" min="0" step="0.01">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Regular Hrs / Pay Period</label>
+            <input type="number" id="ts-regular-hrs" value="16" min="0" step="0.5">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Lunch Deduction (hrs/shift)</label>
+            <input type="number" id="ts-lunch" value="0.5" min="0" step="0.25">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-lg" onclick="generateTimesheet()">Generate Timesheet</button>
+          <button class="btn btn-accent" onclick="window.print()" id="print-btn" style="display:none;">🖨️ Print / Save PDF</button>
+        </div>
+        <p style="color:#888;font-size:0.8em;margin-top:12px;">Tip: After generating, click Print / Save PDF and choose "Save as PDF" in the print dialog.</p>
+      </div>
+      <div id="timesheet-output" style="display:none;"></div>
+    </div>
+
+    <!-- ===== SETTINGS ===== -->
+    <div id="view-settings" class="view">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="card">
+          <h3>Staff Members</h3>
+          <div id="staff-list"></div>
+          <button class="btn btn-accent" onclick="showAddStaff()" style="margin-top:14px;">+ Add Staff Member</button>
+          <div id="add-staff-form" style="display:none;margin-top:18px;border-top:1px solid #eee;padding-top:18px;">
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" id="staff-name">
+              </div>
+              <div class="form-group">
+                <label>Role *</label>
+                <select id="staff-role">
+                  <option>REP</option><option>Senior REP</option><option>ReGroup Director</option>
+                  <option>RJ Director</option><option>Program Manager</option><option>Facilitator</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Start Date</label>
+                <input type="date" id="staff-start-date">
+              </div>
+              <div class="form-group">
+                <label>Hourly Rate ($)</label>
+                <input type="number" id="staff-rate" value="20" min="0">
+              </div>
+              <div class="form-group">
+                <label>Regular Hrs / Pay Period</label>
+                <input type="number" id="staff-reg-hrs" value="16" min="0">
+              </div>
+              <div class="form-group">
+                <label>Default Grant</label>
+                <select id="staff-grant">
+                  <option>CVI</option><option>General Fund</option><option>BeBlac</option>
+                  <option>Collins Foundation</option><option>CJC</option><option>RISE</option>
+                  <option>WHC</option><option>Vital Project Funds</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn btn-primary" onclick="addStaff()">Save Staff Member</button>
+              <button class="btn btn-outline" onclick="document.getElementById('add-staff-form').style.display='none'">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Data Management</h3>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <button class="btn btn-outline" onclick="exportData()">⬇️ Export All Data (JSON)</button>
+            <label class="btn btn-outline" style="cursor:pointer;justify-content:center;">
+              ⬆️ Import Data (JSON)
+              <input type="file" accept=".json" onchange="importDataJSON(event)" style="display:none;">
+            </label>
+            <hr style="border:none;border-top:1px solid #eee;margin:4px 0;">
+            <p style="font-size:0.82em;color:#888;font-weight:600;">IMPORT FROM GOOGLE SHEETS CSV EXPORT:</p>
+            <label class="btn btn-outline" style="cursor:pointer;justify-content:center;">
+              ⬆️ Import Client Sessions CSV
+              <input type="file" accept=".csv" onchange="importCSV(event,'client')" style="display:none;">
+            </label>
+            <label class="btn btn-outline" style="cursor:pointer;justify-content:center;">
+              ⬆️ Import Activity Log CSV
+              <input type="file" accept=".csv" onchange="importCSV(event,'activity')" style="display:none;">
+            </label>
+            <hr style="border:none;border-top:1px solid #eee;margin:4px 0;">
+            <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Session Data</button>
+          </div>
+          <div id="import-msg" class="alert" style="display:none;margin-top:14px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ===================================================================
+// DATA LAYER
+// ===================================================================
+const DB = {
+  sessions:   () => JSON.parse(localStorage.getItem('rg_sessions')   || '[]'),
+  activities: () => JSON.parse(localStorage.getItem('rg_activities') || '[]'),
+  staff:      () => JSON.parse(localStorage.getItem('rg_staff')      || '[]'),
+  saveSessions(arr)   { localStorage.setItem('rg_sessions',   JSON.stringify(arr)); },
+  saveActivities(arr) { localStorage.setItem('rg_activities', JSON.stringify(arr)); },
+  saveStaff(arr)      { localStorage.setItem('rg_staff',      JSON.stringify(arr)); },
+  addSession(s)  { const d = this.sessions();   d.push(s); this.saveSessions(d); },
+  addActivity(a) { const d = this.activities(); d.push(a); this.saveActivities(d); },
+  allEntries() {
+    const s = this.sessions().map(x => ({...x, _type:'client'}));
+    const a = this.activities().map(x => ({...x, _type:'activity'}));
+    return [...s, ...a].sort((a,b) => (getDate(a)||'').localeCompare(getDate(b)||''));
+  }
+};
+
+// ===================================================================
+// HELPERS
+// ===================================================================
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0; return(c==='x'?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+function getDate(e) {
+  return e.dateOfService || e.dateOfActivity || e.dateOfAttempt || '';
+}
+
+function calcHours(start, end) {
+  if (!start || !end) return 0;
+  const [sh,sm] = start.split(':').map(Number);
+  const [eh,em] = end.split(':').map(Number);
+  return Math.round(((eh*60+em)-(sh*60+sm)) / 60 * 100) / 100;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
+}
+
+function fmtDateSlash(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  if (isNaN(dt)) return d;
+  return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+}
+
+function fmtTime(t) {
+  if (!t) return '';
+  const [h,m] = t.split(':').map(Number);
+  const ap = h>=12?'PM':'AM'; const hr=h%12||12;
+  return `${hr}:${String(m).padStart(2,'0')} ${ap}`;
+}
+
+function getActivityLabel(e) {
+  if (e._type==='client' || e.type==='client') {
+    const types = Array.isArray(e.supportTypes) ? e.supportTypes : (e.supportTypes ? [e.supportTypes] : []);
+    return types.filter(Boolean).join(', ') || e.serviceOutcome || '';
+  }
+  return e.activityType || '';
+}
+
+function safeConcernBadge(val) {
+  if (!val || val==='No concerns' || val==='no') return '';
+  const cls = (val.includes('Immediate')||val.includes('Elevated')) ? 'badge-danger' : 'badge-warn';
+  return `<span class="badge ${cls}">${val}</span>`;
+}
+
+// ===================================================================
+// NAVIGATION
+// ===================================================================
+const VIEW_TITLES = {
+  'dashboard':'Dashboard',
+  'progress-note':'Progress Note — DAP Format',
+  'activity-log':'Activity Log — Non-Client Services',
+  'data-view':'Data View',
+  'timesheets':'Timesheets',
+  'settings':'Staff & Settings'
+};
+
+function navigate(v) {
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('#sidebar nav a').forEach(el=>el.classList.remove('active'));
+  const ve = document.getElementById('view-'+v);
+  if (ve) ve.classList.add('active');
+  const ae = document.querySelector(`[data-view="${v}"]`);
+  if (ae) ae.classList.add('active');
+  document.getElementById('topbar-title').textContent = VIEW_TITLES[v]||v;
+  if (v==='dashboard') renderDashboard();
+  if (v==='data-view') renderDataView();
+  if (v==='timesheets') populateTsMentors();
+  if (v==='settings') renderSettings();
+}
+
+// ===================================================================
+// FORM INIT
+// ===================================================================
+const SUPPORT_TYPES = ['Violence Prevention Mentoring','Conflict Mediation','Crisis Intervention',
+  'Safety Planning','Hospital/Post-Injury Intervention','Retaliation Prevention',
+  'Street Outreach Engagement','Relationship Building','Life Stabilization','Housing Navigation',
+  'Employment Support','Education/Training Support','Behavioral Health Support',
+  'Substance Use Recovery Support','Systems Navigation','Transportation Assistance',
+  'Emotional Support','Skill Building','Leadership Development','Restorative Justice Services','Other'];
+
+const REFERRALS = ['Housing','Employment','Treatment','Education','Legal','Peer Support','None','Other'];
+
+const SERVICE_CATS = ['Stabilization','Housing Support','Employment Support','Behavioral Health',
+  'Recovery Support','Community Connection','Violence Prevention','Restorative Justice',
+  'Crisis Response','Leadership Development','Other'];
+
+const ATTEMPT_METHODS = ['Phone','Text','Email','In-Person Attempt','Third-Party Outreach','Other'];
+
+const WHO_INVOLVED = ['Community Member(s)','High-Risk Individual(s)','Program Participant(s)',
+  'Victim/Survivor','Partner Organization','Law Enforcement','Hospital Staff','Court Personnel',
+  'School Staff','Outreach Team','Internal ReGroup Staff','Other'];
+
+const SERVICE_AREAS = ['Violence Prevention','Restorative Justice','Community Outreach',
+  'Partnership Development','Behavioral Health Support','Housing / Stabilization',
+  'Employment Pathways','Youth Engagement','Crisis Response','Organizational Capacity','Training','Other'];
+
+const OUTCOMES = ['Service Successfully Delivered','Mentor Attempted Contact — Client Unreachable',
+  'Client Cancelled','Client No-Show','Rescheduled','Other'];
+
+const SAFETY_PN = ['No concerns','Yes — Immediate Risk','Yes — Emerging Concern'];
+
+const GRANTS = ['BeBlac','Collins Foundation','CJC','CVI','General Fund','RISE','WHC','Vital Project Funds'];
+
+function buildCheckboxes(id, items, name) {
+  document.getElementById(id).innerHTML = items.map(it=>
+    `<label><input type="checkbox" name="${name}" value="${it}"> ${it}</label>`
+  ).join('');
+}
+
+function buildRadios(id, items, name) {
+  document.getElementById(id).innerHTML = items.map(it=>
+    `<label><input type="radio" name="${name}" value="${it}"> ${it}</label>`
+  ).join('');
+}
+
+function initForms() {
+  buildCheckboxes('support-types-check', SUPPORT_TYPES, 'supportTypes');
+  buildCheckboxes('referrals-check', REFERRALS, 'referralsMade');
+  buildCheckboxes('service-categories-check', SERVICE_CATS, 'serviceCategories');
+  buildCheckboxes('attempt-methods-check', ATTEMPT_METHODS, 'attemptMethods');
+  buildCheckboxes('who-involved-check', WHO_INVOLVED, 'whoInvolved');
+  buildCheckboxes('service-areas-check', SERVICE_AREAS, 'serviceAreas');
+  buildRadios('outcome-radio', OUTCOMES, 'serviceOutcome');
+  buildRadios('safety-radio-pn', SAFETY_PN, 'safetyConcerns');
+
+  // Show/hide fields based on service outcome
+  document.getElementById('outcome-radio').addEventListener('change', e => {
+    const v = e.target.value;
+    const success = v === 'Service Successfully Delivered';
+    document.getElementById('successful-fields').style.display = success ? 'block' : 'none';
+    document.getElementById('unsuccessful-fields').style.display = (!success && v) ? 'block' : 'none';
+  });
+
+  // Live hours preview - Progress Note
+  ['[name="startTime"]','[name="endTime"]'].forEach(sel => {
+    document.querySelector('#progress-note-form ' + sel)?.addEventListener('change', () => {
+      const s = document.querySelector('#progress-note-form [name="startTime"]').value;
+      const e = document.querySelector('#progress-note-form [name="endTime"]').value;
+      const h = calcHours(s, e);
+      document.getElementById('pn-hours-preview').value = h > 0 ? h.toFixed(2) + ' hrs' : '';
+    });
+  });
+
+  // Live hours preview - Activity Log
+  document.querySelector('#activity-log-form [name="startTime"]')?.addEventListener('change', updateALHours);
+  document.querySelector('#activity-log-form [name="endTime"]')?.addEventListener('change', updateALHours);
+}
+
+function updateALHours() {
+  const s = document.querySelector('#activity-log-form [name="startTime"]').value;
+  const e = document.querySelector('#activity-log-form [name="endTime"]').value;
+  const h = calcHours(s, e);
+  document.getElementById('al-hours-preview').value = h > 0 ? h.toFixed(2) + ' hrs' : '';
+}
+
+function refreshStaffDatalist() {
+  const names = DB.staff().map(s=>s.name);
+  ['staff-datalist','staff-datalist-al'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = names.map(n=>`<option value="${n}">`).join('');
+  });
+}
+
+// ===================================================================
+// FORM SUBMIT
+// ===================================================================
+document.getElementById('progress-note-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  const data = {id:uuid(), type:'client', submittedAt:new Date().toISOString()};
+  // Single-value fields
+  for (const [k,v] of fd.entries()) { data[k] = v; }
+  // Multi-value fields
+  data.supportTypes = fd.getAll('supportTypes');
+  data.referralsMade = fd.getAll('referralsMade');
+  data.serviceCategories = fd.getAll('serviceCategories');
+  data.attemptMethods = fd.getAll('attemptMethods');
+  DB.addSession(data);
+  document.getElementById('pn-success').style.display='block';
+  this.reset();
+  document.getElementById('successful-fields').style.display='block';
+  document.getElementById('unsuccessful-fields').style.display='none';
+  document.getElementById('pn-hours-preview').value='';
+  window.scrollTo(0,0);
+  setTimeout(()=>document.getElementById('pn-success').style.display='none',5000);
+});
+
+document.getElementById('activity-log-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const fd = new FormData(this);
+  const data = {id:uuid(), type:'activity', submittedAt:new Date().toISOString()};
+  for (const [k,v] of fd.entries()) { data[k]=v; }
+  data.whoInvolved = fd.getAll('whoInvolved');
+  data.serviceAreas = fd.getAll('serviceAreas');
+  DB.addActivity(data);
+  document.getElementById('al-success').style.display='block';
+  this.reset();
+  document.getElementById('al-hours-preview').value='';
+  window.scrollTo(0,0);
+  setTimeout(()=>document.getElementById('al-success').style.display='none',5000);
+});
+
+// ===================================================================
+// DASHBOARD
+// ===================================================================
+function renderDashboard() {
+  const entries = DB.allEntries();
+  const sessions = DB.sessions();
+  const activities = DB.activities();
+
+  const totalHours = entries.reduce((sum,e) => sum + Math.max(0, calcHours(e.startTime, e.endTime)), 0);
+  const uniqueClients = new Set(sessions.map(s=>s.clientId).filter(Boolean)).size;
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card">
+      <div class="num">${sessions.length}</div>
+      <div class="lbl">Client Services</div>
+    </div>
+    <div class="stat-card" style="border-top-color:#7c4dff">
+      <div class="num">${activities.length}</div>
+      <div class="lbl">Activities Logged</div>
+    </div>
+    <div class="stat-card" style="border-top-color:#43a047">
+      <div class="num">${totalHours.toFixed(1)}</div>
+      <div class="lbl">Total Hours</div>
+    </div>
+    <div class="stat-card" style="border-top-color:#fb8c00">
+      <div class="num">${uniqueClients}</div>
+      <div class="lbl">Unique Clients</div>
+    </div>
+  `;
+
+  // Hours by mentor bar chart
+  const mhrs = {};
+  entries.forEach(e => {
+    const n = e.mentorName || 'Unknown';
+    mhrs[n] = (mhrs[n]||0) + Math.max(0, calcHours(e.startTime, e.endTime));
+  });
+  const sorted = Object.entries(mhrs).sort((a,b)=>b[1]-a[1]);
+  const maxH = Math.max(...sorted.map(x=>x[1]), 1);
+  document.getElementById('mentor-hours-chart').innerHTML = sorted.length ?
+    sorted.map(([n,h]) => `
+      <div class="mentor-row">
+        <div style="min-width:130px;font-size:0.85em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
+        <div class="mentor-bar-bg"><div class="mentor-bar" style="width:${(h/maxH*100).toFixed(1)}%"></div></div>
+        <div style="min-width:48px;text-align:right;font-size:0.82em;color:#555;">${h.toFixed(1)}h</div>
+      </div>
+    `).join('') : '<p style="color:#bbb;font-size:0.875em;">No data yet. Start by logging a session.</p>';
+
+  // Weekly summary
+  const now = new Date();
+  const mon = new Date(now); mon.setDate(now.getDate() - ((now.getDay()+6)%7));
+  const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+  const toYMD = d => d.toISOString().slice(0,10);
+  const wStart = toYMD(mon), wEnd = toYMD(sun);
+  const wEntries = entries.filter(e => { const d=getDate(e); return d>=wStart && d<=wEnd; });
+  const wMentors = {};
+  wEntries.forEach(e => {
+    const n = e.mentorName||'Unknown';
+    if (!wMentors[n]) wMentors[n]={sessions:0,hours:0};
+    wMentors[n].sessions++;
+    wMentors[n].hours += Math.max(0,calcHours(e.startTime,e.endTime));
+  });
+  const wHrs = Object.values(wMentors).reduce((a,b)=>a+b.hours,0);
+  document.getElementById('weekly-summary').innerHTML = `
+    <p style="font-size:0.78em;color:#888;margin-bottom:14px;">${fmtDate(wStart)} — ${fmtDate(wEnd)}</p>
+    <div style="display:flex;gap:24px;margin-bottom:18px;">
+      <div><div style="font-size:2em;font-weight:800;color:var(--primary);">${wEntries.length}</div><div style="font-size:0.75em;color:#999;text-transform:uppercase;">Sessions</div></div>
+      <div><div style="font-size:2em;font-weight:800;color:var(--primary);">${wHrs.toFixed(1)}</div><div style="font-size:0.75em;color:#999;text-transform:uppercase;">Hours</div></div>
+    </div>
+    ${Object.entries(wMentors).length ? `
+      <table style="width:100%;font-size:0.84em;border-collapse:collapse;">
+        <thead><tr style="border-bottom:2px solid #f0f0f0;">
+          <th style="text-align:left;padding:4px 0;color:#666;font-weight:600;">Mentor</th>
+          <th style="text-align:center;color:#666;font-weight:600;">Sessions</th>
+          <th style="text-align:center;color:#666;font-weight:600;">Hours</th>
+        </tr></thead>
+        <tbody>${Object.entries(wMentors).map(([n,d])=>`
+          <tr style="border-bottom:1px solid #f5f5f5;">
+            <td style="padding:6px 0;">${n}</td>
+            <td style="text-align:center;">${d.sessions}</td>
+            <td style="text-align:center;">${d.hours.toFixed(1)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : '<p style="color:#bbb;font-size:0.875em;">No entries this week.</p>'}
+  `;
+
+  // Service breakdown
+  const svcCount = {};
+  entries.forEach(e => {
+    const types = Array.isArray(e.supportTypes) ? e.supportTypes : [];
+    const act = e.activityType ? [e.activityType] : [];
+    [...types,...act].filter(Boolean).forEach(t => { svcCount[t]=(svcCount[t]||0)+1; });
+  });
+  const topSvc = Object.entries(svcCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxS = Math.max(...topSvc.map(x=>x[1]),1);
+  document.getElementById('service-breakdown').innerHTML = topSvc.length ?
+    topSvc.map(([n,c]) => `
+      <div class="mentor-row">
+        <div style="min-width:170px;font-size:0.82em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
+        <div class="mentor-bar-bg"><div class="mentor-bar" style="width:${(c/maxS*100).toFixed(1)}%;background:var(--purple)"></div></div>
+        <div style="min-width:30px;text-align:right;font-size:0.82em;color:#555;">${c}</div>
+      </div>
+    `).join('') : '<p style="color:#bbb;font-size:0.875em;">No service data yet.</p>';
+
+  // Safety flags
+  const flags = entries.filter(e => e.safetyConcerns && e.safetyConcerns!=='No concerns' && e.safetyConcerns!=='no').slice(-5).reverse();
+  document.getElementById('safety-flags-dash').innerHTML = flags.length ?
+    flags.map(e=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #f5f5f5;">
+        ${safeConcernBadge(e.safetyConcerns)}
+        <div>
+          <div style="font-size:0.875em;font-weight:600;">${e.mentorName||''} — ${fmtDate(getDate(e))}</div>
+          <div style="font-size:0.8em;color:#666;margin-top:2px;">${e.concernDescription||e.safetyDescription||'No description'}</div>
+        </div>
+      </div>
+    `).join('') : '<p style="color:#bbb;font-size:0.875em;">No safety flags reported.</p>';
+}
+
+// ===================================================================
+// DATA VIEW
+// ===================================================================
+function switchTab(tabId, btn) {
+  document.querySelectorAll('#view-data-view .tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#view-data-view .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+}
+
+function renderDataView() {
+  renderTimesheetTable();
+  renderSummaryTable();
+  renderSafetyTable();
+  renderAllData();
+  populateMentorFilter();
+}
+
+function renderTimesheetTable() {
+  const entries = DB.allEntries();
+  const tbody = document.querySelector('#timesheet-table tbody');
+  tbody.innerHTML = entries.length ? entries.map(e=>`
+    <tr>
+      <td>${e.mentorName||''}</td>
+      <td>${fmtDate(getDate(e))}</td>
+      <td>${fmtTime(e.startTime)}</td>
+      <td>${fmtTime(e.endTime)}</td>
+      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getActivityLabel(e)}</td>
+      <td>${Math.max(0,calcHours(e.startTime,e.endTime)).toFixed(2)}</td>
+      <td>${e.grant||''}</td>
+      <td><span class="badge ${e._type==='client'?'badge-info':'badge-success'}">${e._type==='client'?'Client':'Activity'}</span></td>
+    </tr>
+  `).join('') : '<tr><td colspan="8" style="text-align:center;color:#bbb;padding:30px;">No entries yet.</td></tr>';
+}
+
+function renderSummaryTable() {
+  const mentorData = {};
+  DB.allEntries().forEach(e=>{
+    const n = e.mentorName||'Unknown';
+    if (!mentorData[n]) mentorData[n]={sessions:0,hours:0};
+    mentorData[n].sessions++;
+    mentorData[n].hours += Math.max(0,calcHours(e.startTime,e.endTime));
+  });
+  const tbody = document.querySelector('#summary-table tbody');
+  const rows = Object.entries(mentorData).sort((a,b)=>a[0].localeCompare(b[0]));
+  tbody.innerHTML = rows.length ? rows.map(([n,d])=>`
+    <tr><td>${n}</td><td style="text-align:center">${d.sessions}</td><td style="text-align:center">${d.hours.toFixed(2)}</td></tr>
+  `).join('') : '<tr><td colspan="3" style="text-align:center;color:#bbb;padding:30px;">No data yet.</td></tr>';
+}
+
+function renderSafetyTable() {
+  const entries = DB.allEntries().filter(e=>e.safetyConcerns && e.safetyConcerns!=='No concerns' && e.safetyConcerns!=='no');
+  const tbody = document.querySelector('#safety-table tbody');
+  tbody.innerHTML = entries.length ? entries.map(e=>`
+    <tr>
+      <td>${e.mentorName||''}</td>
+      <td>${fmtDate(getDate(e))}</td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getActivityLabel(e)}</td>
+      <td>${safeConcernBadge(e.safetyConcerns)}</td>
+      <td>${e.concernDescription||e.safetyDescription||''}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="5" style="text-align:center;color:#bbb;padding:30px;">No safety concerns logged.</td></tr>';
+}
+
+function renderAllData() {
+  const search = (document.getElementById('search-input').value||'').toLowerCase();
+  const typeF  = document.getElementById('filter-type').value;
+  const mentorF= document.getElementById('filter-mentor').value;
+  let entries = DB.allEntries();
+  if (typeF) entries = entries.filter(e=>e._type===typeF);
+  if (mentorF) entries = entries.filter(e=>e.mentorName===mentorF);
+  if (search) entries = entries.filter(e=>JSON.stringify(e).toLowerCase().includes(search));
+  const tbody = document.querySelector('#all-data-table tbody');
+  tbody.innerHTML = entries.length ? entries.map(e=>`
+    <tr>
+      <td><span class="badge ${e._type==='client'?'badge-info':'badge-success'}">${e._type==='client'?'Client':'Activity'}</span></td>
+      <td>${e.mentorName||''}</td>
+      <td>${fmtDate(getDate(e))}</td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getActivityLabel(e)}</td>
+      <td style="font-size:0.82em;">${e.serviceOutcome||e.immediateOutcome||''}</td>
+      <td>${Math.max(0,calcHours(e.startTime,e.endTime)).toFixed(2)}</td>
+      <td>${e.grant||''}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="7" style="text-align:center;color:#bbb;padding:30px;">No entries found.</td></tr>';
+}
+
+function populateMentorFilter() {
+  const mentors = [...new Set(DB.allEntries().map(e=>e.mentorName).filter(Boolean))].sort();
+  const sel = document.getElementById('filter-mentor');
+  sel.innerHTML = '<option value="">All mentors</option>' + mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+
+function filterPayPeriod() {
+  const start = document.getElementById('pp-start').value;
+  const end   = document.getElementById('pp-end').value;
+  let entries = DB.allEntries();
+  if (start) entries = entries.filter(e=>getDate(e)>=start);
+  if (end)   entries = entries.filter(e=>getDate(e)<=end);
+  const tbody = document.querySelector('#pp-table tbody');
+  tbody.innerHTML = entries.length ? entries.map(e=>`
+    <tr>
+      <td>${e.mentorName||''}</td>
+      <td>${fmtDate(getDate(e))}</td>
+      <td>${fmtTime(e.startTime)}</td>
+      <td>${fmtTime(e.endTime)}</td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getActivityLabel(e)}</td>
+      <td>${Math.max(0,calcHours(e.startTime,e.endTime)).toFixed(2)}</td>
+      <td>${e.grant||''}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="7" style="text-align:center;color:#bbb;padding:20px;">No entries in this period.</td></tr>';
+}
+
+function exportTableCSV(tableId, filename) {
+  const table = document.getElementById(tableId);
+  const rows = [...table.querySelectorAll('tr')];
+  const csv = rows.map(r=>[...r.querySelectorAll('th,td')].map(c=>
+    `"${c.innerText.replace(/"/g,'""')}"`
+  ).join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${filename}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ===================================================================
+// TIMESHEET GENERATOR
+// ===================================================================
+function populateTsMentors() {
+  const mentors = [...new Set(DB.allEntries().map(e=>e.mentorName).filter(Boolean))].sort();
+  const staff = DB.staff();
+  const sel = document.getElementById('ts-mentor');
+  sel.innerHTML = '<option value="">Select mentor…</option>' + mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+
+function tsUpdateFromStaff() {
+  const name = document.getElementById('ts-mentor').value;
+  const s = DB.staff().find(x=>x.name===name);
+  if (s) {
+    document.getElementById('ts-rate').value = s.rate || 20;
+    document.getElementById('ts-regular-hrs').value = s.regularHrs || 16;
+  }
+}
+
+function generateTimesheet() {
+  const mentor    = document.getElementById('ts-mentor').value;
+  const start     = document.getElementById('ts-start').value;
+  const end       = document.getElementById('ts-end').value;
+  const rate      = parseFloat(document.getElementById('ts-rate').value) || 20;
+  const regHrs    = parseFloat(document.getElementById('ts-regular-hrs').value) || 16;
+  const lunch     = parseFloat(document.getElementById('ts-lunch').value) || 0.5;
+  if (!mentor) { alert('Please select a mentor.'); return; }
+
+  let entries = DB.allEntries().filter(e => e.mentorName === mentor);
+  if (start) entries = entries.filter(e => getDate(e) >= start);
+  if (end)   entries = entries.filter(e => getDate(e) <= end);
+
+  const staffInfo = DB.staff().find(s => s.name === mentor);
+  const startDate = staffInfo?.startDate || start || '';
+
+  // Build data rows
+  const grantTotals = {};
+  GRANTS.forEach(g => grantTotals[g] = 0);
+  let totReg=0, totOT=0, totLunch=0, totHrs=0, totBill=0;
+
+  const dataRows = entries.map(e => {
+    const rawH = Math.max(0, calcHours(e.startTime, e.endTime));
+    const lunchAmt = rawH > 0 ? -lunch : 0;
+    const totalH = rawH + lunchAmt;
+    const grant = e.grant || 'General Fund';
+    const bill  = Math.max(0, totalH) * rate;
+    totReg   += rawH;
+    totLunch += lunchAmt;
+    totHrs   += Math.max(0, totalH);
+    totBill  += bill;
+    if (grantTotals.hasOwnProperty(grant)) grantTotals[grant] += bill;
+    else grantTotals['General Fund'] += bill;
+    return { date:getDate(e), task:getActivityLabel(e), start:e.startTime, end:e.endTime,
+             regular:rawH, overtime:0, lunch:lunchAmt, total:Math.max(0,totalH), grant, bill };
+  });
+
+  // Pad to at least 18 rows (like original timesheet)
+  const MIN_ROWS = 18;
+  const padRows = [];
+  for (let i = dataRows.length; i < MIN_ROWS; i++) {
+    padRows.push(null);
+  }
+
+  // Build table rows HTML
+  const rowsHTML = [...dataRows.map(r=>`
+    <tr class="data-row">
+      <td class="left">${fmtDate(r.date)}</td>
+      <td class="left" style="max-width:180px;font-size:7.5pt;">${r.task}</td>
+      <td>${fmtTime(r.start)}</td>
+      <td>${fmtTime(r.end)}</td>
+      <td style="text-align:right">${r.regular.toFixed(2)}</td>
+      <td style="text-align:right">0.00</td>
+      <td style="text-align:right"></td>
+      <td style="text-align:right">${r.lunch.toFixed(1)}</td>
+      <td style="text-align:right;font-weight:700;">${r.total.toFixed(2)}</td>
+      <td style="color:#1565c0;font-weight:600">${r.grant}</td>
+      <td style="text-align:right;font-weight:700;">$${r.bill.toFixed(2)}</td>
+    </tr>`),
+  ...padRows.map((_,i)=>`
+    <tr class="data-row">
+      <td>&nbsp;</td><td></td><td></td><td></td>
+      <td style="text-align:right">0.00</td>
+      <td style="text-align:right">0.00</td>
+      <td></td>
+      <td style="text-align:right">0.00</td>
+      <td style="text-align:right;font-weight:700;">0.00</td>
+      <td>General Fund</td>
+      <td style="text-align:right">$0.00</td>
+    </tr>`)
+  ].join('');
+
+  const totalRow = `
+    <tr class="total-row">
+      <td colspan="2" style="text-align:left;font-weight:800;letter-spacing:0.04em;">TOTAL HOURS</td>
+      <td>—</td><td>—</td>
+      <td style="text-align:right">${totReg.toFixed(2)}</td>
+      <td style="text-align:right">${totOT.toFixed(2)}</td>
+      <td style="text-align:right">0.00</td>
+      <td style="text-align:right">${totLunch.toFixed(2)}</td>
+      <td style="text-align:right">${totHrs.toFixed(2)}</td>
+      <td></td>
+      <td style="text-align:right">$${totBill.toFixed(2)}</td>
+    </tr>`;
+
+  const financeRows = GRANTS.map(g => `
+    <tr>
+      <td>${g}</td>
+      <td class="right">${grantTotals[g]>0?grantTotals[g].toFixed(0):'0'}</td>
+      <td class="right">${grantTotals[g]>0?(grantTotals[g]*0.1).toFixed(0):'0'}</td>
+    </tr>`).join('');
+
+  const html = `
+    <div class="card ts-print-container">
+      <div class="ts-logo-bar">
+        <div>
+          <div class="ts-logo-text">TRANSFORMATIVE JUSTICE COMMUNITY</div>
+          <div class="ts-logo-sub">ReGroup Operations — Official Timesheet</div>
+        </div>
+      </div>
+      <div class="ts-meta-row">
+        <div class="ts-meta-item"><label>Employee</label><span>${mentor}</span></div>
+        <div class="ts-meta-item"><label>Start Date</label><span>${startDate ? fmtDateSlash(startDate) : '—'}</span></div>
+        <div class="ts-meta-item"><label>Regular Hrs</label><span>${regHrs.toFixed(2)}</span></div>
+        <div class="ts-meta-item"><label>Rate</label><span>$${rate.toFixed(2)}</span></div>
+      </div>
+      <table class="ts-main-table">
+        <thead>
+          <tr>
+            <th>DATE</th><th>Task name</th><th>Start time</th><th>Finish time</th>
+            <th>Regular hrs</th><th>Overtime</th><th>Lunch Time</th><th>Total Lunch</th>
+            <th>TOTAL HRS</th><th>Grant</th><th>BILLABLE</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHTML}${totalRow}</tbody>
+      </table>
+      <div class="ts-footer-row">
+        <div>
+          <div class="ts-sig-line">SUPERVISOR SIGNATURE</div>
+          <div style="font-size:8pt;margin-top:12px;">DATE &nbsp;&nbsp;_________________________</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:7pt;text-transform:uppercase;letter-spacing:0.06em;color:#666;margin-bottom:4px;">→</div>
+        </div>
+        <div class="ts-total-box">
+          <div class="big-num">${totHrs.toFixed(2)}</div>
+          <div class="big-lbl">TOTAL HOURS</div>
+          <div style="margin-top:10px;"></div>
+          <div class="bill-num">$${totBill.toFixed(2)}</div>
+          <div class="big-lbl">TOTAL BILLABLE</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid #ddd;padding-top:16px;">
+        <div class="ts-finance-grid">
+          <div>
+            <div class="ts-finance-title">For Finance Only:</div>
+            <table class="ts-finance-table">
+              <thead><tr><th></th><th style="text-align:right">Billable ($)</th><th style="text-align:right">Payroll Taxes</th></tr></thead>
+              <tbody>
+                ${financeRows}
+                <tr class="total-row">
+                  <td>TOTAL (should match above)</td>
+                  <td class="right">${totBill.toFixed(0)}</td>
+                  <td class="right">${(totBill*0.1).toFixed(0)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:8px;">
+            <p style="font-size:7.5pt;color:#888;line-height:1.7;">
+              Pay period: ${start?fmtDate(start):'—'} to ${end?fmtDate(end):'—'}<br>
+              Generated: ${new Date().toLocaleString()}<br>
+              Lunch deduction: ${lunch}h per shift<br>
+              Entries: ${dataRows.length}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('timesheet-output').innerHTML = html;
+  document.getElementById('timesheet-output').style.display = 'block';
+  document.getElementById('print-btn').style.display = 'inline-flex';
+  document.getElementById('timesheet-output').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ===================================================================
+// SETTINGS
+// ===================================================================
+function renderSettings() {
+  refreshStaffDatalist();
+  const staff = DB.staff();
+  document.getElementById('staff-list').innerHTML = staff.length ? staff.map((s,i)=>`
+    <div class="staff-card">
+      <div class="staff-avatar">${s.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
+      <div class="staff-info">
+        <div class="name">${s.name}</div>
+        <div class="meta">${s.role} · $${s.rate}/hr · ${s.regularHrs}h/pay period · ${s.defaultGrant}</div>
+        ${s.startDate?`<div class="meta">Start: ${fmtDate(s.startDate)}</div>`:''}
+      </div>
+      <button class="btn btn-danger" onclick="removeStaff(${i})" style="padding:6px 12px;font-size:0.78em;">Remove</button>
+    </div>
+  `).join('') : '<p style="color:#bbb;font-size:0.875em;margin-bottom:12px;">No staff members yet. Add your first team member below.</p>';
+}
+
+function showAddStaff() {
+  document.getElementById('add-staff-form').style.display='block';
+}
+
+function addStaff() {
+  const name = document.getElementById('staff-name').value.trim();
+  if (!name) { alert('Name is required.'); return; }
+  const arr = DB.staff();
+  arr.push({
+    id: uuid(), name,
+    role: document.getElementById('staff-role').value,
+    startDate: document.getElementById('staff-start-date').value,
+    rate: parseFloat(document.getElementById('staff-rate').value)||20,
+    regularHrs: parseFloat(document.getElementById('staff-reg-hrs').value)||16,
+    defaultGrant: document.getElementById('staff-grant').value
+  });
+  DB.saveStaff(arr);
+  document.getElementById('add-staff-form').style.display='none';
+  document.getElementById('staff-name').value='';
+  renderSettings();
+}
+
+function removeStaff(i) {
+  if (!confirm('Remove this staff member?')) return;
+  const arr = DB.staff(); arr.splice(i,1); DB.saveStaff(arr); renderSettings();
+}
+
+// ===================================================================
+// DATA IMPORT / EXPORT
+// ===================================================================
+function exportData() {
+  const blob = new Blob([JSON.stringify({
+    sessions:DB.sessions(), activities:DB.activities(), staff:DB.staff(),
+    exportedAt:new Date().toISOString()
+  },null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`regroup-data-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importDataJSON(e) {
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if(d.sessions)    DB.saveSessions(d.sessions);
+      if(d.activities)  DB.saveActivities(d.activities);
+      if(d.staff)       DB.saveStaff(d.staff);
+      showImportMsg('success',`✅ Imported: ${(d.sessions||[]).length} sessions, ${(d.activities||[]).length} activities, ${(d.staff||[]).length} staff.`);
+      renderSettings();
+    } catch(err) { showImportMsg('danger','❌ Error: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSVLine(line) {
+  const result=[]; let cur='',inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){inQ=!inQ;}
+    else if(line[i]===',' && !inQ){result.push(cur.trim());cur='';}
+    else{cur+=line[i];}
+  }
+  result.push(cur.trim()); return result;
+}
+
+function csvHeaderToKey(h) {
+  return h.toLowerCase().trim()
+    .replace(/[^a-z0-9\s]/g,'').replace(/\s+(.)/g,(_,c)=>c.toUpperCase());
+}
+
+function importCSV(e, type) {
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const lines=ev.target.result.split(/\r?\n/).filter(l=>l.trim());
+      const headers=parseCSVLine(lines[0]).map(csvHeaderToKey);
+      const records=lines.slice(1).filter(l=>l.trim()).map(line=>{
+        const vals=parseCSVLine(line);
+        const obj={id:uuid(),type,submittedAt:new Date().toISOString()};
+        headers.forEach((h,i)=>{ if(h) obj[h]=vals[i]||''; });
+        // Map common Google Sheets column names
+        if(obj.mentorName===undefined) obj.mentorName = obj.name||obj.mentor||'';
+        if(obj.dateOfService===undefined && type==='client') obj.dateOfService = obj.date||obj.dateOfActivity||'';
+        if(obj.dateOfActivity===undefined && type==='activity') obj.dateOfActivity = obj.date||'';
+        return obj;
+      });
+      if(type==='client'){
+        const ex=DB.sessions(); DB.saveSessions([...ex,...records]);
+      } else {
+        const ex=DB.activities(); DB.saveActivities([...ex,...records]);
+      }
+      showImportMsg('success',`✅ Imported ${records.length} ${type} records.`);
+    } catch(err){ showImportMsg('danger','❌ Error: '+err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function showImportMsg(type, msg) {
+  const el=document.getElementById('import-msg');
+  el.className=`alert alert-${type}`; el.textContent=msg; el.style.display='block';
+  setTimeout(()=>el.style.display='none',6000);
+}
+
+function clearAllData() {
+  if(!confirm('This will permanently delete all session and activity data. Staff records will be kept. Continue?')) return;
+  DB.saveSessions([]); DB.saveActivities([]);
+  showImportMsg('warn','⚠️ All session and activity data cleared.');
+}
+
+// ===================================================================
+// INIT
+// ===================================================================
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+initForms();
+refreshStaffDatalist();
+renderDashboard();
+</script>
+</body>
+</html>
