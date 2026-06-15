@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReGroup Community Check-In</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 50%, #006064 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+            padding: 50px 30px;
+            text-align: center;
+        }
+        .header h1 { color: white; font-size: 2.2em; margin-bottom: 15px; font-weight: 700; }
+        .header p { color: rgba(255, 255, 255, 0.95); font-size: 1.1em; line-height: 1.6; }
+        .intro-section { padding: 40px 30px; background: #f8f9fa; }
+        .intro-section h2 { color: #1a237e; font-size: 1.6em; margin-bottom: 20px; }
+        .why-box {
+            background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+            border-left: 5px solid #ffa000;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .why-box h3 { color: #e65100; font-size: 1.3em; margin-bottom: 15px; }
+        .why-box p { color: #333; line-height: 1.8; font-size: 1.05em; }
+        .start-button {
+            background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+            color: white;
+            border: none;
+            padding: 18px 60px;
+            font-size: 1.3em;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 188, 212, 0.4);
+            transition: all 0.3s ease;
+            display: block;
+            margin: 30px auto;
+        }
+        .start-button:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0, 188, 212, 0.5); }
+        .survey-form { display: none; padding: 40px 30px; }
+        .survey-form.active { display: block; }
+        .question-group {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 25px 0;
+            border-left: 5px solid #00bcd4;
+        }
+        .question { margin-bottom: 20px; }
+        .question label { display: block; color: #333; font-weight: 600; margin-bottom: 10px; font-size: 1.05em; }
+        input[type="text"], input[type="email"], input[type="number"], textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #00bcd4;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+        textarea { min-height: 100px; resize: vertical; }
+        .radio-group, .checkbox-group { background: white; padding: 15px; border-radius: 8px; }
+        .radio-group label, .checkbox-group label {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: normal;
+        }
+        .radio-group label:hover, .checkbox-group label:hover { background: #f0f0f0; }
+        input[type="radio"], input[type="checkbox"] { margin-right: 10px; width: 18px; height: 18px; cursor: pointer; }
+        .submit-button {
+            background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
+            color: white;
+            border: none;
+            padding: 18px 80px;
+            font-size: 1.4em;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 188, 212, 0.4);
+            transition: all 0.3s ease;
+            display: block;
+            margin: 40px auto;
+        }
+        .submit-button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0, 188, 212, 0.5); }
+        .submit-button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .alert {
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .alert-success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.6em; }
+            .intro-section { padding: 30px 20px; }
+            .survey-form { padding: 30px 20px; }
+            .start-button, .submit-button { padding: 15px 40px; font-size: 1.1em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="landingPage">
+            <div class="header">
+                <h1>🌟 ReGroup Community Check-In</h1>
+                <p>Your voice strengthens our community</p>
+            </div>
+            <div class="intro-section">
+                <h2>Hey Family,</h2>
+                <p style="color: #555; font-size: 1.1em; line-height: 1.8; margin-top: 15px;">
+                    Thank you for being part of ReGroup. This quick check-in helps us understand how we're doing 
+                    and what we can do better. More importantly, <strong>it directly impacts our ability to keep 
+                    this community going</strong>.
+                </p>
+                <div class="why-box">
+                    <h3>💬 Real Talk: Why This Matters</h3>
+                    <p><strong>Our funding depends on showing that ReGroup works.</strong> The state needs to see numbers—how many 
+                    people we're reaching, what kind of support we're providing, and the real impact we're having on people's lives.</p>
+                    <p style="margin-top: 15px;">Without these numbers, we lose funding. Without funding, we can't keep the lights on, pay our peer 
+                    specialists, or provide the resources our community needs. <strong>Your 5 minutes filling this out helps 
+                    secure another year of ReGroup.</strong></p>
+                </div>
+                <div style="background: white; padding: 25px; border-radius: 10px; margin: 25px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                    <h3 style="color: #1a237e; margin-bottom: 15px;">What to Expect:</h3>
+                    <ul style="color: #555; line-height: 2; list-style-position: inside;">
+                        <li>⏱️ Takes 5-7 minutes</li>
+                        <li>🔒 Completely anonymous—no names</li>
+                        <li>💭 Skip any question you want</li>
+                        <li>💪 Every response strengthens our case for continued funding</li>
+                    </ul>
+                </div>
+                <button class="start-button" onclick="startSurvey()">Let's Do This</button>
+            </div>
+        </div>
+
+        <div id="surveyForm" class="survey-form">
+            <div id="successMessage" style="display: none;" class="alert alert-success">
+                ✅ Thank you! Your response has been submitted successfully.<br>
+                You just helped keep ReGroup alive.
+            </div>
+
+            <form id="regroupForm" method="POST">
+                <h2 style="color: #1a237e; text-align: center; margin-bottom: 30px;">Community Check-In</h2>
+
+                <div class="question-group">
+                    <div class="question">
+                        <label>How long have you been connected with ReGroup?</label>
+                        <select name="connection_length">
+                            <option value="">Choose one...</option>
+                            <option value="new">New (less than 3 months)</option>
+                            <option value="3-6months">3-6 months</option>
+                            <option value="6months-1year">6 months to a year</option>
+                            <option value="1-2years">1-2 years</option>
+                            <option value="2plus">More than 2 years</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <h3 style="color: #1a237e; margin-bottom: 20px;">What We've Done Together</h3>
+                    <div class="question">
+                        <label>What kind of support have you gotten from ReGroup? (Check all that apply)</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="services" value="peer_meetings"> Met with peer specialist or mentor</label>
+                            <label><input type="checkbox" name="services" value="group"> Went to group meetings/events</label>
+                            <label><input type="checkbox" name="services" value="crisis"> Crisis support when things got tough</label>
+                            <label><input type="checkbox" name="services" value="resources"> Help finding resources (housing, jobs, etc.)</label>
+                            <label><input type="checkbox" name="services" value="employment"> Job/employment help</label>
+                            <label><input type="checkbox" name="services" value="housing"> Housing assistance</label>
+                            <label><input type="checkbox" name="services" value="other"> Something else: <input type="text" name="services_other" style="width: 200px; display: inline; margin-left: 10px;"></label>
+                        </div>
+                    </div>
+                    <div class="question">
+                        <label>In the past 3 months, about how many times did you connect with ReGroup? (meetings, calls, texts, etc.)</label>
+                        <select name="connection_frequency">
+                            <option value="">Choose one...</option>
+                            <option value="0">Haven't connected recently</option>
+                            <option value="1-2">1-2 times</option>
+                            <option value="3-5">3-5 times</option>
+                            <option value="6-10">6-10 times</option>
+                            <option value="10plus">10+ times</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <h3 style="color: #1a237e; margin-bottom: 20px;">How Things Are Going</h3>
+                    <div class="question">
+                        <label>Since connecting with ReGroup, how are things overall?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="overall_improvement" value="much_better"> Much better</label>
+                            <label><input type="radio" name="overall_improvement" value="somewhat_better"> Somewhat better</label>
+                            <label><input type="radio" name="overall_improvement" value="about_same"> About the same</label>
+                            <label><input type="radio" name="overall_improvement" value="harder"> Things have gotten harder</label>
+                        </div>
+                    </div>
+                    <div class="question">
+                        <label>What's gotten better since you connected with ReGroup? (Check all that apply)</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" name="improvements" value="housing"> Housing situation</label>
+                            <label><input type="checkbox" name="improvements" value="employment"> Job/work situation</label>
+                            <label><input type="checkbox" name="improvements" value="mental_health"> Mental health</label>
+                            <label><input type="checkbox" name="improvements" value="relationships"> Relationships with family/friends</label>
+                            <label><input type="checkbox" name="improvements" value="safety"> Feel safer</label>
+                            <label><input type="checkbox" name="improvements" value="hope"> Feel more hopeful about the future</label>
+                            <label><input type="checkbox" name="improvements" value="community"> Feel more connected to community</label>
+                            <label><input type="checkbox" name="improvements" value="none"> Nothing yet/too early to say</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <h3 style="color: #1a237e; margin-bottom: 20px;">Staying Safe</h3>
+                    <div class="question">
+                        <label>Since connecting with ReGroup, have you been able to avoid situations that could have turned violent?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="violence_prevention" value="yes_multiple"> Yes, multiple times</label>
+                            <label><input type="radio" name="violence_prevention" value="yes_once"> Yes, at least once</label>
+                            <label><input type="radio" name="violence_prevention" value="not_sure"> Not sure</label>
+                            <label><input type="radio" name="violence_prevention" value="no"> No</label>
+                            <label><input type="radio" name="violence_prevention" value="na"> Not applicable to my situation</label>
+                        </div>
+                    </div>
+                    <div class="question">
+                        <label>Do you feel ReGroup has helped reduce conflict in your life?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="conflict_reduction" value="yes_definitely"> Yes, definitely</label>
+                            <label><input type="radio" name="conflict_reduction" value="yes_somewhat"> Yes, somewhat</label>
+                            <label><input type="radio" name="conflict_reduction" value="no_difference"> No difference yet</label>
+                            <label><input type="radio" name="conflict_reduction" value="na"> Not applicable</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <h3 style="color: #1a237e; margin-bottom: 20px;">Community & Belonging</h3>
+                    <div class="question">
+                        <label>Have you made meaningful connections with others through ReGroup?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="connections" value="yes_many"> Yes, several people</label>
+                            <label><input type="radio" name="connections" value="yes_few"> Yes, a few people</label>
+                            <label><input type="radio" name="connections" value="working_on_it"> Working on it</label>
+                            <label><input type="radio" name="connections" value="not_yet"> Not yet</label>
+                        </div>
+                    </div>
+                    <div class="question">
+                        <label>Have you been able to help or support someone else since connecting with ReGroup?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="helping_others" value="yes_regularly"> Yes, regularly</label>
+                            <label><input type="radio" name="helping_others" value="yes_occasionally"> Yes, occasionally</label>
+                            <label><input type="radio" name="helping_others" value="want_to"> Want to but haven't yet</label>
+                            <label><input type="radio" name="helping_others" value="not_yet"> Not yet</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <h3 style="color: #1a237e; margin-bottom: 20px;">Where You're At</h3>
+                    <div class="question">
+                        <label>What county do you live in?</label>
+                        <input type="text" name="county" placeholder="Enter county name">
+                    </div>
+                    <div class="question">
+                        <label>Where do you mainly connect with ReGroup services?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="service_area" value="willamette"> Willamette Valley</label>
+                            <label><input type="radio" name="service_area" value="portland"> Portland metro</label>
+                            <label><input type="radio" name="service_area" value="other_oregon"> Other Oregon location</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <h3 style="color: #1a237e; margin-bottom: 20px;">Your Voice</h3>
+                    <div class="question">
+                        <label>What's the most valuable thing ReGroup has done for you?</label>
+                        <textarea name="most_valuable" placeholder="Share what matters most to you..."></textarea>
+                    </div>
+                    <div class="question">
+                        <label>What would make ReGroup even better?</label>
+                        <textarea name="improvements_needed" placeholder="What do we need to add, change, or do more of?"></textarea>
+                    </div>
+                    <div class="question">
+                        <label>Would you recommend ReGroup to someone who needs support?</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="recommend" value="definitely"> Definitely</label>
+                            <label><input type="radio" name="recommend" value="probably"> Probably</label>
+                            <label><input type="radio" name="recommend" value="maybe"> Maybe</label>
+                            <label><input type="radio" name="recommend" value="probably_not"> Probably not</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="question-group">
+                    <h3 style="color: #1a237e; margin-bottom: 20px;">Optional Info (Helps Us Show We Serve Everyone)</h3>
+                    <p style="color: #666; margin-bottom: 20px; font-size: 0.95em;">
+                        This helps us prove to funders that we're reaching diverse communities. Totally optional.
+                    </p>
+                    <div class="question">
+                        <label>Age range</label>
+                        <select name="age">
+                            <option value="">Prefer not to answer</option>
+                            <option value="18-24">18-24</option>
+                            <option value="25-34">25-34</option>
+                            <option value="35-44">35-44</option>
+                            <option value="45-54">45-54</option>
+                            <option value="55-64">55-64</option>
+                            <option value="65plus">65+</option>
+                        </select>
+                    </div>
+                    <div class="question">
+                        <label>Gender</label>
+                        <select name="gender">
+                            <option value="">Prefer not to answer</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="nonbinary">Non-binary</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-button" id="submitBtn">Submit</button>
+                
+                <p style="text-align: center; color: #666; margin: 20px 0;">
+                    Thank you for taking the time to share your experience.<br>
+                    You just helped keep ReGroup alive.
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function startSurvey() {
+            document.getElementById('landingPage').style.display = 'none';
+            document.getElementById('surveyForm').classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        document.getElementById('regroupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            
+            try {
+                const formData = new FormData(this);
+                
+                // Send to FormSubmit
+                const response = await fetch('https://formsubmit.co/chayes@tjcoregon.org', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    document.getElementById('successMessage').style.display = 'block';
+                    this.style.display = 'none';
+                    window.scrollTo(0, 0);
+                } else {
+                    throw new Error('Submission failed');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message + '\n\nPlease contact chayes@tjcoregon.org directly with your responses.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit';
+            }
+        });
+    </script>
+</body>
+</html>
