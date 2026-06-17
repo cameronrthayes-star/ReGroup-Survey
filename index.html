@@ -233,6 +233,7 @@ table tr:hover td{background:#fafbff;}
 
     <div class="nav-section">Directory</div>
     <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon">👥</span> Client Directory</a>
+    <a onclick="navigate('email-blast')" data-view="email-blast"><span class="nav-icon">📧</span> Email Blast</a>
 
     <div class="nav-section">Forms</div>
     <a onclick="navigate('needs-assessment')" data-view="needs-assessment"><span class="nav-icon">📋</span> Needs Assessment</a>
@@ -977,6 +978,46 @@ table tr:hover td{background:#fafbff;}
       </div>
     </div>
 
+    <!-- ===== EMAIL BLAST ===== -->
+    <div id="view-email-blast" class="view">
+      <div class="card">
+        <h3>📧 Email Blast</h3>
+        <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Compose a message to send to clients. Your email app will open with all addresses in the BCC field. For large lists, use the <b>Copy Addresses</b> button and paste into Gmail/Outlook BCC manually.</p>
+
+        <div class="form-group">
+          <label>From</label>
+          <input type="text" value="chayes@tjcoregon.org" readonly style="background:#f0f4ff;font-weight:600;color:var(--primary);">
+        </div>
+
+        <div class="form-group">
+          <label>Recipients</label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <select id="eb-filter" onchange="updateEBPreview()" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;">
+              <option value="all">All clients with email addresses</option>
+              <option value="accurate">Accurate confirmation only</option>
+            </select>
+            <span id="eb-count" style="font-size:0.85em;color:#666;"></span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Subject *</label>
+          <input type="text" id="eb-subject" placeholder="Email subject…">
+        </div>
+
+        <div class="form-group">
+          <label>Message Body *</label>
+          <textarea id="eb-body" rows="8" placeholder="Type your message here…" style="min-height:160px;"></textarea>
+        </div>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
+          <button class="btn btn-outline" onclick="copyEBAddresses()">📋 Copy All Addresses</button>
+          <button class="btn btn-primary" onclick="openEBMailto()">📨 Open in Email App</button>
+        </div>
+        <div id="eb-msg" style="display:none;margin-top:14px;"></div>
+      </div>
+    </div>
+
     <!-- ===== NEEDS ASSESSMENT ===== -->
     <div id="view-needs-assessment" class="view">
       <div class="tabs no-print">
@@ -1361,6 +1402,7 @@ const VIEW_TITLES = {
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
   'clients':'Client Directory',
+  'email-blast':'Email Blast',
 };
 
 // ===================================================================
@@ -1430,8 +1472,8 @@ function changeAdminPIN() {
 }
 
 function navigate(v) {
-  if (v === 'settings' && !_adminUnlocked) {
-    promptAdminPIN(() => navigate('settings'));
+  if ((v === 'settings' || v === 'email-blast') && !_adminUnlocked) {
+    promptAdminPIN(() => navigate(v));
     return;
   }
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
@@ -1446,6 +1488,7 @@ function navigate(v) {
   if (v==='timesheets') populateTsMentors();
   if (v==='settings') renderSettings();
   if (v==='clients') renderClientDirectory();
+  if (v==='email-blast') updateEBPreview();
 }
 
 // ===================================================================
@@ -1861,11 +1904,73 @@ async function saveClient() {
   closeClientModal();
 }
 
-async function deleteClient() {
+function deleteClient() {
   const id = document.getElementById('cm-id').value;
-  if (!id || !confirm('Remove this client from the directory?')) return;
-  await DB.removeClient(id);
-  closeClientModal();
+  if (!id) return;
+  promptAdminPIN(async () => {
+    if (!confirm('Remove this client from the directory? This cannot be undone.')) return;
+    await DB.removeClient(id);
+    closeClientModal();
+  });
+}
+
+// ===================================================================
+// EMAIL BLAST
+// ===================================================================
+function getEBRecipients() {
+  const filter = document.getElementById('eb-filter')?.value || 'all';
+  return DB.clients()
+    .filter(c => c.email && c.email.trim())
+    .filter(c => filter === 'accurate' ? c.confirmation === 'Accurate' : true)
+    .map(c => c.email.trim());
+}
+
+function updateEBPreview() {
+  const emails = getEBRecipients();
+  const el = document.getElementById('eb-count');
+  if (el) el.textContent = `${emails.length} recipient${emails.length !== 1 ? 's' : ''}`;
+}
+
+function copyEBAddresses() {
+  const emails = getEBRecipients();
+  if (!emails.length) { showEBMsg('warn', '⚠️ No email addresses found for the selected filter.'); return; }
+  navigator.clipboard.writeText(emails.join(', ')).then(() => {
+    showEBMsg('success', `✅ Copied ${emails.length} email addresses to clipboard. Paste into BCC in Gmail or Outlook.`);
+  }).catch(() => {
+    // Fallback: show in a textarea
+    const ta = document.createElement('textarea');
+    ta.value = emails.join(', ');
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showEBMsg('success', `✅ Copied ${emails.length} email addresses to clipboard.`);
+  });
+}
+
+function openEBMailto() {
+  const emails = getEBRecipients();
+  if (!emails.length) { showEBMsg('warn', '⚠️ No email addresses found.'); return; }
+  const subject = document.getElementById('eb-subject').value.trim();
+  const body    = document.getElementById('eb-body').value.trim();
+  if (!subject) { showEBMsg('warn', '⚠️ Please enter a subject.'); return; }
+  // mailto: has browser URL limits ~2000 chars — warn if large
+  const bcc = emails.join(',');
+  const url = `mailto:?from=chayes%40tjcoregon.org&bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (url.length > 2000) {
+    showEBMsg('warn', `⚠️ Too many recipients for mailto: (${emails.length} addresses). Use <b>Copy All Addresses</b> and paste into Gmail/Outlook BCC instead.`);
+    return;
+  }
+  window.open(url, '_blank');
+  showEBMsg('success', '✅ Opening your email app…');
+}
+
+function showEBMsg(type, html) {
+  const el = document.getElementById('eb-msg');
+  el.className = `alert alert-${type}`;
+  el.innerHTML = html;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 8000);
 }
 
 document.getElementById('client-modal').addEventListener('click', function(e) {
@@ -2656,6 +2761,7 @@ Object.assign(window, {
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
+  updateEBPreview, copyEBAddresses, openEBMailto,
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
