@@ -868,6 +868,13 @@ table tr:hover td{background:#fafbff;}
             </div>
           </div>
         </div>
+        <div style="display:flex;flex-direction:column;gap:20px;">
+        <div class="card">
+          <h3>Security</h3>
+          <p style="font-size:0.85em;color:#666;margin-bottom:14px;">The admin PIN protects Staff &amp; Settings from being changed by mentors. Default PIN is <b>1234</b> — change it below.</p>
+          <button class="btn btn-accent" onclick="changeAdminPIN()">🔑 Change Admin PIN</button>
+          <p style="font-size:0.78em;color:#aaa;margin-top:10px;">PIN is stored on this device. Share it only with admins.</p>
+        </div>
         <div class="card">
           <h3>Data Management</h3>
           <div style="display:flex;flex-direction:column;gap:12px;">
@@ -891,6 +898,7 @@ table tr:hover td{background:#fafbff;}
           </div>
           <div id="import-msg" class="alert" style="display:none;margin-top:14px;"></div>
         </div>
+        </div><!-- /right column flex -->
       </div>
     </div>
 
@@ -1052,6 +1060,25 @@ table tr:hover td{background:#fafbff;}
 
   </div><!-- /content -->
 </div><!-- /main -->
+
+<!-- PIN OVERLAY -->
+<div id="pin-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(10,20,60,0.72);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:40px 36px;width:320px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+    <div style="font-size:2em;margin-bottom:8px;">🔒</div>
+    <h2 style="color:var(--primary);margin-bottom:6px;font-size:1.2em;">Admin Access Required</h2>
+    <p style="color:#777;font-size:0.85em;margin-bottom:24px;">Enter the admin PIN to access Staff &amp; Settings.</p>
+    <input id="pin-input" type="password" inputmode="numeric" maxlength="8"
+      placeholder="Enter PIN"
+      style="width:100%;padding:12px;border:2px solid #ddd;border-radius:10px;font-size:1.3em;text-align:center;letter-spacing:0.25em;margin-bottom:10px;font-family:monospace;"
+      onkeydown="if(event.key==='Enter')submitPIN()">
+    <div id="pin-error" style="color:#e53935;font-size:0.82em;min-height:18px;margin-bottom:10px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="cancelPIN()" class="btn btn-outline" style="flex:1;">Cancel</button>
+      <button onclick="submitPIN()" class="btn btn-primary" style="flex:1;">Unlock</button>
+    </div>
+    <p style="color:#bbb;font-size:0.75em;margin-top:18px;">Default PIN: 1234 — change it in Settings once unlocked.</p>
+  </div>
+</div>
 
 <script type="module">
 // ===================================================================
@@ -1233,7 +1260,60 @@ const VIEW_TITLES = {
   'expense-report':'Expense Reimbursement'
 };
 
+// ===================================================================
+// AUTH — PIN gate for Settings view
+// ===================================================================
+const DEFAULT_ADMIN_PIN = '1234';
+let _adminUnlocked = false;
+
+function getAdminPIN() {
+  return localStorage.getItem('rg_admin_pin') || DEFAULT_ADMIN_PIN;
+}
+
+function promptAdminPIN(onSuccess) {
+  const overlay = document.getElementById('pin-overlay');
+  document.getElementById('pin-input').value = '';
+  document.getElementById('pin-error').textContent = '';
+  overlay.style.display = 'flex';
+  document.getElementById('pin-input').focus();
+  window._pinCallback = onSuccess;
+}
+
+function submitPIN() {
+  const entered = document.getElementById('pin-input').value;
+  if (entered === getAdminPIN()) {
+    _adminUnlocked = true;
+    document.getElementById('pin-overlay').style.display = 'none';
+    if (window._pinCallback) window._pinCallback();
+    window._pinCallback = null;
+  } else {
+    document.getElementById('pin-error').textContent = '❌ Incorrect PIN. Try again.';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+}
+
+function cancelPIN() {
+  document.getElementById('pin-overlay').style.display = 'none';
+  window._pinCallback = null;
+}
+
+function changeAdminPIN() {
+  const current = prompt('Enter current PIN:');
+  if (current !== getAdminPIN()) { alert('Incorrect current PIN.'); return; }
+  const next = prompt('Enter new PIN (4–8 digits):');
+  if (!next || !/^\d{4,8}$/.test(next)) { alert('PIN must be 4–8 digits.'); return; }
+  const confirm2 = prompt('Confirm new PIN:');
+  if (next !== confirm2) { alert('PINs do not match.'); return; }
+  localStorage.setItem('rg_admin_pin', next);
+  alert('✅ PIN changed successfully.');
+}
+
 function navigate(v) {
+  if (v === 'settings' && !_adminUnlocked) {
+    promptAdminPIN(() => navigate('settings'));
+    return;
+  }
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('#sidebar nav a').forEach(el=>el.classList.remove('active'));
   const ve = document.getElementById('view-'+v);
@@ -2182,7 +2262,8 @@ Object.assign(window, {
   exportData, importDataJSON, importCSV, clearAllData,
   renderAllData, renderDashboard, renderDataView, renderSettings,
   renderNAList, printNA,
-  renderERList, printER, addERRow, updateERTotal
+  renderERList, printER, addERRow, updateERTotal,
+  submitPIN, cancelPIN, changeAdminPIN
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
