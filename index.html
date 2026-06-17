@@ -1080,6 +1080,21 @@ table tr:hover td{background:#fafbff;}
   </div>
 </div>
 
+<!-- APP LOGIN SCREEN -->
+<div id="app-login" style="position:fixed;inset:0;z-index:10000;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-direction:column;">
+  <div style="background:#fff;border-radius:20px;padding:48px 44px;width:360px;text-align:center;box-shadow:0 12px 50px rgba(0,0,0,0.4);">
+    <div style="font-size:2.8em;margin-bottom:6px;">🔐</div>
+    <h1 style="color:var(--primary);font-size:1.5em;margin-bottom:4px;font-weight:800;">ReGroup</h1>
+    <p style="color:#999;font-size:0.8em;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:28px;">Operations Platform</p>
+    <input id="app-password-input" type="password" placeholder="Enter password"
+      style="width:100%;padding:13px 16px;border:2px solid #ddd;border-radius:10px;font-size:1.05em;text-align:center;letter-spacing:0.15em;margin-bottom:10px;font-family:inherit;transition:border-color 0.2s;"
+      onkeydown="if(event.key==='Enter')submitAppLogin()"
+      oninput="document.getElementById('app-login-error').textContent=''">
+    <div id="app-login-error" style="color:#e53935;font-size:0.82em;min-height:18px;margin-bottom:12px;"></div>
+    <button onclick="submitAppLogin()" style="width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:1em;font-weight:700;cursor:pointer;font-family:inherit;transition:background 0.2s;" onmouseover="this.style.background='var(--primary-light)'" onmouseout="this.style.background='var(--primary)'">Sign In</button>
+  </div>
+</div>
+
 <script type="module">
 // ===================================================================
 // FIREBASE CONFIG — paste your firebaseConfig object here
@@ -1296,6 +1311,23 @@ function submitPIN() {
 function cancelPIN() {
   document.getElementById('pin-overlay').style.display = 'none';
   window._pinCallback = null;
+}
+
+// ===================================================================
+// APP LOGIN
+// ===================================================================
+const APP_PASSWORD = 'ELITE';
+
+function submitAppLogin() {
+  const entered = document.getElementById('app-password-input').value;
+  if (entered === APP_PASSWORD) {
+    document.getElementById('app-login').style.display = 'none';
+    document.getElementById('app-password-input').value = '';
+  } else {
+    document.getElementById('app-login-error').textContent = '❌ Incorrect password. Try again.';
+    document.getElementById('app-password-input').value = '';
+    document.getElementById('app-password-input').focus();
+  }
 }
 
 function changeAdminPIN() {
@@ -2263,7 +2295,8 @@ Object.assign(window, {
   renderAllData, renderDashboard, renderDataView, renderSettings,
   renderNAList, printNA,
   renderERList, printER, addERRow, updateERTotal,
-  submitPIN, cancelPIN, changeAdminPIN
+  submitPIN, cancelPIN, changeAdminPIN,
+  submitAppLogin
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
