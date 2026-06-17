@@ -232,6 +232,7 @@ table tr:hover td{background:#fafbff;}
     <div class="nav-section">Log Entry</div>
     <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon">📝</span> Progress Note</a>
     <a onclick="navigate('activity-log')" data-view="activity-log"><span class="nav-icon">📋</span> Activity Log</a>
+    <a onclick="navigate('meetings')" data-view="meetings"><span class="nav-icon">🤝</span> Meetings</a>
 
     <div class="nav-section">Reports</div>
     <a onclick="navigate('data-view')" data-view="data-view"><span class="nav-icon">🗂</span> Data View</a>
@@ -1298,6 +1299,35 @@ table tr:hover td{background:#fafbff;}
       </div>
     </div>
 
+    <!-- ===== MEETINGS ===== -->
+    <div id="view-meetings" class="view">
+      <div class="tabs no-print">
+        <button class="tab-btn active" onclick="switchTab('mtg-tab-new',this)">Log a Meeting</button>
+        <button class="tab-btn" onclick="switchTab('mtg-tab-list',this);renderMeetingsList()">All Meetings</button>
+      </div>
+      <div id="mtg-tab-new" class="tab-content active card">
+        <h3>Log a Meeting</h3>
+        <form id="meetings-form">
+          <div class="form-grid">
+            <div class="form-group full"><label>Meeting Location / Address *</label><input type="text" name="location" required placeholder="e.g. 123 Main St, Portland OR — or Zoom"></div>
+            <div class="form-group"><label>Date *</label><input type="date" name="meetingDate" required></div>
+            <div class="form-group"><label>Logged By</label><input type="text" name="loggedBy" list="staff-datalist" placeholder="Your name"></div>
+            <div class="form-group full"><label>Attendees *</label><textarea name="attendees" rows="3" required placeholder="List names of everyone who attended, one per line or comma-separated"></textarea></div>
+            <div class="form-group full"><label>Topic / Agenda *</label><input type="text" name="topic" required placeholder="Main topic or purpose of the meeting"></div>
+            <div class="form-group full"><label>Notes</label><textarea name="notes" rows="6" placeholder="Key discussion points, decisions made, follow-up actions…"></textarea></div>
+          </div>
+          <div style="text-align:center;padding:10px 0;">
+            <button type="submit" class="btn btn-primary btn-lg">Save Meeting</button>
+          </div>
+          <div id="mtg-success" class="alert alert-success" style="display:none;margin-top:12px;">✅ Meeting saved!</div>
+        </form>
+      </div>
+      <div id="mtg-tab-list" class="tab-content card">
+        <h3>All Meetings</h3>
+        <div id="meetings-list"></div>
+      </div>
+    </div>
+
     <!-- ===== NEEDS ASSESSMENT ===== -->
     <div id="view-needs-assessment" class="view">
       <div class="tabs no-print">
@@ -1527,7 +1557,7 @@ let _listenersReady   = 0;
 
 function _onReady() {
   _listenersReady++;
-  if (_listenersReady === 9) {
+  if (_listenersReady === 10) {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
@@ -1569,6 +1599,7 @@ let _clients  = [];
 let _tasks    = [];
 let _projects = [];
 let _events   = [];
+let _meetings = [];
 
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -1590,6 +1621,11 @@ onSnapshot(query(collection(db,'events'),   orderBy('_createdAt','asc')), snap =
   _events = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-events')?.classList.contains('active')) renderEvents();
+});
+onSnapshot(query(collection(db,'meetings'), orderBy('_createdAt','asc')), snap => {
+  _meetings = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('view-meetings')?.classList.contains('active')) renderMeetingsList();
 });
 
 const DB = {
@@ -1617,6 +1653,8 @@ const DB = {
   async removeProject(id)   { await deleteDoc(doc(db,'projects',id)); },
 
   async addEvent(e)         { await addDoc(collection(db,'events'),   {...e, _createdAt: serverTimestamp()}); },
+  async addMeeting(m)       { await addDoc(collection(db,'meetings'), {...m, _createdAt: serverTimestamp()}); },
+  meetings: () => _meetings,
 
   async addSession(s) {
     await addDoc(collection(db,'sessions'), {...s, _createdAt: serverTimestamp()});
@@ -1723,6 +1761,7 @@ const VIEW_TITLES = {
   'my-tasks':'My Tasks',
   'projects':'Projects',
   'events':'Events & Social Media',
+  'meetings':'Meeting Log',
 };
 
 // ===================================================================
@@ -1813,6 +1852,7 @@ function navigate(v) {
   if (v==='my-tasks') renderMyTasks();
   if (v==='projects') renderProjects();
   if (v==='events') renderEvents();
+  if (v==='meetings') renderMeetingsList();
 }
 
 // ===================================================================
@@ -3706,6 +3746,53 @@ function copyEvText(containerId) {
 const copyText = copyEvText;
 
 // ===================================================================
+// MEETINGS
+// ===================================================================
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderMeetingsList() {
+  const el = document.getElementById('meetings-list');
+  if (!el) return;
+  const meetings = DB.meetings().slice().reverse();
+  if (!meetings.length) { el.innerHTML='<p style="color:#bbb;font-size:0.875em;">No meetings logged yet.</p>'; return; }
+  el.innerHTML = meetings.map(m => {
+    return '<div class="card" style="margin-bottom:16px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">' +
+        '<div>' +
+          '<div style="font-weight:700;font-size:1.05em;color:var(--primary);">🤝 ' + _esc(m.topic||'Meeting') + '</div>' +
+          '<div style="font-size:0.8em;color:#999;">' + (m.meetingDate?fmtDate(m.meetingDate)+' · ':'') + '📍 ' + _esc(m.location||'No location') + (m.loggedBy?' · Logged by '+_esc(m.loggedBy):'') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-bottom:6px;"><strong>Attendees:</strong> ' + _esc(m.attendees||'—') + '</div>' +
+      (m.notes ? '<div style="margin-top:8px;background:#f8f9fa;border-radius:8px;padding:12px;font-size:0.875em;white-space:pre-wrap;line-height:1.6;">' + _esc(m.notes) + '</div>' : '') +
+    '</div>';
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const mf = document.getElementById('meetings-form');
+  if (mf) mf.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(mf);
+    const btn = mf.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await DB.addMeeting({
+        location:    fd.get('location')?.trim()||'',
+        meetingDate: fd.get('meetingDate')||'',
+        loggedBy:    fd.get('loggedBy')?.trim()||'',
+        attendees:   fd.get('attendees')?.trim()||'',
+        topic:       fd.get('topic')?.trim()||'',
+        notes:       fd.get('notes')?.trim()||'',
+      });
+      mf.reset();
+      const s = document.getElementById('mtg-success');
+      if (s) { s.style.display='block'; setTimeout(()=>s.style.display='none', 3000); }
+    } catch(err) { alert('Error saving meeting: '+err.message); }
+    btn.disabled = false; btn.textContent = 'Save Meeting';
+  });
+});
+
+// ===================================================================
 // SETTINGS
 // ===================================================================
 function renderSettings() {
@@ -3853,6 +3940,7 @@ Object.assign(window, {
   renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject, openProjectDetail, closeProjectDetail, postProjectUpdate,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   renderEvents, switchEvTab, copyEvText, copyText,
+  renderMeetingsList,
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
