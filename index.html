@@ -1718,6 +1718,17 @@ function clearAllData() {
 // ===================================================================
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 initForms();
+
+// Expose all functions used by inline onclick/onchange handlers to global scope
+// (required because <script type="module"> does not share scope with HTML attributes)
+Object.assign(window, {
+  navigate, switchTab, filterPayPeriod, exportTableCSV,
+  generateTimesheet, tsUpdateFromStaff, populateTsMentors,
+  showAddStaff, addStaff, removeStaff,
+  exportData, importDataJSON, importCSV, clearAllData,
+  renderAllData, renderDashboard, renderDataView, renderSettings
+});
+
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
 </script>
 </body>
