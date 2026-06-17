@@ -239,6 +239,14 @@ table tr:hover td{background:#fafbff;}
     <a onclick="navigate('needs-assessment')" data-view="needs-assessment"><span class="nav-icon">📋</span> Needs Assessment</a>
     <a onclick="navigate('expense-report')" data-view="expense-report"><span class="nav-icon">💳</span> Expense Report</a>
 
+    <div class="nav-section">Alerts & Tasks</div>
+    <a onclick="navigate('admin-inbox')" data-view="admin-inbox"><span class="nav-icon">🔔</span> Admin Inbox</a>
+    <a onclick="navigate('my-tasks')" data-view="my-tasks"><span class="nav-icon">✅</span> My Tasks</a>
+
+    <div class="nav-section">Work</div>
+    <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon">📁</span> Projects</a>
+    <a onclick="navigate('events')" data-view="events"><span class="nav-icon">📸</span> Events & Social</a>
+
     <div class="nav-section">Admin</div>
     <a onclick="navigate('settings')" data-view="settings"><span class="nav-icon">⚙️</span> Staff & Settings</a>
   </nav>
@@ -1018,6 +1026,156 @@ table tr:hover td{background:#fafbff;}
       </div>
     </div>
 
+    <!-- ===== ADMIN INBOX ===== -->
+    <div id="view-admin-inbox" class="view">
+      <div class="tabs no-print">
+        <button class="tab-btn active" onclick="switchTab('ai-tab-alerts',this)">🔔 Client Alerts</button>
+        <button class="tab-btn" onclick="switchTab('ai-tab-tasks',this);renderAdminTasks()">📋 All Tasks</button>
+      </div>
+      <div id="ai-tab-alerts" class="tab-content active">
+        <div class="card" style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div>
+              <h3 style="margin-bottom:4px;">Client Alert Radar</h3>
+              <p style="color:#666;font-size:0.85em;">Auto-detected from session history. Click any alert to assign it as a task to a mentor.</p>
+            </div>
+            <button class="btn btn-accent" onclick="refreshAlerts()">🔄 Refresh</button>
+          </div>
+        </div>
+        <div id="alert-list"><p style="color:#bbb;font-size:0.875em;padding:20px 0;">Loading alerts…</p></div>
+      </div>
+      <div id="ai-tab-tasks" class="tab-content">
+        <div class="card">
+          <h3>All Assigned Tasks</h3>
+          <div id="admin-tasks-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assign Task Modal -->
+    <div id="assign-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:32px 28px;width:480px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 style="color:var(--primary);margin-bottom:18px;">Assign Task to Mentor</h3>
+        <input type="hidden" id="am-alert-data">
+        <div class="form-group">
+          <label>Assign To</label>
+          <select id="am-mentor" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;"></select>
+        </div>
+        <div class="form-group">
+          <label>Task Description</label>
+          <textarea id="am-description" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;resize:vertical;min-height:70px;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Due Date</label>
+          <input type="date" id="am-due" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;">
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+          <button class="btn btn-outline" onclick="closeAssignModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveAssignedTask()">Assign Task</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MY TASKS ===== -->
+    <div id="view-my-tasks" class="view">
+      <div class="card" style="margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <label style="font-weight:600;color:#333;">Viewing tasks for:</label>
+          <select id="my-tasks-mentor" onchange="renderMyTasks()" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;min-width:200px;">
+            <option value="">— Select your name —</option>
+          </select>
+          <span id="my-tasks-count" style="font-size:0.85em;color:#999;"></span>
+        </div>
+      </div>
+      <div id="my-tasks-list"></div>
+    </div>
+
+    <!-- ===== PROJECTS ===== -->
+    <div id="view-projects" class="view">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <h2 style="color:var(--primary);font-size:1.1em;font-weight:700;">Projects</h2>
+        <button class="btn btn-accent" onclick="openProjectModal(null)">+ New Project</button>
+      </div>
+      <div id="projects-list"></div>
+    </div>
+
+    <!-- Project Modal -->
+    <div id="project-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:32px 28px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 id="pm-title" style="color:var(--primary);margin-bottom:18px;">New Project</h3>
+        <input type="hidden" id="pm-id">
+        <div class="form-group"><label>Project Name *</label><input type="text" id="pm-name" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;"></div>
+        <div class="form-group"><label>Description</label><textarea id="pm-desc" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;resize:vertical;min-height:70px;"></textarea></div>
+        <div class="form-group"><label>Status</label>
+          <select id="pm-status" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;">
+            <option>Active</option><option>On Hold</option><option>Completed</option><option>Cancelled</option>
+          </select></div>
+        <div class="form-group"><label>Assigned To</label>
+          <select id="pm-assignee" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;"><option value="">— Unassigned —</option></select></div>
+        <div style="display:flex;gap:10px;justify-content:space-between;margin-top:8px;">
+          <button id="pm-delete-btn" class="btn btn-danger" style="display:none;" onclick="deleteProject()">Delete</button>
+          <div style="display:flex;gap:10px;margin-left:auto;">
+            <button class="btn btn-outline" onclick="closeProjectModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Detail Modal -->
+    <div id="project-detail-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:32px 28px;width:620px;max-width:95vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;">
+          <div><h3 id="pd-name" style="color:var(--primary);margin-bottom:4px;"></h3><p id="pd-desc" style="color:#666;font-size:0.875em;"></p></div>
+          <button onclick="closeProjectDetail()" style="background:none;border:none;font-size:1.4em;cursor:pointer;color:#999;padding:0 0 0 12px;">✕</button>
+        </div>
+        <div id="pd-updates-list" style="margin-bottom:20px;"></div>
+        <div style="border-top:1px solid #eee;padding-top:16px;">
+          <label style="font-weight:600;color:#333;font-size:0.875em;display:block;margin-bottom:8px;">Post an Update</label>
+          <textarea id="pd-update-text" rows="3" placeholder="Describe progress, blockers, next steps…" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;resize:vertical;margin-bottom:10px;min-height:70px;"></textarea>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <select id="pd-update-status" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;">
+              <option value="">— Change status (optional) —</option>
+              <option>Active</option><option>On Hold</option><option>Completed</option><option>Cancelled</option>
+            </select>
+            <button class="btn btn-primary" onclick="postProjectUpdate()">Post Update</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== EVENTS & SOCIAL ===== -->
+    <div id="view-events" class="view">
+      <div class="tabs no-print">
+        <button class="tab-btn active" onclick="switchTab('ev-tab-new',this)">New Event Post</button>
+        <button class="tab-btn" onclick="switchTab('ev-tab-list',this);renderEvents()">All Events</button>
+      </div>
+      <div id="ev-tab-new" class="tab-content active card">
+        <h3>Post an Event Update</h3>
+        <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Fill in the event details and the app will generate ready-to-post social media copy and a newsletter blurb.</p>
+        <form id="event-form">
+          <div class="form-grid">
+            <div class="form-group"><label>Event Title *</label><input type="text" name="title" required></div>
+            <div class="form-group"><label>Date</label><input type="date" name="eventDate"></div>
+            <div class="form-group"><label>Location</label><input type="text" name="location" placeholder="e.g. Portland Community Center"></div>
+            <div class="form-group"><label>Posted By</label><input type="text" name="postedBy" list="staff-datalist"></div>
+            <div class="form-group full"><label>What happened? (Summary) *</label><textarea name="summary" rows="4" required placeholder="Describe the event — what happened, who attended, key moments…"></textarea></div>
+            <div class="form-group full"><label>Impact / Outcomes</label><textarea name="impact" rows="3" placeholder="Lives impacted, milestones reached, community response…"></textarea></div>
+            <div class="form-group full"><label>Photo Descriptions (list what photos you have)</label><textarea name="photoDesc" rows="2" placeholder="e.g. Group photo with 12 participants, ribbon cutting, mentor with client…"></textarea></div>
+            <div class="form-group full"><label>Hashtags / Keywords (comma-separated)</label><input type="text" name="hashtags" placeholder="reentry, community, Portland, ReGroup"></div>
+          </div>
+          <div style="text-align:center;padding:10px 0;">
+            <button type="submit" class="btn btn-primary btn-lg">Generate Posts & Save</button>
+          </div>
+          <div id="ev-success" class="alert alert-success" style="display:none;margin-top:12px;">✅ Event saved! Switch to "All Events" to view generated posts.</div>
+        </form>
+      </div>
+      <div id="ev-tab-list" class="tab-content card">
+        <h3>Event Posts & Generated Content</h3>
+        <div id="events-list"></div>
+      </div>
+    </div>
+
     <!-- ===== NEEDS ASSESSMENT ===== -->
     <div id="view-needs-assessment" class="view">
       <div class="tabs no-print">
@@ -1247,7 +1405,7 @@ let _listenersReady   = 0;
 
 function _onReady() {
   _listenersReady++;
-  if (_listenersReady === 6) {
+  if (_listenersReady === 9) {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
@@ -1284,11 +1442,31 @@ onSnapshot(query(collection(db,'expenseReports'), orderBy('_createdAt','asc')), 
   if (document.getElementById('view-expense-report')?.classList.contains('active')) renderERList();
 });
 
-let _clients = [];
+let _clients  = [];
+let _tasks    = [];
+let _projects = [];
+let _events   = [];
+
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-clients')?.classList.contains('active')) renderClientDirectory();
+});
+onSnapshot(query(collection(db,'tasks'),    orderBy('_createdAt','asc')), snap => {
+  _tasks = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('view-admin-inbox')?.classList.contains('active')) renderAdminTasks();
+  if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
+});
+onSnapshot(query(collection(db,'projects'), orderBy('_createdAt','asc')), snap => {
+  _projects = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('view-projects')?.classList.contains('active')) renderProjects();
+});
+onSnapshot(query(collection(db,'events'),   orderBy('_createdAt','asc')), snap => {
+  _events = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('view-events')?.classList.contains('active')) renderEvents();
 });
 
 const DB = {
@@ -1297,10 +1475,24 @@ const DB = {
   staff:            () => _staff,
   needsAssessments: () => _needsAssessments,
   expenseReports:   () => _expenseReports,
-  clients: () => _clients,
+  clients:  () => _clients,
+  tasks:    () => _tasks,
+  projects: () => _projects,
+  events:   () => _events,
+
   async addClient(c) { await addDoc(collection(db,'clients'), {...c, _createdAt: serverTimestamp()}); },
   async updateClient(id, c) { await setDoc(doc(db,'clients',id), {...c, _updatedAt: serverTimestamp()}, {merge:true}); },
   async removeClient(id) { await deleteDoc(doc(db,'clients',id)); },
+
+  async addTask(t)          { await addDoc(collection(db,'tasks'),    {...t, _createdAt: serverTimestamp()}); },
+  async updateTask(id, t)   { await setDoc(doc(db,'tasks',id),    {...t, _updatedAt: serverTimestamp()}, {merge:true}); },
+  async removeTask(id)      { await deleteDoc(doc(db,'tasks',id)); },
+
+  async addProject(p)       { await addDoc(collection(db,'projects'), {...p, _createdAt: serverTimestamp()}); },
+  async updateProject(id,p) { await setDoc(doc(db,'projects',id),  {...p, _updatedAt: serverTimestamp()}, {merge:true}); },
+  async removeProject(id)   { await deleteDoc(doc(db,'projects',id)); },
+
+  async addEvent(e)         { await addDoc(collection(db,'events'),   {...e, _createdAt: serverTimestamp()}); },
 
   async addSession(s) {
     await addDoc(collection(db,'sessions'), {...s, _createdAt: serverTimestamp()});
@@ -1403,6 +1595,10 @@ const VIEW_TITLES = {
   'expense-report':'Expense Reimbursement',
   'clients':'Client Directory',
   'email-blast':'Email Blast',
+  'admin-inbox':'Admin Inbox — Client Alerts & Tasks',
+  'my-tasks':'My Tasks',
+  'projects':'Projects',
+  'events':'Events & Social Media',
 };
 
 // ===================================================================
@@ -1472,7 +1668,7 @@ function changeAdminPIN() {
 }
 
 function navigate(v) {
-  if ((v === 'settings' || v === 'email-blast') && !_adminUnlocked) {
+  if ((v === 'settings' || v === 'email-blast' || v === 'admin-inbox') && !_adminUnlocked) {
     promptAdminPIN(() => navigate(v));
     return;
   }
@@ -1489,6 +1685,10 @@ function navigate(v) {
   if (v==='settings') renderSettings();
   if (v==='clients') renderClientDirectory();
   if (v==='email-blast') updateEBPreview();
+  if (v==='admin-inbox') refreshAlerts();
+  if (v==='my-tasks') renderMyTasks();
+  if (v==='projects') renderProjects();
+  if (v==='events') renderEvents();
 }
 
 // ===================================================================
@@ -2620,6 +2820,453 @@ function generateTimesheet() {
 }
 
 // ===================================================================
+// ALERT ENGINE
+// ===================================================================
+function computeClientAlerts() {
+  const alerts = [];
+  const now = new Date();
+  const msDay = 86400000;
+  const sessions = DB.sessions();
+  const clients  = DB.clients();
+
+  function sortByDate(arr) {
+    return arr.slice().sort((a,b)=>(getDate(a)||'').localeCompare(getDate(b)||''));
+  }
+
+  // Group sessions by clientId field
+  const byClientId = {};
+  sessions.forEach(s => {
+    const key = (s.clientId||'').trim();
+    if (!key) return;
+    if (!byClientId[key]) byClientId[key] = [];
+    byClientId[key].push(s);
+  });
+
+  // ALERT TYPE 2: No contact in 3+ months — for any client with sessions
+  Object.entries(byClientId).forEach(([clientId, sess]) => {
+    const sorted = sortByDate(sess);
+    const lastDate = new Date(getDate(sorted[sorted.length-1]) + 'T12:00:00');
+    const daysSince = (now - lastDate) / msDay;
+    if (daysSince >= 90) {
+      const cRec = clients.find(c=>c.clientId===clientId);
+      const name = cRec ? [cRec.firstName,cRec.lastName].filter(Boolean).join(' ') : clientId;
+      alerts.push({
+        type:'no-contact-90', severity:'danger', clientName:name, clientId,
+        lastContact: getDate(sorted[sorted.length-1]),
+        daysSince: Math.floor(daysSince), sessionCount: sess.length,
+        reason: 'No contact in ' + Math.floor(daysSince) + ' days (last: ' + fmtDate(getDate(sorted[sorted.length-1])) + ')'
+      });
+    }
+  });
+
+  // ALERT TYPES 1 & 3: Overdue regular contact / missed meeting
+  Object.entries(byClientId).forEach(([clientId, sess]) => {
+    if (sess.length < 2) return;
+    const sorted = sortByDate(sess);
+    const gaps = [];
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = new Date(getDate(sorted[i-1]) + 'T12:00:00');
+      const curr = new Date(getDate(sorted[i]) + 'T12:00:00');
+      if (!isNaN(prev) && !isNaN(curr)) gaps.push((curr - prev) / msDay);
+    }
+    if (!gaps.length) return;
+    const avgGap = gaps.reduce((s,v)=>s+v,0) / gaps.length;
+    const lastDate = new Date(getDate(sorted[sorted.length-1]) + 'T12:00:00');
+    const daysSinceLast = (now - lastDate) / msDay;
+    const cRec = clients.find(c=>c.clientId===clientId);
+    const name = cRec ? [cRec.firstName,cRec.lastName].filter(Boolean).join(' ') : clientId;
+    const alreadyFlagged = alerts.find(a=>a.clientId===clientId && a.type==='no-contact-90');
+
+    // Type 1: regular contact pattern but 2+ weeks overdue
+    if (!alreadyFlagged && avgGap < 60 && daysSinceLast > avgGap + 14) {
+      alerts.push({
+        type:'overdue-regular', severity:'warn', clientName:name, clientId,
+        lastContact: getDate(sorted[sorted.length-1]),
+        daysSince: Math.floor(daysSinceLast), avgGapDays: Math.round(avgGap),
+        sessionCount: sess.length,
+        reason: 'Usually contacted every ~' + Math.round(avgGap) + ' days, but it\'s been ' + Math.floor(daysSinceLast) + ' days (' + Math.floor(daysSinceLast - avgGap) + ' days overdue)'
+      });
+    }
+
+    // Type 3: had 2+ consecutive contacts then a large gap
+    if (!alreadyFlagged && sorted.length >= 3 && avgGap < 45 && gaps.length >= 2) {
+      const lastGap = gaps[gaps.length-1];
+      const prevAvg = gaps.slice(0,-1).reduce((s,v)=>s+v,0) / (gaps.length-1);
+      if (lastGap > prevAvg * 2.2 && lastGap > 14 && !alerts.find(a=>a.clientId===clientId)) {
+        alerts.push({
+          type:'missed-meeting', severity:'warn', clientName:name, clientId,
+          lastContact: getDate(sorted[sorted.length-1]),
+          daysSince: Math.floor(daysSinceLast), sessionCount: sess.length,
+          reason: 'Had regular contact (avg every ' + Math.round(prevAvg) + ' days) then a ' + Math.round(lastGap) + '-day gap — may have missed a meeting'
+        });
+      }
+    }
+  });
+
+  return alerts.sort((a,b) => b.daysSince - a.daysSince);
+}
+
+// ===================================================================
+// ADMIN INBOX
+// ===================================================================
+let _cachedAlerts = [];
+
+function refreshAlerts() {
+  _cachedAlerts = computeClientAlerts();
+  renderAdminInbox();
+}
+
+function renderAdminInbox() {
+  if (!_cachedAlerts.length) _cachedAlerts = computeClientAlerts();
+  const el = document.getElementById('alert-list');
+  if (!el) return;
+  if (!_cachedAlerts.length) {
+    el.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:#bbb;">✅ No client alerts at this time. All contacts appear up to date.</div>';
+    return;
+  }
+  el.innerHTML = _cachedAlerts.map((a,i) => {
+    const col = a.severity==='danger' ? 'var(--danger)' : 'var(--warn)';
+    const icon = a.severity==='danger' ? '🔴' : '🟡';
+    return '<div class="card" style="border-left:4px solid ' + col + ';margin-bottom:14px;">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:700;color:var(--primary);margin-bottom:4px;">' + icon + ' ' + (a.clientName||'Unknown') + ' <span style="font-size:0.75em;color:#999;font-weight:400;">#' + (a.clientId||'—') + '</span></div>' +
+          '<div style="font-size:0.875em;color:#555;margin-bottom:6px;">' + a.reason + '</div>' +
+          '<div style="font-size:0.78em;color:#aaa;">Last contact: ' + (fmtDate(a.lastContact)||'Unknown') + ' · ' + a.sessionCount + ' session' + (a.sessionCount!==1?'s':'') + ' on record</div>' +
+        '</div>' +
+        '<button class="btn btn-accent" style="white-space:nowrap;" onclick="openAssignModal(' + i + ')">Assign Task</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderAdminTasks() {
+  const el = document.getElementById('admin-tasks-list');
+  if (!el) return;
+  const tasks = DB.tasks().slice().reverse();
+  if (!tasks.length) { el.innerHTML='<p style="color:#bbb;font-size:0.875em;">No tasks assigned yet.</p>'; return; }
+  el.innerHTML = '<div class="table-wrap"><table>' +
+    '<thead><tr><th>Assigned To</th><th>Client</th><th>Description</th><th>Due</th><th>Status</th><th></th></tr></thead>' +
+    '<tbody>' + tasks.map(t =>
+      '<tr>' +
+        '<td><b>' + (t.mentorName||'—') + '</b></td>' +
+        '<td>' + (t.clientName||'—') + '</td>' +
+        '<td style="font-size:0.85em;">' + (t.description||'—') + '</td>' +
+        '<td style="font-size:0.82em;">' + (fmtDate(t.dueDate)||'—') + '</td>' +
+        '<td><span class="badge ' + (t.status==='Done'?'badge-success':t.status==='In Progress'?'badge-info':'badge-warn') + '">' + (t.status||'Open') + '</span></td>' +
+        '<td><button class="btn btn-danger" style="padding:4px 8px;font-size:0.75em;" onclick="adminRemoveTask(\'' + t._id + '\')">Remove</button></td>' +
+      '</tr>'
+    ).join('') + '</tbody></table></div>';
+}
+
+function openAssignModal(alertIndex) {
+  const a = _cachedAlerts[alertIndex];
+  if (!a) return;
+  document.getElementById('am-alert-data').value = JSON.stringify(a);
+  document.getElementById('am-description').value = 'Follow up with ' + a.clientName + ': ' + a.reason;
+  document.getElementById('am-due').value = '';
+  const sel = document.getElementById('am-mentor');
+  sel.innerHTML = '<option value="">— Select mentor —</option>' +
+    DB.staff().map(s=>'<option value="' + s.name + '">' + s.name + '</option>').join('');
+  document.getElementById('assign-modal').style.display = 'flex';
+}
+
+function closeAssignModal() { document.getElementById('assign-modal').style.display='none'; }
+
+async function saveAssignedTask() {
+  const mentorName = document.getElementById('am-mentor').value;
+  const description = document.getElementById('am-description').value.trim();
+  if (!mentorName) { alert('Please select a mentor.'); return; }
+  if (!description) { alert('Please enter a task description.'); return; }
+  const alertData = JSON.parse(document.getElementById('am-alert-data').value||'{}');
+  await DB.addTask({
+    mentorName, description,
+    clientName: alertData.clientName||'',
+    clientId:   alertData.clientId||'',
+    dueDate:    document.getElementById('am-due').value,
+    status:     'Open',
+    alertType:  alertData.type||'',
+    reason:     alertData.reason||''
+  });
+  closeAssignModal();
+}
+
+async function adminRemoveTask(id) {
+  if (!confirm('Remove this task?')) return;
+  await DB.removeTask(id);
+  renderAdminTasks();
+}
+
+// ===================================================================
+// MY TASKS (MENTOR INBOX)
+// ===================================================================
+function renderMyTasks() {
+  const sel = document.getElementById('my-tasks-mentor');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Select your name —</option>' +
+    DB.staff().map(s=>'<option value="' + s.name + '"' + (s.name===current?' selected':'') + '>' + s.name + '</option>').join('');
+  const el = document.getElementById('my-tasks-list');
+  if (!el) return;
+  if (!current) { el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">Select your name above to see your tasks.</div>'; return; }
+  const tasks = DB.tasks().filter(t=>t.mentorName===current);
+  const countEl = document.getElementById('my-tasks-count');
+  if (countEl) countEl.textContent = tasks.filter(t=>t.status!=='Done').length + ' open';
+  if (!tasks.length) { el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">🎉 No tasks assigned to you right now.</div>'; return; }
+  el.innerHTML = tasks.slice().reverse().map(t => {
+    const col = t.status==='Done'?'var(--success)':t.status==='In Progress'?'var(--accent)':'var(--warn)';
+    return '<div class="card" style="border-left:4px solid ' + col + ';margin-bottom:14px;">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:700;color:var(--primary);margin-bottom:4px;">' + (t.clientName||'General Task') + '</div>' +
+          '<div style="font-size:0.875em;color:#555;margin-bottom:8px;">' + (t.description||'') + '</div>' +
+          (t.dueDate ? '<div style="font-size:0.78em;color:#888;">Due: ' + fmtDate(t.dueDate) + '</div>' : '') +
+          (t.reason  ? '<div style="font-size:0.78em;color:#999;margin-top:4px;font-style:italic;">Alert: ' + t.reason + '</div>' : '') +
+        '</div>' +
+        '<select onchange="updateMyTaskStatus(\'' + t._id + '\',this.value)" style="padding:6px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:0.82em;min-width:120px;">' +
+          '<option' + (t.status==='Open'?' selected':'') + '>Open</option>' +
+          '<option' + (t.status==='In Progress'?' selected':'') + '>In Progress</option>' +
+          '<option' + (t.status==='Done'?' selected':'') + '>Done</option>' +
+        '</select>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function updateMyTaskStatus(id, status) {
+  await DB.updateTask(id, {status});
+}
+
+// ===================================================================
+// PROJECTS
+// ===================================================================
+let _activeProjectId = null;
+
+function renderProjects() {
+  const el = document.getElementById('projects-list');
+  if (!el) return;
+  const projects = DB.projects();
+  if (!projects.length) { el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:40px;">No projects yet. Click "+ New Project" to get started.</div>'; return; }
+  const statusColor = {Active:'var(--accent)',Completed:'var(--success)','On Hold':'var(--warn)',Cancelled:'#ccc'};
+  el.innerHTML = projects.map(p => {
+    const last = p.updates&&p.updates.length ? p.updates[p.updates.length-1] : null;
+    return '<div class="card" style="border-left:4px solid ' + (statusColor[p.status]||'var(--accent)') + ';margin-bottom:16px;">' +
+      '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
+        '<div style="flex:1;cursor:pointer;" onclick="openProjectDetail(\'' + p._id + '\')">' +
+          '<div style="font-weight:700;font-size:1.05em;color:var(--primary);margin-bottom:4px;">' + p.name + '</div>' +
+          (p.description?'<div style="font-size:0.875em;color:#666;margin-bottom:8px;">' + p.description + '</div>':'') +
+          '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">' +
+            '<span class="badge ' + (p.status==='Completed'?'badge-success':p.status==='On Hold'?'badge-warn':'badge-info') + '">' + (p.status||'Active') + '</span>' +
+            (p.assignedTo?'<span style="font-size:0.8em;color:#777;">👤 ' + p.assignedTo + '</span>':'') +
+            (p.updates&&p.updates.length?'<span style="font-size:0.78em;color:#aaa;">' + p.updates.length + ' update' + (p.updates.length!==1?'s':'') + '</span>':'') +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;">' +
+          '<button class="btn btn-outline" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectModal(\'' + p._id + '\')">Edit</button>' +
+          '<button class="btn btn-accent" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectDetail(\'' + p._id + '\')">Updates →</button>' +
+        '</div>' +
+      '</div>' +
+      (last?'<div style="margin-top:10px;border-top:1px solid #eee;padding-top:8px;font-size:0.82em;color:#888;">Last update: <b>' + last.text.slice(0,80) + (last.text.length>80?'…':'') + '</b> <span style="color:#bbb;margin-left:6px;">' + new Date(last.at).toLocaleDateString() + '</span></div>':'') +
+    '</div>';
+  }).join('');
+}
+
+function openProjectModal(id) {
+  const sel = document.getElementById('pm-assignee');
+  sel.innerHTML = '<option value="">— Unassigned —</option>' + DB.staff().map(s=>'<option>' + s.name + '</option>').join('');
+  const deleteBtn = document.getElementById('pm-delete-btn');
+  if (id) {
+    const p = DB.projects().find(x=>x._id===id);
+    if (!p) return;
+    document.getElementById('pm-title').textContent = 'Edit Project';
+    document.getElementById('pm-id').value = id;
+    document.getElementById('pm-name').value = p.name||'';
+    document.getElementById('pm-desc').value = p.description||'';
+    document.getElementById('pm-status').value = p.status||'Active';
+    document.getElementById('pm-assignee').value = p.assignedTo||'';
+    deleteBtn.style.display = 'inline-flex';
+  } else {
+    document.getElementById('pm-title').textContent = 'New Project';
+    document.getElementById('pm-id').value = '';
+    document.getElementById('pm-name').value = '';
+    document.getElementById('pm-desc').value = '';
+    document.getElementById('pm-status').value = 'Active';
+    document.getElementById('pm-assignee').value = '';
+    deleteBtn.style.display = 'none';
+  }
+  document.getElementById('project-modal').style.display = 'flex';
+}
+
+function closeProjectModal() { document.getElementById('project-modal').style.display='none'; }
+
+async function saveProject() {
+  const id   = document.getElementById('pm-id').value;
+  const name = document.getElementById('pm-name').value.trim();
+  if (!name) { alert('Project name is required.'); return; }
+  const data = { name, description: document.getElementById('pm-desc').value.trim(), status: document.getElementById('pm-status').value, assignedTo: document.getElementById('pm-assignee').value };
+  if (id) {
+    const existing = DB.projects().find(p=>p._id===id);
+    await DB.updateProject(id, {...data, updates: existing?.updates||[]});
+  } else {
+    await DB.addProject({...data, updates:[]});
+  }
+  closeProjectModal();
+}
+
+async function deleteProject() {
+  const id = document.getElementById('pm-id').value;
+  if (!id || !confirm('Delete this project and all its updates?')) return;
+  await DB.removeProject(id);
+  closeProjectModal();
+}
+
+function openProjectDetail(id) {
+  _activeProjectId = id;
+  const p = DB.projects().find(x=>x._id===id);
+  if (!p) return;
+  document.getElementById('pd-name').textContent = p.name;
+  document.getElementById('pd-desc').textContent = p.description||'';
+  document.getElementById('pd-update-text').value = '';
+  document.getElementById('pd-update-status').value = '';
+  renderProjectUpdates(p);
+  document.getElementById('project-detail-modal').style.display = 'flex';
+}
+
+function renderProjectUpdates(p) {
+  const el = document.getElementById('pd-updates-list');
+  if (!el) return;
+  const updates = (p.updates||[]).slice().reverse();
+  if (!updates.length) { el.innerHTML='<p style="color:#bbb;font-size:0.875em;">No updates yet. Post the first one below.</p>'; return; }
+  el.innerHTML = updates.map(u =>
+    '<div style="border-left:3px solid var(--accent);padding:10px 14px;margin-bottom:12px;background:#f8fbff;border-radius:0 8px 8px 0;">' +
+      '<div style="font-size:0.875em;color:#333;white-space:pre-wrap;">' + u.text + '</div>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-top:6px;">' +
+        '<span style="font-size:0.75em;color:#aaa;">' + new Date(u.at).toLocaleString() + ' · ' + (u.by||'Staff') + '</span>' +
+        (u.status?'<span class="badge badge-info" style="font-size:0.7em;">' + u.status + '</span>':'') +
+      '</div>' +
+    '</div>'
+  ).join('');
+}
+
+function closeProjectDetail() { document.getElementById('project-detail-modal').style.display='none'; _activeProjectId=null; }
+
+async function postProjectUpdate() {
+  const text = document.getElementById('pd-update-text').value.trim();
+  if (!text) { alert('Please enter an update.'); return; }
+  const status = document.getElementById('pd-update-status').value;
+  const p = DB.projects().find(x=>x._id===_activeProjectId);
+  if (!p) return;
+  const updates = [...(p.updates||[]), {text, status, by:'Admin', at: new Date().toISOString()}];
+  const patch = {updates};
+  if (status) patch.status = status;
+  await DB.updateProject(_activeProjectId, {...p, ...patch});
+  document.getElementById('pd-update-text').value = '';
+  document.getElementById('pd-update-status').value = '';
+  renderProjectUpdates({...p, ...patch});
+}
+
+// ===================================================================
+// EVENTS & SOCIAL MEDIA
+// ===================================================================
+function generateSocialPost(data) {
+  const rawTags = (data.hashtags||'').split(',').map(h=>h.trim()).filter(Boolean)
+    .map(h=>'#'+h.replace(/\s+/g,'').replace(/^#+/,'')).join(' ');
+  const tags = rawTags + ' #ReGroup #ReGroupEliteSquad #Reentry #Community';
+  const loc  = data.location ? '\n📍 ' + data.location : '';
+  const dt   = data.eventDate ? '  📅 ' + fmtDate(data.eventDate) : '';
+
+  const instagram = '✨ ' + (data.title||'').toUpperCase() + ' ✨\n\n' +
+    (data.summary||'') + '\n\n' +
+    (data.impact ? '💪 ' + data.impact + '\n\n' : '') +
+    tags;
+
+  const facebook = '🎉 ' + (data.title||'') + '\n\n' +
+    (data.summary||'') + '\n\n' +
+    (data.impact ? data.impact + '\n\n' : '') +
+    'Join us in supporting reentry and community transformation. Share this post!\n' +
+    loc + dt + '\n\n' + rawTags;
+
+  const twitterText = (data.title||'') + ' — ' + (data.summary||'').slice(0,140) + ((data.summary||'').length>140?'…':'');
+  const twitter = twitterText.slice(0,250) + ' ' + rawTags.split(' ').slice(0,3).join(' ') + ' #ReGroup';
+
+  const newsletter =
+    '## ' + (data.title||'') + '\n' +
+    (data.eventDate ? '_' + fmtDate(data.eventDate) + (data.location?' · '+data.location:'') + '_\n\n' : '') +
+    (data.summary||'') + '\n\n' +
+    (data.impact ? '**Impact:** ' + data.impact + '\n\n' : '') +
+    (data.photoDesc ? '_Photos: ' + data.photoDesc + '_\n\n' : '') +
+    '---';
+
+  return {instagram, facebook, twitter, newsletter};
+}
+
+document.getElementById('event-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = this.querySelector('[type="submit"]');
+  btn.textContent = 'Generating…'; btn.disabled = true;
+  const fd = new FormData(this);
+  const data = {id: uuid(), submittedAt: new Date().toISOString()};
+  for (const [k,v] of fd.entries()) data[k] = v;
+  data.generatedPosts = generateSocialPost(data);
+  await DB.addEvent(data);
+  btn.textContent = 'Generate Posts & Save'; btn.disabled = false;
+  document.getElementById('ev-success').style.display = 'block';
+  this.reset();
+  setTimeout(()=>document.getElementById('ev-success').style.display='none', 5000);
+});
+
+function renderEvents() {
+  const el = document.getElementById('events-list');
+  if (!el) return;
+  const events = DB.events().slice().reverse();
+  if (!events.length) { el.innerHTML='<p style="color:#bbb;font-size:0.875em;">No events posted yet.</p>'; return; }
+  el.innerHTML = events.map(ev => {
+    const gp = ev.generatedPosts||{};
+    const uid = ev._id;
+    const panels = [
+      {key:'instagram', label:'Instagram', content: gp.instagram||''},
+      {key:'facebook',  label:'Facebook',  content: gp.facebook||''},
+      {key:'twitter',   label:'X / Twitter', content: gp.twitter||''},
+      {key:'newsletter',label:'Newsletter', content: gp.newsletter||''},
+    ];
+    return '<div class="card" style="margin-bottom:20px;">' +
+      '<div style="margin-bottom:14px;">' +
+        '<div style="font-weight:700;font-size:1.05em;color:var(--primary);">📸 ' + (ev.title||'Event') + '</div>' +
+        '<div style="font-size:0.8em;color:#999;">' + (ev.eventDate?fmtDate(ev.eventDate)+' · ':'') + 'Posted by ' + (ev.postedBy||'Staff') + '</div>' +
+      '</div>' +
+      '<div class="tabs" style="margin-bottom:14px;">' +
+        panels.map((p,i) => '<button class="tab-btn' + (i===0?' active':'') + '" onclick="switchEvTab(this,\'ev-' + p.key + '-' + uid + '\')">' + p.label + '</button>').join('') +
+      '</div>' +
+      panels.map((p,i) =>
+        '<div id="ev-' + p.key + '-' + uid + '" class="ev-tab-panel" style="display:' + (i===0?'block':'none') + ';">' +
+          '<div style="background:#f8f9fa;border-radius:8px;padding:14px;font-size:0.875em;white-space:pre-wrap;font-family:inherit;line-height:1.6;">' + p.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' +
+          '<button class="btn btn-outline" style="margin-top:8px;font-size:0.78em;" onclick="copyEvText(\'ev-' + p.key + '-' + uid + '\')">📋 Copy</button>' +
+        '</div>'
+      ).join('') +
+    '</div>';
+  }).join('');
+}
+
+function switchEvTab(btn, panelId) {
+  const card = btn.closest('.card');
+  card.querySelectorAll('.ev-tab-panel').forEach(p=>p.style.display='none');
+  card.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.getElementById(panelId);
+  if (panel) panel.style.display = 'block';
+}
+
+function copyEvText(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const text = el.querySelector('div').textContent;
+  navigator.clipboard.writeText(text).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=text;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  });
+}
+
+// ===================================================================
 // SETTINGS
 // ===================================================================
 function renderSettings() {
@@ -2762,6 +3409,10 @@ Object.assign(window, {
   submitAppLogin,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
   updateEBPreview, copyEBAddresses, openEBMailto,
+  refreshAlerts, renderAdminInbox, renderAdminTasks, openAssignModal, closeAssignModal, saveAssignedTask, adminRemoveTask,
+  renderMyTasks, updateMyTaskStatus,
+  renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject, openProjectDetail, closeProjectDetail, postProjectUpdate,
+  renderEvents, switchEvTab, copyEvText,
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
