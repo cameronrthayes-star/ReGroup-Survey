@@ -1430,6 +1430,7 @@ onSnapshot(collection(db,'staff'), snap => {
   _onReady();
   refreshStaffDatalist();
   if (document.getElementById('view-settings')?.classList.contains('active')) renderSettings();
+  if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
 });
 onSnapshot(query(collection(db,'needsAssessments'), orderBy('_createdAt','asc')), snap => {
   _needsAssessments = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -1801,6 +1802,13 @@ function refreshStaffDatalist() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = names.map(n=>`<option value="${n}">`).join('');
   });
+  // Keep My Tasks dropdown in sync whenever staff list changes
+  const mtSel = document.getElementById('my-tasks-mentor');
+  if (mtSel) {
+    const current = mtSel.value;
+    mtSel.innerHTML = '<option value="">— Select your name —</option>' +
+      names.map(n=>'<option value="' + n + '"' + (n===current?' selected':'') + '>' + n + '</option>').join('');
+  }
 }
 
 // ===================================================================
