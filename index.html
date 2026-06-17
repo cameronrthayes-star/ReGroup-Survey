@@ -153,6 +153,12 @@ table tr:hover td{background:#fafbff;}
 .ts-finance-table tr.total-row td{background:#1a237e;color:#fff;font-weight:800;}
 .ts-finance-title{font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;color:#555;}
 
+/* === PMI WIZARD === */
+.pmi-step{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,0.25);transition:background 0.3s;}
+.pmi-step.done{background:#00bcd4;}
+.pmi-step.active{background:#fff;}
+.pmi-phase{display:block;}
+
 /* === NEEDS ASSESSMENT PRINT === */
 .na-print-doc{font-family:'Times New Roman',serif;font-size:11pt;color:#000;max-width:7.5in;margin:0 auto;padding:0.5in;}
 .na-print-header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px;}
@@ -1092,9 +1098,12 @@ table tr:hover td{background:#fafbff;}
 
     <!-- ===== PROJECTS ===== -->
     <div id="view-projects" class="view">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
         <h2 style="color:var(--primary);font-size:1.1em;font-weight:700;">Projects</h2>
-        <button class="btn btn-accent" onclick="openProjectModal(null)">+ New Project</button>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-outline" onclick="openProjectModal(null)">+ Quick Project</button>
+          <button class="btn btn-accent" onclick="openPMIWizard(null)">🏗 New PMI Project</button>
+        </div>
       </div>
       <div id="projects-list"></div>
     </div>
@@ -1139,6 +1148,119 @@ table tr:hover td{background:#fafbff;}
               <option>Active</option><option>On Hold</option><option>Completed</option><option>Cancelled</option>
             </select>
             <button class="btn btn-primary" onclick="postProjectUpdate()">Post Update</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PMI WIZARD MODAL ===== -->
+    <div id="pmi-wizard" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(10,20,60,0.7);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:18px;width:680px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 12px 50px rgba(0,0,0,0.35);display:flex;flex-direction:column;">
+
+        <!-- Header -->
+        <div style="background:var(--primary);color:#fff;border-radius:18px 18px 0 0;padding:20px 28px 16px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-size:0.7em;text-transform:uppercase;letter-spacing:0.12em;opacity:0.6;margin-bottom:4px;">PMI 5-Phase Project Builder</div>
+              <div id="pmi-phase-title" style="font-size:1.25em;font-weight:800;"></div>
+            </div>
+            <button onclick="closePMIWizard()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:0.85em;">✕ Save & Exit</button>
+          </div>
+          <!-- Phase progress bar -->
+          <div style="display:flex;gap:6px;margin-top:16px;">
+            <div id="pmi-step-0" class="pmi-step"></div>
+            <div id="pmi-step-1" class="pmi-step"></div>
+            <div id="pmi-step-2" class="pmi-step"></div>
+            <div id="pmi-step-3" class="pmi-step"></div>
+            <div id="pmi-step-4" class="pmi-step"></div>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <div style="flex:1;font-size:0.62em;opacity:0.55;text-align:center;">Initiation</div>
+            <div style="flex:1;font-size:0.62em;opacity:0.55;text-align:center;">Planning</div>
+            <div style="flex:1;font-size:0.62em;opacity:0.55;text-align:center;">Execution</div>
+            <div style="flex:1;font-size:0.62em;opacity:0.55;text-align:center;">Monitor</div>
+            <div style="flex:1;font-size:0.62em;opacity:0.55;text-align:center;">Closing</div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div style="padding:24px 28px;flex:1;">
+          <input type="hidden" id="pmi-project-id">
+
+          <!-- Phase 0: Initiation -->
+          <div id="pmi-phase-0" class="pmi-phase">
+            <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Define why this project exists and who owns it.</p>
+            <div class="form-group"><label>Project Name *</label><input type="text" id="pmi-p0-name" placeholder="What are we calling this?"></div>
+            <div class="form-group"><label>Problem or Opportunity *</label><textarea id="pmi-p0-problem" rows="3" placeholder="What situation does this project address?"></textarea></div>
+            <div class="form-group"><label>Project Sponsor / Champion</label><input type="text" id="pmi-p0-sponsor" list="staff-datalist" placeholder="Who is backing this?"></div>
+            <div class="form-group"><label>High-Level Goal *</label><textarea id="pmi-p0-goal" rows="2" placeholder="What does success look like in one sentence?"></textarea></div>
+            <div class="form-group"><label>Key Stakeholders</label><textarea id="pmi-p0-stakeholders" rows="2" placeholder="Who needs to be involved or kept informed? (clients, partners, funders…)"></textarea></div>
+          </div>
+
+          <!-- Phase 1: Planning -->
+          <div id="pmi-phase-1" class="pmi-phase" style="display:none;">
+            <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Define the roadmap — what we'll do, how, and by when.</p>
+            <div class="form-group"><label>Scope — What's In *</label><textarea id="pmi-p1-scope-in" rows="2" placeholder="What will this project deliver?"></textarea></div>
+            <div class="form-group"><label>Scope — What's Out</label><textarea id="pmi-p1-scope-out" rows="2" placeholder="What are we explicitly NOT doing?"></textarea></div>
+            <div class="form-group"><label>Milestones *</label><textarea id="pmi-p1-milestones" rows="3" placeholder="Key checkpoints and target dates (e.g. Week 2: kickoff, Week 6: pilot complete)"></textarea></div>
+            <div class="form-group"><label>Budget / Resources</label><textarea id="pmi-p1-budget" rows="2" placeholder="Funding, staff hours, equipment, partner support needed"></textarea></div>
+            <div class="form-group"><label>Risks</label><textarea id="pmi-p1-risks" rows="2" placeholder="What could go wrong? How will we handle it?"></textarea></div>
+            <div class="form-group"><label>Communication Plan</label><textarea id="pmi-p1-comms" rows="2" placeholder="Who gets updates, how often, and through what channel?"></textarea></div>
+          </div>
+
+          <!-- Phase 2: Execution -->
+          <div id="pmi-phase-2" class="pmi-phase" style="display:none;">
+            <p style="color:#666;font-size:0.88em;margin-bottom:20px;">What's actively being built or delivered right now.</p>
+            <div class="form-group"><label>Deliverables In Progress *</label><textarea id="pmi-p2-deliverables" rows="3" placeholder="List what's being worked on currently"></textarea></div>
+            <div class="form-group"><label>Key Task Assignments</label><textarea id="pmi-p2-assignments" rows="3" placeholder="Who is doing what? (Tasks will be assignable to mentors after this phase)"></textarea></div>
+            <div class="form-group"><label>Dependencies</label><textarea id="pmi-p2-dependencies" rows="2" placeholder="What must happen before something else can start?"></textarea></div>
+          </div>
+
+          <!-- Phase 3: Monitoring & Controlling -->
+          <div id="pmi-phase-3" class="pmi-phase" style="display:none;">
+            <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Track progress and catch problems early.</p>
+            <div class="form-group"><label>KPIs / Success Metrics *</label><textarea id="pmi-p3-kpis" rows="3" placeholder="How will we measure if this is working? (numbers, milestones hit, client outcomes)"></textarea></div>
+            <div class="form-group"><label>Status Check Cadence</label>
+              <select id="pmi-p3-cadence" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;">
+                <option value="Weekly">Weekly</option>
+                <option value="Bi-weekly">Bi-weekly</option>
+                <option value="Monthly">Monthly</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Change Request Process</label><textarea id="pmi-p3-changes" rows="2" placeholder="How will scope/timeline changes be approved?"></textarea></div>
+            <div class="form-group"><label>Issue Log (current issues)</label><textarea id="pmi-p3-issues" rows="2" placeholder="Any active blockers or concerns?"></textarea></div>
+          </div>
+
+          <!-- Phase 4: Closing -->
+          <div id="pmi-phase-4" class="pmi-phase" style="display:none;">
+            <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Wrap it up properly so nothing falls through the cracks.</p>
+            <div class="form-group"><label>Deliverable Acceptance *</label><textarea id="pmi-p4-acceptance" rows="2" placeholder="Who confirms the work is complete and how?"></textarea></div>
+            <div class="form-group"><label>Lessons Learned</label><textarea id="pmi-p4-lessons" rows="3" placeholder="What worked? What would we do differently?"></textarea></div>
+            <div class="form-group"><label>Final Report Notes</label><textarea id="pmi-p4-report" rows="2" placeholder="Key outcomes, numbers, impact to document"></textarea></div>
+            <div class="form-group"><label>Handoff / Archive Plan</label><textarea id="pmi-p4-handoff" rows="2" placeholder="Where do files go? Who takes over ongoing work?"></textarea></div>
+          </div>
+
+          <!-- Phase summary (shown after completing a phase) -->
+          <div id="pmi-summary-panel" style="display:none;">
+            <div style="background:#f0f7ff;border-radius:12px;padding:18px;margin-bottom:18px;">
+              <div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.95em;">✅ Phase Summary</div>
+              <div id="pmi-summary-text" style="font-size:0.875em;color:#444;line-height:1.7;white-space:pre-wrap;"></div>
+            </div>
+            <div id="pmi-tasks-panel" style="margin-bottom:18px;">
+              <div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.95em;">📋 Tasks — <span id="pmi-tasks-phase-label"></span></div>
+              <div id="pmi-tasks-list"></div>
+            </div>
+            <div id="pmi-next-prompt" style="font-size:0.925em;color:#555;font-weight:600;"></div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:16px 28px;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <button id="pmi-back-btn" class="btn btn-outline" onclick="pmiBack()" style="display:none;">← Back</button>
+          <div style="margin-left:auto;display:flex;gap:10px;">
+            <button id="pmi-complete-btn" class="btn btn-primary" onclick="pmiCompletePhase()">Complete Phase →</button>
+            <button id="pmi-next-btn" class="btn btn-accent" onclick="pmiNextPhase()" style="display:none;">Next Phase →</button>
+            <button id="pmi-finish-btn" class="btn btn-success" onclick="pmiFinish()" style="display:none;">🏁 Finish Project</button>
           </div>
         </div>
       </div>
@@ -1490,6 +1612,7 @@ const DB = {
   async removeTask(id)      { await deleteDoc(doc(db,'tasks',id)); },
 
   async addProject(p)       { await addDoc(collection(db,'projects'), {...p, _createdAt: serverTimestamp()}); },
+  async addProjectAndGetRef(p) { const r = await addDoc(collection(db,'projects'), {...p, _createdAt: serverTimestamp()}); return r.id; },
   async updateProject(id,p) { await setDoc(doc(db,'projects',id),  {...p, _updatedAt: serverTimestamp()}, {merge:true}); },
   async removeProject(id)   { await deleteDoc(doc(db,'projects',id)); },
 
@@ -3058,23 +3181,37 @@ function renderProjects() {
   const statusColor = {Active:'var(--accent)',Completed:'var(--success)','On Hold':'var(--warn)',Cancelled:'#ccc'};
   el.innerHTML = projects.map(p => {
     const last = p.updates&&p.updates.length ? p.updates[p.updates.length-1] : null;
-    return '<div class="card" style="border-left:4px solid ' + (statusColor[p.status]||'var(--accent)') + ';margin-bottom:16px;">' +
+    const isPMI = p.type==='pmi';
+    const pmiPhases = ['initiation','planning','execution','monitoring','closing'];
+    const pmiDone = isPMI ? pmiPhases.filter(k=>p.pmi&&p.pmi[k]&&p.pmi[k].complete).length : 0;
+    const pmiBar = isPMI ?
+      '<div style="margin-top:10px;">' +
+        '<div style="display:flex;gap:3px;margin-bottom:4px;">' +
+          pmiPhases.map(k=>'<div style="flex:1;height:5px;border-radius:3px;background:' + (p.pmi&&p.pmi[k]&&p.pmi[k].complete?'var(--success)':'#e0e0e0') + ';"></div>').join('') +
+        '</div>' +
+        '<div style="font-size:0.72em;color:#888;">PMI Phase ' + pmiDone + '/5 complete' + (pmiDone<5?' — <span style="color:var(--accent);cursor:pointer;font-weight:600;" onclick="openPMIWizard(\''+p._id+'\')">Continue wizard →</span>':'') + '</div>' +
+      '</div>' : '';
+    return '<div class="card" style="border-left:4px solid ' + (isPMI?'var(--purple)':statusColor[p.status]||'var(--accent)') + ';margin-bottom:16px;">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
-        '<div style="flex:1;cursor:pointer;" onclick="openProjectDetail(\'' + p._id + '\')">' +
-          '<div style="font-weight:700;font-size:1.05em;color:var(--primary);margin-bottom:4px;">' + p.name + '</div>' +
+        '<div style="flex:1;">' +
+          '<div style="font-weight:700;font-size:1.05em;color:var(--primary);margin-bottom:4px;">' +
+            (isPMI?'<span style="font-size:0.7em;background:var(--purple);color:#fff;border-radius:4px;padding:2px 6px;margin-right:6px;vertical-align:middle;">PMI</span>':'') +
+            p.name + '</div>' +
           (p.description?'<div style="font-size:0.875em;color:#666;margin-bottom:8px;">' + p.description + '</div>':'') +
           '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">' +
             '<span class="badge ' + (p.status==='Completed'?'badge-success':p.status==='On Hold'?'badge-warn':'badge-info') + '">' + (p.status||'Active') + '</span>' +
             (p.assignedTo?'<span style="font-size:0.8em;color:#777;">👤 ' + p.assignedTo + '</span>':'') +
             (p.updates&&p.updates.length?'<span style="font-size:0.78em;color:#aaa;">' + p.updates.length + ' update' + (p.updates.length!==1?'s':'') + '</span>':'') +
           '</div>' +
+          pmiBar +
         '</div>' +
-        '<div style="display:flex;gap:8px;">' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+          (isPMI&&pmiDone<5?'<button class="btn btn-accent" style="padding:6px 12px;font-size:0.78em;" onclick="openPMIWizard(\'' + p._id + '\')">Continue PMI</button>':'') +
           '<button class="btn btn-outline" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectModal(\'' + p._id + '\')">Edit</button>' +
-          '<button class="btn btn-accent" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectDetail(\'' + p._id + '\')">Updates →</button>' +
+          '<button class="btn btn-outline" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectDetail(\'' + p._id + '\')">Updates →</button>' +
         '</div>' +
       '</div>' +
-      (last?'<div style="margin-top:10px;border-top:1px solid #eee;padding-top:8px;font-size:0.82em;color:#888;">Last update: <b>' + last.text.slice(0,80) + (last.text.length>80?'…':'') + '</b> <span style="color:#bbb;margin-left:6px;">' + new Date(last.at).toLocaleDateString() + '</span></div>':'') +
+      (last?'<div style="margin-top:8px;border-top:1px solid #eee;padding-top:8px;font-size:0.82em;color:#888;">Last update: <b>' + last.text.slice(0,80) + (last.text.length>80?'…':'') + '</b> <span style="color:#bbb;margin-left:6px;">' + new Date(last.at).toLocaleDateString() + '</span></div>':'') +
     '</div>';
   }).join('');
 }
@@ -3171,6 +3308,299 @@ async function postProjectUpdate() {
   document.getElementById('pd-update-text').value = '';
   document.getElementById('pd-update-status').value = '';
   renderProjectUpdates({...p, ...patch});
+}
+
+// ===================================================================
+// PMI 5-PHASE PROJECT WIZARD
+// ===================================================================
+const PMI_PHASES = [
+  { key:'initiation',  label:'Phase 1 — Initiation',             short:'Initiation'   },
+  { key:'planning',    label:'Phase 2 — Planning',               short:'Planning'     },
+  { key:'execution',   label:'Phase 3 — Execution',              short:'Execution'    },
+  { key:'monitoring',  label:'Phase 4 — Monitoring & Controlling', short:'Monitoring' },
+  { key:'closing',     label:'Phase 5 — Closing',                short:'Closing'      },
+];
+
+let _pmiPhaseIndex = 0;  // 0-4
+let _pmiShowingSummary = false;
+
+function openPMIWizard(id) {
+  _pmiPhaseIndex = 0;
+  _pmiShowingSummary = false;
+  document.getElementById('pmi-project-id').value = id || '';
+
+  if (id) {
+    const p = DB.projects().find(x=>x._id===id);
+    if (p && p.pmi) {
+      // Resume — find the first incomplete phase
+      const idx = PMI_PHASES.findIndex(ph=>!p.pmi[ph.key]?.complete);
+      _pmiPhaseIndex = idx >= 0 ? idx : 4;
+      _prefillPMIPhase(p, _pmiPhaseIndex);
+    }
+  } else {
+    // Clear all fields
+    _clearPMIFields();
+  }
+
+  _renderPMIPhase();
+  document.getElementById('pmi-wizard').style.display = 'flex';
+}
+
+function closePMIWizard() {
+  document.getElementById('pmi-wizard').style.display = 'none';
+}
+
+function _clearPMIFields() {
+  ['pmi-p0-name','pmi-p0-problem','pmi-p0-sponsor','pmi-p0-goal','pmi-p0-stakeholders',
+   'pmi-p1-scope-in','pmi-p1-scope-out','pmi-p1-milestones','pmi-p1-budget','pmi-p1-risks','pmi-p1-comms',
+   'pmi-p2-deliverables','pmi-p2-assignments','pmi-p2-dependencies',
+   'pmi-p3-kpis','pmi-p3-changes','pmi-p3-issues',
+   'pmi-p4-acceptance','pmi-p4-lessons','pmi-p4-report','pmi-p4-handoff'
+  ].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+function _prefillPMIPhase(p, idx) {
+  const ph = p.pmi;
+  if (!ph) return;
+  const f = (id,val) => { const el=document.getElementById(id); if(el&&val) el.value=val; };
+  f('pmi-p0-name',       p.name);
+  f('pmi-p0-problem',    ph.initiation?.problem);
+  f('pmi-p0-sponsor',    ph.initiation?.sponsor);
+  f('pmi-p0-goal',       ph.initiation?.goal);
+  f('pmi-p0-stakeholders', ph.initiation?.stakeholders);
+  f('pmi-p1-scope-in',   ph.planning?.scopeIn);
+  f('pmi-p1-scope-out',  ph.planning?.scopeOut);
+  f('pmi-p1-milestones', ph.planning?.milestones);
+  f('pmi-p1-budget',     ph.planning?.budget);
+  f('pmi-p1-risks',      ph.planning?.risks);
+  f('pmi-p1-comms',      ph.planning?.comms);
+  f('pmi-p2-deliverables',  ph.execution?.deliverables);
+  f('pmi-p2-assignments',   ph.execution?.assignments);
+  f('pmi-p2-dependencies',  ph.execution?.dependencies);
+  f('pmi-p3-kpis',       ph.monitoring?.kpis);
+  f('pmi-p3-changes',    ph.monitoring?.changes);
+  f('pmi-p3-issues',     ph.monitoring?.issues);
+  if (ph.monitoring?.cadence) document.getElementById('pmi-p3-cadence').value = ph.monitoring.cadence;
+  f('pmi-p4-acceptance', ph.closing?.acceptance);
+  f('pmi-p4-lessons',    ph.closing?.lessons);
+  f('pmi-p4-report',     ph.closing?.report);
+  f('pmi-p4-handoff',    ph.closing?.handoff);
+}
+
+function _renderPMIPhase() {
+  const ph = PMI_PHASES[_pmiPhaseIndex];
+  document.getElementById('pmi-phase-title').textContent = ph.label;
+
+  // Step indicators
+  PMI_PHASES.forEach((_,i) => {
+    const el = document.getElementById('pmi-step-'+i);
+    el.className = 'pmi-step' + (i < _pmiPhaseIndex ? ' done' : i===_pmiPhaseIndex ? ' active' : '');
+  });
+
+  // Show/hide phase forms and summary
+  PMI_PHASES.forEach((_,i) => {
+    const el = document.getElementById('pmi-phase-'+i);
+    if (el) el.style.display = (!_pmiShowingSummary && i===_pmiPhaseIndex) ? 'block' : 'none';
+  });
+  document.getElementById('pmi-summary-panel').style.display = _pmiShowingSummary ? 'block' : 'none';
+
+  // Buttons
+  document.getElementById('pmi-back-btn').style.display     = _pmiPhaseIndex>0 && !_pmiShowingSummary ? 'inline-flex' : 'none';
+  document.getElementById('pmi-complete-btn').style.display  = !_pmiShowingSummary ? 'inline-flex' : 'none';
+  document.getElementById('pmi-next-btn').style.display      = _pmiShowingSummary && _pmiPhaseIndex<4 ? 'inline-flex' : 'none';
+  document.getElementById('pmi-next-btn').textContent        = 'Ready for ' + (PMI_PHASES[_pmiPhaseIndex+1]?.short||'Next') + ' →';
+  document.getElementById('pmi-finish-btn').style.display    = _pmiShowingSummary && _pmiPhaseIndex===4 ? 'inline-flex' : 'none';
+}
+
+function _gatherPhaseData(idx) {
+  const g = id => (document.getElementById(id)?.value||'').trim();
+  switch(idx) {
+    case 0: return { problem:g('pmi-p0-problem'), sponsor:g('pmi-p0-sponsor'), goal:g('pmi-p0-goal'), stakeholders:g('pmi-p0-stakeholders'), complete:true };
+    case 1: return { scopeIn:g('pmi-p1-scope-in'), scopeOut:g('pmi-p1-scope-out'), milestones:g('pmi-p1-milestones'), budget:g('pmi-p1-budget'), risks:g('pmi-p1-risks'), comms:g('pmi-p1-comms'), complete:true };
+    case 2: return { deliverables:g('pmi-p2-deliverables'), assignments:g('pmi-p2-assignments'), dependencies:g('pmi-p2-dependencies'), complete:true };
+    case 3: return { kpis:g('pmi-p3-kpis'), cadence:document.getElementById('pmi-p3-cadence').value, changes:g('pmi-p3-changes'), issues:g('pmi-p3-issues'), complete:true };
+    case 4: return { acceptance:g('pmi-p4-acceptance'), lessons:g('pmi-p4-lessons'), report:g('pmi-p4-report'), handoff:g('pmi-p4-handoff'), complete:true };
+  }
+}
+
+function _buildSummary(idx, data) {
+  const bullets = [];
+  switch(idx) {
+    case 0:
+      if(data.goal)          bullets.push('Goal: ' + data.goal);
+      if(data.problem)       bullets.push('Problem/Opportunity: ' + data.problem);
+      if(data.sponsor)       bullets.push('Sponsor: ' + data.sponsor);
+      if(data.stakeholders)  bullets.push('Key Stakeholders: ' + data.stakeholders);
+      break;
+    case 1:
+      const si = document.getElementById('pmi-p1-scope-in')?.value||'';
+      if(si)               bullets.push('In Scope: ' + si);
+      if(data.scopeOut)    bullets.push('Out of Scope: ' + data.scopeOut);
+      if(data.milestones)  bullets.push('Milestones: ' + data.milestones);
+      if(data.risks)       bullets.push('Key Risks: ' + data.risks);
+      if(data.comms)       bullets.push('Communication: ' + data.comms);
+      break;
+    case 2:
+      if(data.deliverables)   bullets.push('Active Deliverables: ' + data.deliverables);
+      if(data.assignments)    bullets.push('Assignments: ' + data.assignments);
+      if(data.dependencies)   bullets.push('Dependencies: ' + data.dependencies);
+      break;
+    case 3:
+      if(data.kpis)    bullets.push('KPIs: ' + data.kpis);
+      if(data.cadence) bullets.push('Check-in cadence: ' + data.cadence);
+      if(data.issues)  bullets.push('Current Issues: ' + data.issues);
+      if(data.changes) bullets.push('Change process: ' + data.changes);
+      break;
+    case 4:
+      if(data.acceptance) bullets.push('Acceptance: ' + data.acceptance);
+      if(data.lessons)    bullets.push('Lessons Learned: ' + data.lessons);
+      if(data.report)     bullets.push('Final Report: ' + data.report);
+      if(data.handoff)    bullets.push('Handoff: ' + data.handoff);
+      break;
+  }
+  return bullets.map(b=>'• '+b).join('\n');
+}
+
+function _buildPhaseTasks(idx, phaseData, projectName) {
+  const tasks = [];
+  const name = (document.getElementById('pmi-p0-name')?.value||projectName||'Project').trim();
+  switch(idx) {
+    case 0:
+      tasks.push({desc:'Hold project kickoff meeting — align team on goal and stakeholders', trigger:'Week 1'});
+      if(phaseData.sponsor) tasks.push({desc:'Brief sponsor ' + phaseData.sponsor + ' on project scope and goals', trigger:'Before Phase 2'});
+      tasks.push({desc:'Document and circulate project charter to all stakeholders', trigger:'End of Initiation'});
+      break;
+    case 1:
+      tasks.push({desc:'Finalize project scope document and get sign-off', trigger:'Start of Execution'});
+      if(phaseData.milestones) tasks.push({desc:'Set up milestone tracking for: ' + phaseData.milestones.slice(0,80), trigger:'Ongoing'});
+      if(phaseData.risks) tasks.push({desc:'Create risk log and assign risk owners: ' + phaseData.risks.slice(0,60), trigger:'Week 1'});
+      tasks.push({desc:'Schedule recurring team check-ins per communication plan', trigger:'Recurring'});
+      break;
+    case 2:
+      tasks.push({desc:'Kick off active deliverables: ' + (phaseData.deliverables||'').slice(0,80), trigger:'Immediately'});
+      if(phaseData.assignments) {
+        phaseData.assignments.split('\n').filter(Boolean).forEach(line => {
+          tasks.push({desc:line.trim(), trigger:'Per plan'});
+        });
+      }
+      if(phaseData.dependencies) tasks.push({desc:'Resolve dependencies before proceeding: ' + phaseData.dependencies.slice(0,80), trigger:'Before next milestone'});
+      break;
+    case 3:
+      tasks.push({desc:'Set up KPI tracking dashboard / log for: ' + (phaseData.kpis||'').slice(0,60), trigger:'Week 1'});
+      tasks.push({desc:'Run ' + (phaseData.cadence||'weekly') + ' status check-in with team', trigger:phaseData.cadence||'Weekly'});
+      if(phaseData.issues) tasks.push({desc:'Resolve open issues: ' + phaseData.issues.slice(0,80), trigger:'ASAP'});
+      break;
+    case 4:
+      tasks.push({desc:'Obtain formal deliverable sign-off per acceptance criteria', trigger:'Before close'});
+      tasks.push({desc:'Compile lessons learned document and share with team', trigger:'Final week'});
+      if(phaseData.handoff) tasks.push({desc:'Execute handoff plan: ' + phaseData.handoff.slice(0,80), trigger:'Close date'});
+      tasks.push({desc:'Archive all project files and send final report to stakeholders', trigger:'Project close'});
+      break;
+  }
+  return tasks;
+}
+
+async function pmiCompletePhase() {
+  const idx = _pmiPhaseIndex;
+  const projectName = (document.getElementById('pmi-p0-name')?.value||'').trim();
+  if (idx===0 && !projectName) { alert('Please enter a project name.'); return; }
+
+  const phaseData = _gatherPhaseData(idx);
+  const summary   = _buildSummary(idx, phaseData);
+  const tasks     = _buildPhaseTasks(idx, phaseData, projectName);
+
+  // Save to Firestore
+  const projectId = document.getElementById('pmi-project-id').value;
+  const pmiKey    = PMI_PHASES[idx].key;
+  const pmiPatch  = {};
+  pmiPatch[pmiKey] = phaseData;
+
+  let savedId = projectId;
+  if (!projectId) {
+    // Create the project
+    const ref = await DB.addProjectAndGetRef({
+      name:        projectName,
+      description: phaseData.goal || phaseData.deliverables || '',
+      status:      'Active',
+      type:        'pmi',
+      pmi:         pmiPatch,
+      updates:     []
+    });
+    savedId = ref;
+    document.getElementById('pmi-project-id').value = savedId;
+  } else {
+    const existing = DB.projects().find(p=>p._id===projectId);
+    const pmi = {...(existing?.pmi||{}), ...pmiPatch};
+    await DB.updateProject(projectId, {...existing, pmi, name: projectName||existing?.name||''});
+  }
+
+  // Show summary
+  document.getElementById('pmi-summary-text').textContent = summary;
+  document.getElementById('pmi-tasks-phase-label').textContent = PMI_PHASES[idx].short;
+
+  // Render task assignment rows
+  const staffOptions = DB.staff().map(s=>'<option value="' + s.name + '">' + s.name + '</option>').join('');
+  document.getElementById('pmi-tasks-list').innerHTML = tasks.map((t,i) =>
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">' +
+      '<div style="flex:1;min-width:200px;font-size:0.875em;color:#333;">' + t.desc + '</div>' +
+      '<select id="pmi-task-owner-' + i + '" style="padding:6px 10px;border:1.5px solid #ddd;border-radius:7px;font-size:0.82em;min-width:130px;">' +
+        '<option value="">Assign to…</option>' + staffOptions +
+      '</select>' +
+      '<input type="text" id="pmi-task-due-' + i + '" value="' + t.trigger + '" style="width:110px;padding:6px 8px;border:1.5px solid #ddd;border-radius:7px;font-size:0.82em;" placeholder="Due/Trigger">' +
+      '<button class="btn btn-accent" style="padding:5px 10px;font-size:0.75em;" onclick="pmiAssignTask(' + i + ',\'' + savedId + '\',\'' + pmiKey + '\')">Assign</button>' +
+    '</div>'
+  ).join('') + '<p style="font-size:0.78em;color:#aaa;margin-top:6px;">Select a mentor and click Assign to send tasks to their inbox.</p>';
+
+  document.getElementById('pmi-next-prompt').textContent =
+    idx < 4
+      ? 'Ready for ' + PMI_PHASES[idx+1].label + '?'
+      : '🏁 All 5 phases complete. Click "Finish Project" to close the wizard.';
+
+  _pmiShowingSummary = true;
+  _renderPMIPhase();
+}
+
+async function pmiAssignTask(taskIdx, projectId, phaseKey) {
+  const owner = document.getElementById('pmi-task-owner-' + taskIdx)?.value;
+  const due   = document.getElementById('pmi-task-due-' + taskIdx)?.value;
+  const btn   = event.target;
+  if (!owner) { alert('Select a mentor to assign this task to.'); return; }
+  const desc  = btn.closest('div').querySelector('div').textContent.trim();
+  await DB.addTask({
+    mentorName:  owner,
+    clientName:  '',
+    clientId:    '',
+    description: desc,
+    dueDate:     due,
+    status:      'Open',
+    alertType:   'pmi',
+    reason:      'PMI ' + phaseKey + ' task — Project: ' + (DB.projects().find(p=>p._id===projectId)?.name||projectId)
+  });
+  btn.textContent = '✅';
+  btn.disabled = true;
+  btn.style.background = 'var(--success)';
+}
+
+function pmiBack() {
+  if (_pmiShowingSummary) { _pmiShowingSummary = false; _renderPMIPhase(); return; }
+  if (_pmiPhaseIndex > 0) { _pmiPhaseIndex--; _renderPMIPhase(); }
+}
+
+function pmiNextPhase() {
+  if (_pmiPhaseIndex < 4) {
+    _pmiPhaseIndex++;
+    _pmiShowingSummary = false;
+    _renderPMIPhase();
+  }
+}
+
+async function pmiFinish() {
+  const id = document.getElementById('pmi-project-id').value;
+  if (id) {
+    const p = DB.projects().find(x=>x._id===id);
+    if (p) await DB.updateProject(id, {...p, status:'Active'});
+  }
+  closePMIWizard();
 }
 
 // ===================================================================
@@ -3421,6 +3851,7 @@ Object.assign(window, {
   refreshAlerts, renderAdminInbox, renderAdminTasks, openAssignModal, closeAssignModal, saveAssignedTask, adminRemoveTask,
   renderMyTasks, updateMyTaskStatus,
   renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject, openProjectDetail, closeProjectDetail, postProjectUpdate,
+  openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   renderEvents, switchEvTab, copyEvText, copyText,
 });
 
