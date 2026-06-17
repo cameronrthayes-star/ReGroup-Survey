@@ -1374,7 +1374,7 @@ function generateTimesheet() {
     const rawH = Math.max(0, calcHours(e.startTime, e.endTime));
     const lunchAmt = rawH > 0 ? -lunch : 0;
     const totalH = rawH + lunchAmt;
-    const grant = e.grant || 'General Fund';
+    const grant = e.grant || staffInfo?.defaultGrant || 'General Fund';
     const bill  = Math.max(0, totalH) * rate;
     totReg   += rawH;
     totLunch += lunchAmt;
