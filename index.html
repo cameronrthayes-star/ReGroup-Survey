@@ -27,20 +27,22 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);display:flex
 
 /* === SIDEBAR === */
 #sidebar{width:var(--sidebar-w);background:linear-gradient(175deg,#0d1b5e 0%,#1a237e 55%,#1a3060 100%);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:200;overflow-y:auto;box-shadow:4px 0 24px rgba(0,0,0,0.18);}
-.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,0.08);}
-.sidebar-logo-regroup{display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
-.sidebar-logo-regroup svg{filter:brightness(0) invert(1);width:130px;height:auto;}
-.sidebar-logo-tjc{display:flex;align-items:center;gap:8px;opacity:0.72;padding:6px 8px;background:rgba(255,255,255,0.06);border-radius:8px;}
-.sidebar-logo-tjc svg{width:28px;height:28px;flex-shrink:0;}
-.sidebar-logo-tjc-text{font-size:0.62em;line-height:1.3;letter-spacing:0.02em;font-weight:600;color:rgba(255,255,255,0.85);}
+.sidebar-logo{padding:26px 18px 18px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.sidebar-logo-regroup{display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.sidebar-logo-regroup svg{width:172px;height:auto;}
+.sidebar-logo-tjc{display:flex;align-items:center;gap:9px;padding:7px 10px;background:rgba(255,255,255,0.07);border-radius:9px;}
+.sidebar-logo-tjc svg{width:34px;height:34px;flex-shrink:0;}
+.sidebar-logo-tjc-text{font-size:0.6em;line-height:1.45;letter-spacing:0.03em;font-weight:700;}
 .sidebar-logo-tjc-text span{display:block;}
-.sidebar-logo-platform{font-size:0.68em;text-align:center;opacity:0.4;margin-top:10px;text-transform:uppercase;letter-spacing:0.14em;font-weight:500;}
+.sidebar-logo-platform{font-size:0.63em;text-align:center;opacity:0.35;margin-top:10px;text-transform:uppercase;letter-spacing:0.16em;font-weight:500;}
 #sidebar nav{flex:1;padding:8px 0 20px;}
 .nav-section{padding:16px 20px 4px;font-size:0.6em;text-transform:uppercase;letter-spacing:0.14em;opacity:0.35;font-weight:700;}
 #sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 16px 10px 20px;color:rgba(255,255,255,0.65);text-decoration:none;font-size:0.84em;font-weight:500;cursor:pointer;transition:all 0.18s;border-left:3px solid transparent;user-select:none;border-radius:0 8px 8px 0;margin:1px 10px 1px 0;}
 #sidebar nav a:hover{background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.92);}
 #sidebar nav a.active{background:rgba(255,255,255,0.12);color:#fff;border-left-color:var(--accent);font-weight:600;}
-#sidebar nav a .nav-icon{font-size:1em;width:20px;text-align:center;opacity:0.85;}
+#sidebar nav a .nav-icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;opacity:0.7;}
+#sidebar nav a .nav-icon svg{width:16px;height:16px;}
+#sidebar nav a:hover .nav-icon,#sidebar nav a.active .nav-icon{opacity:1;}
 
 /* === MAIN === */
 #main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
@@ -231,43 +233,45 @@ table tr:hover td{background:#fafbff;}
 <!-- SIDEBAR -->
 <div id="sidebar">
   <div class="sidebar-logo">
-    <!-- ReGroup logo — prominent, white version for dark sidebar -->
+    <!-- ReGroup logo — white on dark sidebar -->
     <div class="sidebar-logo-regroup">
-      <!-- Oval with arrow curl bottom-left, REGROUP bold text -->
-      <svg viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg" width="160" height="auto">
-        <!-- Main oval outline -->
-        <ellipse cx="170" cy="55" rx="160" ry="50" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
-        <!-- Arrow curl at bottom-left of oval: the oval line breaks and curls inward -->
-        <path d="M38 82 C28 96 18 104 32 108 C20 100 36 90 44 78" fill="#fff" stroke="none"/>
-        <!-- REGROUP ultra-bold text -->
-        <text x="175" y="73" text-anchor="middle"
-              font-family="'Arial Black','Impact','Franklin Gothic Heavy',sans-serif"
-              font-weight="900" font-size="52" fill="#fff" letter-spacing="-1">REGROUP</text>
+      <svg viewBox="0 0 300 96" xmlns="http://www.w3.org/2000/svg">
+        <!-- Oval outline — open at bottom-left for the arrow curl -->
+        <path d="M52 88 C30 96 8 84 8 48 C8 22 36 6 150 6 C264 6 292 22 292 48 C292 74 264 90 150 90 C110 90 76 88 52 88 Z"
+              fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Arrow tail curling inward at bottom-left -->
+        <path d="M52 88 C44 94 36 100 44 106" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+        <path d="M44 106 L36 94 L54 96 Z" fill="#fff"/>
+        <!-- REGROUP text -->
+        <text x="152" y="64" text-anchor="middle"
+              font-family="'Arial Black','Impact','Franklin Gothic Heavy','Arial Bold',sans-serif"
+              font-weight="900" font-size="54" fill="#fff" letter-spacing="0">REGROUP</text>
       </svg>
     </div>
     <!-- TJC parent org — secondary -->
     <div class="sidebar-logo-tjc">
-      <!-- 6 person figures in a circle, two-tone blue -->
-      <svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" width="36" height="36" flex-shrink="0">
-        <!-- 6 figures arranged in a circle, each = head circle + body arc -->
-        <!-- Figure 1 — top -->
-        <circle cx="28" cy="7"  r="4.2" fill="#1565c0"/>
-        <path d="M22.5 18 Q28 13 33.5 18" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round"/>
-        <!-- Figure 2 — top-right -->
-        <circle cx="45" cy="16" r="4.2" fill="#1e88e5"/>
-        <path d="M39 26 Q45 21 49 27" fill="none" stroke="#1e88e5" stroke-width="4" stroke-linecap="round"/>
-        <!-- Figure 3 — bottom-right -->
-        <circle cx="47" cy="36" r="4.2" fill="#1565c0"/>
-        <path d="M41 46 Q47 41 52 46" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round"/>
-        <!-- Figure 4 — bottom -->
-        <circle cx="28" cy="49" r="4.2" fill="#1e88e5"/>
-        <path d="M22.5 56 Q28 54 33.5 56" fill="none" stroke="#1e88e5" stroke-width="4" stroke-linecap="round"/>
-        <!-- Figure 5 — bottom-left -->
-        <circle cx="9"  cy="36" r="4.2" fill="#1565c0"/>
-        <path d="M4 46 Q9 41 15 46" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round"/>
-        <!-- Figure 6 — top-left -->
-        <circle cx="11" cy="16" r="4.2" fill="#1e88e5"/>
-        <path d="M7 27 Q11 21 17 26" fill="none" stroke="#1e88e5" stroke-width="4" stroke-linecap="round"/>
+      <!-- 6 interconnected person silhouettes in a circle, 2-tone blue matching actual logo -->
+      <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+        <!-- Outer ring figures (darker blue) at 0°,120°,240° -->
+        <!-- Top (0°): cx=30,cy=6 -->
+        <circle cx="30" cy="7"  r="5" fill="#1a5fa8"/>
+        <path d="M23 20 C23 14 37 14 37 20" fill="#1a5fa8"/>
+        <!-- Bottom-right (120°): cx=51,cy=39 -->
+        <circle cx="51" cy="38" r="5" fill="#1a5fa8"/>
+        <path d="M44 51 C44 45 58 45 58 51" fill="#1a5fa8"/>
+        <!-- Bottom-left (240°): cx=9,cy=39 -->
+        <circle cx="9"  cy="38" r="5" fill="#1a5fa8"/>
+        <path d="M2  51 C2  45 16 45 16 51" fill="#1a5fa8"/>
+        <!-- Inner ring figures (lighter blue) at 60°,180°,300° -->
+        <!-- Top-right (60°): cx=47,cy=16 -->
+        <circle cx="47" cy="16" r="4.2" fill="#29b6cf"/>
+        <path d="M41 27 C41 22 53 22 53 27" fill="#29b6cf"/>
+        <!-- Bottom (180°): cx=30,cy=52 -->
+        <circle cx="30" cy="51" r="4.2" fill="#29b6cf"/>
+        <path d="M24 60 C24 56 36 56 36 60" fill="#29b6cf"/>
+        <!-- Top-left (300°): cx=13,cy=16 -->
+        <circle cx="13" cy="16" r="4.2" fill="#29b6cf"/>
+        <path d="M7  27 C7  22 19 22 19 27" fill="#29b6cf"/>
       </svg>
       <div class="sidebar-logo-tjc-text">
         <span><b style="color:#fff;">T</b><span style="color:#29b6cf;">RANSFORMATIVE</span></span>
@@ -279,35 +283,35 @@ table tr:hover td{background:#fafbff;}
   </div>
   <nav>
     <div class="nav-section">Analytics</div>
-    <a onclick="navigate('dashboard')" data-view="dashboard"><span class="nav-icon">📊</span> Dashboard</a>
+    <a onclick="navigate('dashboard')" data-view="dashboard"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg></span> Dashboard</a>
 
     <div class="nav-section">Log Entry</div>
-    <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon">📝</span> Progress Note</a>
-    <a onclick="navigate('activity-log')" data-view="activity-log"><span class="nav-icon">📋</span> Activity Log</a>
-    <a onclick="navigate('meetings')" data-view="meetings"><span class="nav-icon">🤝</span> Meetings</a>
+    <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span> Progress Note</a>
+    <a onclick="navigate('activity-log')" data-view="activity-log"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Activity Log</a>
+    <a onclick="navigate('meetings')" data-view="meetings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Meetings</a>
 
     <div class="nav-section">Reports</div>
-    <a onclick="navigate('data-view')" data-view="data-view"><span class="nav-icon">🗂</span> Data View</a>
-    <a onclick="navigate('timesheets')" data-view="timesheets"><span class="nav-icon">🕐</span> Timesheets</a>
+    <a onclick="navigate('data-view')" data-view="data-view"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></span> Data View</a>
+    <a onclick="navigate('timesheets')" data-view="timesheets"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Timesheets</a>
 
     <div class="nav-section">Directory</div>
-    <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon">👥</span> Client Directory</a>
-    <a onclick="navigate('email-blast')" data-view="email-blast"><span class="nav-icon">📧</span> Email Blast</a>
+    <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Client Directory</a>
+    <a onclick="navigate('email-blast')" data-view="email-blast"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span> Email Blast</a>
 
     <div class="nav-section">Forms</div>
-    <a onclick="navigate('needs-assessment')" data-view="needs-assessment"><span class="nav-icon">📋</span> Needs Assessment</a>
-    <a onclick="navigate('expense-report')" data-view="expense-report"><span class="nav-icon">💳</span> Expense Report</a>
+    <a onclick="navigate('needs-assessment')" data-view="needs-assessment"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Needs Assessment</a>
+    <a onclick="navigate('expense-report')" data-view="expense-report"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Expense Report</a>
 
     <div class="nav-section">Alerts & Tasks</div>
-    <a onclick="navigate('admin-inbox')" data-view="admin-inbox"><span class="nav-icon">🔔</span> Admin Inbox</a>
-    <a onclick="navigate('my-tasks')" data-view="my-tasks"><span class="nav-icon">✅</span> My Tasks</a>
+    <a onclick="navigate('admin-inbox')" data-view="admin-inbox"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Admin Inbox</a>
+    <a onclick="navigate('my-tasks')" data-view="my-tasks"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> My Tasks</a>
 
     <div class="nav-section">Work</div>
-    <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon">📁</span> Projects</a>
-    <a onclick="navigate('events')" data-view="events"><span class="nav-icon">📸</span> Events & Social</a>
+    <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Projects</a>
+    <a onclick="navigate('events')" data-view="events"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> Events & Social</a>
 
     <div class="nav-section">Admin</div>
-    <a onclick="navigate('settings')" data-view="settings"><span class="nav-icon">⚙️</span> Staff & Settings</a>
+    <a onclick="navigate('settings')" data-view="settings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Staff & Settings</a>
   </nav>
 </div>
 
@@ -1565,29 +1569,25 @@ table tr:hover td{background:#fafbff;}
   <div style="background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);border-radius:24px;padding:48px 44px;width:380px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,0.4);position:relative;">
     <!-- ReGroup logo — dark charcoal version for white card -->
     <div style="margin-bottom:14px;">
-      <svg viewBox="0 0 340 110" xmlns="http://www.w3.org/2000/svg" width="200" style="display:inline-block;">
-        <ellipse cx="170" cy="55" rx="160" ry="50" fill="none" stroke="#3a3a3a" stroke-width="8" stroke-linecap="round"/>
-        <path d="M38 82 C28 96 18 104 32 108 C20 100 36 90 44 78" fill="#3a3a3a" stroke="none"/>
-        <text x="175" y="73" text-anchor="middle"
-              font-family="'Arial Black','Impact','Franklin Gothic Heavy',sans-serif"
-              font-weight="900" font-size="52" fill="#3a3a3a" letter-spacing="-1">REGROUP</text>
+      <svg viewBox="0 0 300 96" xmlns="http://www.w3.org/2000/svg" width="220" style="display:inline-block;">
+        <path d="M52 88 C30 96 8 84 8 48 C8 22 36 6 150 6 C264 6 292 22 292 48 C292 74 264 90 150 90 C110 90 76 88 52 88 Z"
+              fill="none" stroke="#3a3a3a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M52 88 C44 94 36 100 44 106" fill="none" stroke="#3a3a3a" stroke-width="9" stroke-linecap="round"/>
+        <path d="M44 106 L36 94 L54 96 Z" fill="#3a3a3a"/>
+        <text x="152" y="64" text-anchor="middle"
+              font-family="'Arial Black','Impact','Franklin Gothic Heavy','Arial Bold',sans-serif"
+              font-weight="900" font-size="54" fill="#3a3a3a" letter-spacing="0">REGROUP</text>
       </svg>
     </div>
     <!-- TJC sub-brand -->
     <div style="display:inline-flex;align-items:center;gap:8px;background:#f0f5ff;border-radius:10px;padding:7px 14px;margin-bottom:22px;">
-      <svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
-        <circle cx="28" cy="7"  r="4.2" fill="#1565c0"/>
-        <path d="M22.5 18 Q28 13 33.5 18" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="45" cy="16" r="4.2" fill="#1e88e5"/>
-        <path d="M39 26 Q45 21 49 27" fill="none" stroke="#1e88e5" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="47" cy="36" r="4.2" fill="#1565c0"/>
-        <path d="M41 46 Q47 41 52 46" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="28" cy="49" r="4.2" fill="#1e88e5"/>
-        <path d="M22.5 56 Q28 54 33.5 56" fill="none" stroke="#1e88e5" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="9"  cy="36" r="4.2" fill="#1565c0"/>
-        <path d="M4 46 Q9 41 15 46" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="11" cy="16" r="4.2" fill="#1e88e5"/>
-        <path d="M7 27 Q11 21 17 26" fill="none" stroke="#1e88e5" stroke-width="4" stroke-linecap="round"/>
+      <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" width="32" height="32">
+        <circle cx="30" cy="7"  r="5" fill="#1a5fa8"/><path d="M23 20 C23 14 37 14 37 20" fill="#1a5fa8"/>
+        <circle cx="51" cy="38" r="5" fill="#1a5fa8"/><path d="M44 51 C44 45 58 45 58 51" fill="#1a5fa8"/>
+        <circle cx="9"  cy="38" r="5" fill="#1a5fa8"/><path d="M2  51 C2  45 16 45 16 51" fill="#1a5fa8"/>
+        <circle cx="47" cy="16" r="4.2" fill="#29b6cf"/><path d="M41 27 C41 22 53 22 53 27" fill="#29b6cf"/>
+        <circle cx="30" cy="51" r="4.2" fill="#29b6cf"/><path d="M24 60 C24 56 36 56 36 60" fill="#29b6cf"/>
+        <circle cx="13" cy="16" r="4.2" fill="#29b6cf"/><path d="M7  27 C7  22 19 22 19 27" fill="#29b6cf"/>
       </svg>
       <div style="text-align:left;line-height:1.35;font-size:0.7em;font-weight:700;letter-spacing:0.04em;">
         <div><span style="color:#1a237e;">T</span><span style="color:#1e88e5;">RANSFORMATIVE</span></div>
