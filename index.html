@@ -855,23 +855,94 @@ table tr:hover td{background:#fafbff;}
   </div><!-- /content -->
 </div><!-- /main -->
 
-<script>
+<script type="module">
 // ===================================================================
-// DATA LAYER
+// FIREBASE CONFIG — paste your firebaseConfig object here
 // ===================================================================
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc,
+  query, orderBy, onSnapshot, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "PASTE_API_KEY",
+  authDomain: "PASTE_AUTH_DOMAIN",
+  projectId: "PASTE_PROJECT_ID",
+  storageBucket: "PASTE_STORAGE_BUCKET",
+  messagingSenderId: "PASTE_MESSAGING_SENDER_ID",
+  appId: "PASTE_APP_ID"
+};
+
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+
+// ===================================================================
+// DATA LAYER — Firestore backed, real-time shared across all users
+// ===================================================================
+
+// In-memory cache updated by real-time listeners
+let _sessions    = [];
+let _activities  = [];
+let _staff       = [];
+let _listenersReady = 0;
+
+function _onReady() {
+  _listenersReady++;
+  if (_listenersReady === 3) {
+    renderDashboard();
+    refreshStaffDatalist();
+  }
+}
+
+// Real-time listeners — fire whenever any mentor adds/changes data
+onSnapshot(query(collection(db,'sessions'),   orderBy('dateOfService','asc')),   snap => {
+  _sessions   = snap.docs.map(d => ({...d.data(), _id:d.id, _type:'client'}));
+  _onReady();
+  if (document.getElementById('view-dashboard')?.classList.contains('active'))   renderDashboard();
+  if (document.getElementById('view-data-view')?.classList.contains('active'))  renderDataView();
+});
+onSnapshot(query(collection(db,'activities'), orderBy('dateOfActivity','asc')),  snap => {
+  _activities = snap.docs.map(d => ({...d.data(), _id:d.id, _type:'activity'}));
+  _onReady();
+  if (document.getElementById('view-dashboard')?.classList.contains('active'))   renderDashboard();
+  if (document.getElementById('view-data-view')?.classList.contains('active'))  renderDataView();
+});
+onSnapshot(collection(db,'staff'), snap => {
+  _staff = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  refreshStaffDatalist();
+  if (document.getElementById('view-settings')?.classList.contains('active')) renderSettings();
+});
+
 const DB = {
-  sessions:   () => JSON.parse(localStorage.getItem('rg_sessions')   || '[]'),
-  activities: () => JSON.parse(localStorage.getItem('rg_activities') || '[]'),
-  staff:      () => JSON.parse(localStorage.getItem('rg_staff')      || '[]'),
-  saveSessions(arr)   { localStorage.setItem('rg_sessions',   JSON.stringify(arr)); },
-  saveActivities(arr) { localStorage.setItem('rg_activities', JSON.stringify(arr)); },
-  saveStaff(arr)      { localStorage.setItem('rg_staff',      JSON.stringify(arr)); },
-  addSession(s)  { const d = this.sessions();   d.push(s); this.saveSessions(d); },
-  addActivity(a) { const d = this.activities(); d.push(a); this.saveActivities(d); },
+  sessions:   () => _sessions,
+  activities: () => _activities,
+  staff:      () => _staff,
+
+  async addSession(s) {
+    await addDoc(collection(db,'sessions'), {...s, _createdAt: serverTimestamp()});
+  },
+  async addActivity(a) {
+    await addDoc(collection(db,'activities'), {...a, _createdAt: serverTimestamp()});
+  },
+  async saveStaffMember(s) {
+    const ref = s._id ? doc(db,'staff',s._id) : doc(collection(db,'staff'));
+    await setDoc(ref, s);
+  },
+  async removeStaffMember(id) {
+    await deleteDoc(doc(db,'staff',id));
+  },
+  async saveSessions(arr) {
+    for (const s of arr) await addDoc(collection(db,'sessions'), {...s, _createdAt: serverTimestamp()});
+  },
+  async saveActivities(arr) {
+    for (const a of arr) await addDoc(collection(db,'activities'), {...a, _createdAt: serverTimestamp()});
+  },
+
   allEntries() {
-    const s = this.sessions().map(x => ({...x, _type:'client'}));
-    const a = this.activities().map(x => ({...x, _type:'activity'}));
-    return [...s, ...a].sort((a,b) => (getDate(a)||'').localeCompare(getDate(b)||''));
+    return [..._sessions, ..._activities]
+      .sort((a,b) => (getDate(a)||'').localeCompare(getDate(b)||''));
   }
 };
 
@@ -1052,18 +1123,19 @@ function refreshStaffDatalist() {
 // ===================================================================
 // FORM SUBMIT
 // ===================================================================
-document.getElementById('progress-note-form').addEventListener('submit', function(e) {
+document.getElementById('progress-note-form').addEventListener('submit', async function(e) {
   e.preventDefault();
+  const btn = this.querySelector('[type="submit"]');
+  btn.textContent = 'Saving…'; btn.disabled = true;
   const fd = new FormData(this);
   const data = {id:uuid(), type:'client', submittedAt:new Date().toISOString()};
-  // Single-value fields
   for (const [k,v] of fd.entries()) { data[k] = v; }
-  // Multi-value fields
   data.supportTypes = fd.getAll('supportTypes');
   data.referralsMade = fd.getAll('referralsMade');
   data.serviceCategories = fd.getAll('serviceCategories');
   data.attemptMethods = fd.getAll('attemptMethods');
-  DB.addSession(data);
+  await DB.addSession(data);
+  btn.textContent = 'Submit Progress Note'; btn.disabled = false;
   document.getElementById('pn-success').style.display='block';
   this.reset();
   document.getElementById('successful-fields').style.display='block';
@@ -1073,14 +1145,17 @@ document.getElementById('progress-note-form').addEventListener('submit', functio
   setTimeout(()=>document.getElementById('pn-success').style.display='none',5000);
 });
 
-document.getElementById('activity-log-form').addEventListener('submit', function(e) {
+document.getElementById('activity-log-form').addEventListener('submit', async function(e) {
   e.preventDefault();
+  const btn = this.querySelector('[type="submit"]');
+  btn.textContent = 'Saving…'; btn.disabled = true;
   const fd = new FormData(this);
   const data = {id:uuid(), type:'activity', submittedAt:new Date().toISOString()};
   for (const [k,v] of fd.entries()) { data[k]=v; }
   data.whoInvolved = fd.getAll('whoInvolved');
   data.serviceAreas = fd.getAll('serviceAreas');
-  DB.addActivity(data);
+  await DB.addActivity(data);
+  btn.textContent = 'Submit Activity Log'; btn.disabled = false;
   document.getElementById('al-success').style.display='block';
   this.reset();
   document.getElementById('al-hours-preview').value='';
@@ -1521,7 +1596,7 @@ function generateTimesheet() {
 function renderSettings() {
   refreshStaffDatalist();
   const staff = DB.staff();
-  document.getElementById('staff-list').innerHTML = staff.length ? staff.map((s,i)=>`
+  document.getElementById('staff-list').innerHTML = staff.length ? staff.map(s=>`
     <div class="staff-card">
       <div class="staff-avatar">${s.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
       <div class="staff-info">
@@ -1529,7 +1604,7 @@ function renderSettings() {
         <div class="meta">${s.role} · $${s.rate}/hr · ${s.regularHrs}h/pay period · ${s.defaultGrant}</div>
         ${s.startDate?`<div class="meta">Start: ${fmtDate(s.startDate)}</div>`:''}
       </div>
-      <button class="btn btn-danger" onclick="removeStaff(${i})" style="padding:6px 12px;font-size:0.78em;">Remove</button>
+      <button class="btn btn-danger" onclick="removeStaff('${s._id}')" style="padding:6px 12px;font-size:0.78em;">Remove</button>
     </div>
   `).join('') : '<p style="color:#bbb;font-size:0.875em;margin-bottom:12px;">No staff members yet. Add your first team member below.</p>';
 }
@@ -1538,27 +1613,24 @@ function showAddStaff() {
   document.getElementById('add-staff-form').style.display='block';
 }
 
-function addStaff() {
+async function addStaff() {
   const name = document.getElementById('staff-name').value.trim();
   if (!name) { alert('Name is required.'); return; }
-  const arr = DB.staff();
-  arr.push({
-    id: uuid(), name,
+  await DB.saveStaffMember({
+    name,
     role: document.getElementById('staff-role').value,
     startDate: document.getElementById('staff-start-date').value,
     rate: parseFloat(document.getElementById('staff-rate').value)||20,
     regularHrs: parseFloat(document.getElementById('staff-reg-hrs').value)||16,
     defaultGrant: document.getElementById('staff-grant').value
   });
-  DB.saveStaff(arr);
   document.getElementById('add-staff-form').style.display='none';
   document.getElementById('staff-name').value='';
-  renderSettings();
 }
 
-function removeStaff(i) {
+async function removeStaff(id) {
   if (!confirm('Remove this staff member?')) return;
-  const arr = DB.staff(); arr.splice(i,1); DB.saveStaff(arr); renderSettings();
+  await DB.removeStaffMember(id);
 }
 
 // ===================================================================
@@ -1566,8 +1638,10 @@ function removeStaff(i) {
 // ===================================================================
 function exportData() {
   const blob = new Blob([JSON.stringify({
-    sessions:DB.sessions(), activities:DB.activities(), staff:DB.staff(),
-    exportedAt:new Date().toISOString()
+    sessions: DB.sessions().map(({_type,...s})=>s),
+    activities: DB.activities().map(({_type,...a})=>a),
+    staff: DB.staff(),
+    exportedAt: new Date().toISOString()
   },null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1578,14 +1652,12 @@ function exportData() {
 function importDataJSON(e) {
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
-  reader.onload = ev => {
+  reader.onload = async ev => {
     try {
       const d = JSON.parse(ev.target.result);
-      if(d.sessions)    DB.saveSessions(d.sessions);
-      if(d.activities)  DB.saveActivities(d.activities);
-      if(d.staff)       DB.saveStaff(d.staff);
-      showImportMsg('success',`✅ Imported: ${(d.sessions||[]).length} sessions, ${(d.activities||[]).length} activities, ${(d.staff||[]).length} staff.`);
-      renderSettings();
+      if(d.sessions)   await DB.saveSessions(d.sessions);
+      if(d.activities) await DB.saveActivities(d.activities);
+      showImportMsg('success',`✅ Imported: ${(d.sessions||[]).length} sessions, ${(d.activities||[]).length} activities.`);
     } catch(err) { showImportMsg('danger','❌ Error: '+err.message); }
   };
   reader.readAsText(file);
@@ -1609,7 +1681,7 @@ function csvHeaderToKey(h) {
 function importCSV(e, type) {
   const file=e.target.files[0]; if(!file) return;
   const reader=new FileReader();
-  reader.onload=ev=>{
+  reader.onload=async ev=>{
     try{
       const lines=ev.target.result.split(/\r?\n/).filter(l=>l.trim());
       const headers=parseCSVLine(lines[0]).map(csvHeaderToKey);
@@ -1617,17 +1689,13 @@ function importCSV(e, type) {
         const vals=parseCSVLine(line);
         const obj={id:uuid(),type,submittedAt:new Date().toISOString()};
         headers.forEach((h,i)=>{ if(h) obj[h]=vals[i]||''; });
-        // Map common Google Sheets column names
         if(obj.mentorName===undefined) obj.mentorName = obj.name||obj.mentor||'';
         if(obj.dateOfService===undefined && type==='client') obj.dateOfService = obj.date||obj.dateOfActivity||'';
         if(obj.dateOfActivity===undefined && type==='activity') obj.dateOfActivity = obj.date||'';
         return obj;
       });
-      if(type==='client'){
-        const ex=DB.sessions(); DB.saveSessions([...ex,...records]);
-      } else {
-        const ex=DB.activities(); DB.saveActivities([...ex,...records]);
-      }
+      if(type==='client') await DB.saveSessions(records);
+      else await DB.saveActivities(records);
       showImportMsg('success',`✅ Imported ${records.length} ${type} records.`);
     } catch(err){ showImportMsg('danger','❌ Error: '+err.message); }
   };
@@ -1641,9 +1709,8 @@ function showImportMsg(type, msg) {
 }
 
 function clearAllData() {
-  if(!confirm('This will permanently delete all session and activity data. Staff records will be kept. Continue?')) return;
-  DB.saveSessions([]); DB.saveActivities([]);
-  showImportMsg('warn','⚠️ All session and activity data cleared.');
+  if(!confirm('This will permanently delete all session and activity data from Firestore. This cannot be undone. Continue?')) return;
+  showImportMsg('warn','⚠️ To clear all data, delete the sessions and activities collections directly in the Firebase console.');
 }
 
 // ===================================================================
@@ -1651,8 +1718,7 @@ function clearAllData() {
 // ===================================================================
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 initForms();
-refreshStaffDatalist();
-renderDashboard();
+// Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
 </script>
 </body>
 </html>
