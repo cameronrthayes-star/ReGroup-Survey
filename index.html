@@ -4397,13 +4397,18 @@ async function generatePlanAI(){
   if (_plannerDoc && _plannerDoc.kind==='text') textPart += '\n\nPROJECT DOCUMENT:\n' + _plannerDoc.text;
   if (paste) textPart += '\n\nADDITIONAL DETAILS:\n' + paste;
   content.push({type:'text', text:textPart});
+  const headers = {'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+  if (_plannerDoc && _plannerDoc.kind==='pdf') headers['anthropic-beta'] = 'pdfs-2024-09-25';  // enable PDF document input
   try{
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers,
       body:JSON.stringify({model:'claude-opus-4-8', max_tokens:3072, messages:[{role:'user',content},{role:'assistant',content:'['}]})
     });
-    if (!resp.ok) throw new Error('Anthropic API '+resp.status);
+    if (!resp.ok){
+      let detail=''; try{ const e=await resp.json(); detail = (e.error && e.error.message) || ''; }catch(_){}
+      throw new Error('Anthropic API '+resp.status+(detail?': '+detail:''));
+    }
     const j = await resp.json();
     let txt = (j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
     txt = ('['+txt).replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
@@ -4414,7 +4419,7 @@ async function generatePlanAI(){
     renderPlannerSteps();
   } catch(err){
     status.style.color='#e53935';
-    status.textContent = 'AI error: '+err.message+'. Check the API key and try again.';
+    status.textContent = 'AI error — '+err.message;
   } finally { btn.disabled=false; }
 }
 
@@ -4846,7 +4851,7 @@ async function generateAllPostsAI(data) {
       ],
     }),
   });
-  if (!resp.ok) throw new Error('Anthropic API ' + resp.status);
+  if (!resp.ok) { let detail=''; try{ const e=await resp.json(); detail=(e.error&&e.error.message)||''; }catch(_){} throw new Error('Anthropic API ' + resp.status + (detail?': '+detail:'')); }
   const j = await resp.json();
   let txt = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
   if (!txt) return null;
