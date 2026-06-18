@@ -207,15 +207,15 @@ table tr:hover td{background:#fafbff;}
 .er-sig-line{border-bottom:1px solid #000;height:28px;min-width:200px;}
 .er-sig-label{font-size:8pt;text-transform:uppercase;letter-spacing:0.06em;color:#666;margin-top:3px;}
 
+#print-root{display:none;}
 @media print{
-  #sidebar,#topbar,.no-print{display:none!important;}
-  #main{margin-left:0;}
-  #content{padding:0;}
+  /* Print only the dedicated print root; hide the whole app shell.
+     (Print areas can't live inside a hidden .view — display:none on an
+     ancestor hides them regardless — so we render into a top-level root.) */
+  body > *:not(#print-root){display:none!important;}
+  #print-root{display:block!important;}
   body{background:#fff;}
-  .card{box-shadow:none;border:none;padding:4px 0;margin:0;}
-  #timesheet-output{display:block!important;}
-  #na-print-area,#er-print-area{display:block!important;}
-  .view{display:none!important;}
+  @page{margin:0.5in;}
 }
 
 @media(max-width:900px){
@@ -878,7 +878,7 @@ table tr:hover td{background:#fafbff;}
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn btn-primary btn-lg" onclick="generateTimesheet()">Build Timesheet</button>
-          <button class="btn btn-accent btn-lg" onclick="window.print()" id="print-btn" style="display:none;">⬇️ Download PDF</button>
+          <button class="btn btn-accent btn-lg" onclick="printTimesheet()" id="print-btn" style="display:none;">⬇️ Download PDF</button>
         </div>
         <p style="color:#888;font-size:0.8em;margin-top:12px;">After building, click <b>Download PDF</b> and choose “Save as PDF” as the destination.</p>
       </div>
@@ -1830,6 +1830,9 @@ table tr:hover td{background:#fafbff;}
 
   </div><!-- /content -->
 </div><!-- /main -->
+
+<!-- Dedicated print target (kept outside .view so print CSS can show it) -->
+<div id="print-root"></div>
 
 <!-- PIN OVERLAY -->
 <div id="pin-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(10,20,60,0.72);align-items:center;justify-content:center;">
@@ -3154,11 +3157,7 @@ function printNA(id) {
         <div><div class="na-sig-line"></div><div class="na-sig-label">DATE</div></div>
       </div>
     </div>`;
-  const area = document.getElementById('na-print-area');
-  area.innerHTML = html;
-  area.style.display = 'block';
-  setTimeout(()=>window.print(), 120);
-  setTimeout(()=>{ area.style.display='none'; }, 3000);
+  printDoc(html);
 }
 
 // ===================================================================
@@ -3282,11 +3281,23 @@ function printER(id) {
         </div>
       </div>
     </div>`;
-  const area = document.getElementById('er-print-area');
-  area.innerHTML = html;
-  area.style.display = 'block';
+  printDoc(html);
+}
+
+// Render arbitrary HTML into the top-level print root and open the print dialog.
+function printDoc(html){
+  const root = document.getElementById('print-root');
+  if (!root) { window.print(); return; }
+  root.innerHTML = html;
   setTimeout(()=>window.print(), 120);
-  setTimeout(()=>{ area.style.display='none'; }, 3000);
+  setTimeout(()=>{ root.innerHTML=''; }, 3000);
+}
+
+// Download the built timesheet (copies the on-screen output into the print root)
+function printTimesheet(){
+  const out = document.getElementById('timesheet-output');
+  if (!out || !out.innerHTML.trim()) { alert('Build the timesheet first.'); return; }
+  printDoc(out.innerHTML);
 }
 
 // ===================================================================
@@ -5276,7 +5287,7 @@ Object.assign(window, {
   renderAllData, renderDashboard, renderDataView, renderSettings,
   renderNAList, printNA,
   renderERList, printER, addERRow, updateERTotal,
-  renderFormReports,
+  renderFormReports, printTimesheet,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
