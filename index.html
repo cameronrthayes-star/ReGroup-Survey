@@ -1393,12 +1393,43 @@ table tr:hover td{background:#fafbff;}
     <div id="view-projects" class="view">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
         <h2 style="color:var(--primary);font-size:1.1em;font-weight:700;">Projects</h2>
-        <div style="display:flex;gap:10px;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn btn-outline" onclick="openProjectModal(null)">+ Quick Project</button>
           <button class="btn btn-accent" onclick="openPMIWizard(null)">🏗 New PMI Project</button>
+          <button class="btn btn-primary" onclick="openAIPlanner()">🤖 AI Planner</button>
         </div>
       </div>
       <div id="projects-list"></div>
+    </div>
+
+    <!-- AI Project Planner Modal -->
+    <div id="planner-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:28px 26px;width:680px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 style="color:var(--primary);margin-bottom:4px;">🤖 AI Project Planner</h3>
+        <p style="font-size:0.84em;color:#666;margin-bottom:16px;">Upload a project document (PDF, text, or image) — or paste text — and AI will break it into steps. Then assign each step to a mentor and create the tasks.</p>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Project Name *</label>
+          <input type="text" id="plan-name" placeholder="e.g. Spring Reentry Job Fair" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.92em;">
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Project Document <span style="color:#aaa;font-weight:400;">(PDF, .txt, .md, or image)</span></label>
+          <input type="file" id="plan-file" accept=".pdf,.txt,.md,.markdown,image/*" onchange="handlePlannerFile(this)" style="width:100%;font-size:0.85em;">
+          <div id="plan-file-info" style="font-size:0.78em;color:#888;margin-top:5px;"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>…or paste the project details</label>
+          <textarea id="plan-text" rows="4" placeholder="Paste a project brief, scope, or notes here…" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;resize:vertical;min-height:80px;"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-accent" id="plan-generate-btn" onclick="generatePlanAI()">✨ Generate Steps</button>
+          <span id="plan-status" style="font-size:0.84em;color:#666;"></span>
+        </div>
+        <div id="plan-steps" style="margin-top:18px;"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="closeAIPlanner()">Cancel</button>
+          <button class="btn btn-primary" id="plan-create-btn" onclick="createPlannerTasks()" style="display:none;">Create Project &amp; Tasks</button>
+        </div>
+      </div>
     </div>
 
     <!-- Project Modal -->
@@ -2976,6 +3007,9 @@ document.getElementById('mtask-modal').addEventListener('click', function(e) {
 document.getElementById('staff-modal').addEventListener('click', function(e) {
   if (e.target === this) closeStaffModal();
 });
+document.getElementById('planner-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeAIPlanner();
+});
 
 // ===================================================================
 // NEEDS ASSESSMENT — form handlers and list/print renderers
@@ -4262,8 +4296,147 @@ const PMI_PHASES = [
   { key:'closing',     label:'Phase 5 — Closing',                short:'Closing'      },
 ];
 
-let _pmiPhaseIndex = 0;  // 0-4
-let _pmiShowingSummary = false;
+// ===================================================================
+// AI PROJECT PLANNER — upload a doc, AI splits it into steps, assign tasks
+// ===================================================================
+let _plannerDoc = null;     // {kind:'pdf'|'image'|'text', media_type?, data?, text?}
+let _plannerSteps = [];
+
+function openAIPlanner(){
+  _plannerDoc = null; _plannerSteps = [];
+  ['plan-name','plan-text','plan-file'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('plan-file-info').textContent = '';
+  document.getElementById('plan-status').textContent = '';
+  document.getElementById('plan-steps').innerHTML = '';
+  document.getElementById('plan-create-btn').style.display = 'none';
+  document.getElementById('planner-modal').style.display = 'flex';
+}
+function closeAIPlanner(){ document.getElementById('planner-modal').style.display='none'; }
+
+function handlePlannerFile(input){
+  const f = input.files && input.files[0];
+  const info = document.getElementById('plan-file-info');
+  if (!f){ _plannerDoc=null; info.textContent=''; return; }
+  const name = f.name.toLowerCase();
+  const reader = new FileReader();
+  if (f.type==='application/pdf' || name.endsWith('.pdf')){
+    reader.onload = ()=>{ _plannerDoc={kind:'pdf', media_type:'application/pdf', data:reader.result.split(',')[1]}; info.textContent='📄 '+f.name+' ready'; };
+    reader.readAsDataURL(f);
+  } else if (f.type.startsWith('image/')){
+    reader.onload = ()=>{ _plannerDoc={kind:'image', media_type:f.type, data:reader.result.split(',')[1]}; info.textContent='🖼 '+f.name+' ready'; };
+    reader.readAsDataURL(f);
+  } else if (f.type.startsWith('text/') || /\.(txt|md|markdown|csv)$/.test(name)){
+    reader.onload = ()=>{ _plannerDoc={kind:'text', text:reader.result}; info.textContent='📄 '+f.name+' ready'; };
+    reader.readAsText(f);
+  } else {
+    _plannerDoc=null; input.value='';
+    info.textContent='Unsupported file type — upload a PDF, text file, or image, or paste the text below.';
+  }
+}
+
+async function generatePlanAI(){
+  const key = (localStorage.getItem('rg_anthropic_key')||'').trim();
+  const status = document.getElementById('plan-status');
+  if (!key){ status.style.color='#e53935'; status.innerHTML='No AI key set. Add one in Staff &amp; Settings → AI.'; return; }
+  const paste = document.getElementById('plan-text').value.trim();
+  if (!_plannerDoc && !paste){ status.style.color='#e53935'; status.textContent='Upload a document or paste some text first.'; return; }
+  const btn = document.getElementById('plan-generate-btn');
+  btn.disabled=true; status.style.color='#666'; status.textContent='Reading the document and drafting steps…';
+  const instruction =
+    'You are a project manager for ReGroup Elite Squad, a reentry and mentorship organization. ' +
+    'Read the project document/details provided and break the project into a clear, ordered list of ' +
+    'concrete, actionable tasks needed to complete it. Each task is a single ownable action. ' +
+    'Return ONLY a JSON array of objects with keys "title" (short, under 8 words) and "description" ' +
+    '(1-2 sentences). Aim for 6-20 tasks. No commentary, no code fences.';
+  const content = [];
+  if (_plannerDoc && _plannerDoc.kind==='pdf')   content.push({type:'document', source:{type:'base64', media_type:'application/pdf', data:_plannerDoc.data}});
+  if (_plannerDoc && _plannerDoc.kind==='image') content.push({type:'image',    source:{type:'base64', media_type:_plannerDoc.media_type, data:_plannerDoc.data}});
+  let textPart = instruction;
+  if (_plannerDoc && _plannerDoc.kind==='text') textPart += '\n\nPROJECT DOCUMENT:\n' + _plannerDoc.text;
+  if (paste) textPart += '\n\nADDITIONAL DETAILS:\n' + paste;
+  content.push({type:'text', text:textPart});
+  try{
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-opus-4-8', max_tokens:3072, messages:[{role:'user',content},{role:'assistant',content:'['}]})
+    });
+    if (!resp.ok) throw new Error('Anthropic API '+resp.status);
+    const j = await resp.json();
+    let txt = (j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+    txt = ('['+txt).replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+    const arr = JSON.parse(txt);
+    _plannerSteps = (Array.isArray(arr)?arr:[]).filter(s=>s && (s.title||s.description));
+    if (!_plannerSteps.length){ status.style.color='#e53935'; status.textContent='No steps could be extracted. Try a clearer document.'; }
+    else { status.style.color='#43a047'; status.textContent=_plannerSteps.length+' steps drafted — assign each below.'; }
+    renderPlannerSteps();
+  } catch(err){
+    status.style.color='#e53935';
+    status.textContent = 'AI error: '+err.message+'. Check the API key and try again.';
+  } finally { btn.disabled=false; }
+}
+
+function renderPlannerSteps(){
+  const el = document.getElementById('plan-steps');
+  const createBtn = document.getElementById('plan-create-btn');
+  if (!_plannerSteps.length){ el.innerHTML=''; createBtn.style.display='none'; return; }
+  const opts = '<option value="">— Unassigned —</option>' + mentorNames().map(n=>`<option value="${fEsc(n)}">${fEsc(n)}</option>`).join('');
+  el.innerHTML = '<div style="font-weight:600;color:var(--primary);margin-bottom:10px;">Steps &amp; assignments</div>' +
+    _plannerSteps.map((s,i)=>`
+      <div class="card" style="margin-bottom:10px;padding:14px;" data-step="${i}">
+        <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <input class="plan-step-title" value="${fEsc(s.title||'')}" placeholder="Task title" style="width:100%;font-weight:600;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;margin-bottom:6px;">
+            <textarea class="plan-step-desc" rows="2" placeholder="Description" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:0.86em;resize:vertical;">${fEsc(s.description||'')}</textarea>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:160px;">
+            <label style="font-size:0.72em;color:#777;">Assign to</label>
+            <select class="plan-step-mentor" style="padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:7px;">${opts.replace(`value="${fEsc(s.mentor||'')}"`, `value="${fEsc(s.mentor||'')}" selected`)}</select>
+            <button class="btn btn-outline" style="font-size:0.74em;padding:4px 8px;" onclick="removePlannerStep(${i})">Remove</button>
+          </div>
+        </div>
+      </div>`).join('') +
+    '<button class="btn btn-outline" style="font-size:0.8em;" onclick="addPlannerStep()">+ Add step</button>';
+  createBtn.style.display='inline-flex';
+}
+
+function syncPlannerStepsFromDOM(){
+  const rows = [...document.querySelectorAll('#plan-steps [data-step]')];
+  _plannerSteps = rows.map(r=>({
+    title: r.querySelector('.plan-step-title').value.trim(),
+    description: r.querySelector('.plan-step-desc').value.trim(),
+    mentor: r.querySelector('.plan-step-mentor').value
+  }));
+}
+function addPlannerStep(){ syncPlannerStepsFromDOM(); _plannerSteps.push({title:'',description:'',mentor:''}); renderPlannerSteps(); }
+function removePlannerStep(i){ syncPlannerStepsFromDOM(); _plannerSteps.splice(i,1); renderPlannerSteps(); }
+
+async function createPlannerTasks(){
+  const name = document.getElementById('plan-name').value.trim();
+  const status = document.getElementById('plan-status');
+  if (!name){ status.style.color='#e53935'; status.textContent='Enter a project name first.'; return; }
+  syncPlannerStepsFromDOM();
+  const steps = _plannerSteps.filter(s=>s.title||s.description);
+  if (!steps.length){ status.style.color='#e53935'; status.textContent='No steps to create.'; return; }
+  const btn = document.getElementById('plan-create-btn');
+  btn.disabled=true; status.style.color='#666'; status.textContent='Creating project and tasks…';
+  await DB.addProject({name, description:'Created from an uploaded document via the AI Planner.', status:'Active', source:'AI Planner'});
+  for (const s of steps){
+    await DB.addTask({
+      mentorName: s.mentor||'',
+      description: s.title ? (s.title + (s.description ? ' — '+s.description : '')) : s.description,
+      clientName: name,
+      project: name,
+      status: 'Open',
+      source: 'AI Planner'
+    });
+  }
+  const assigned = steps.filter(s=>s.mentor).length;
+  status.style.color='#43a047';
+  status.textContent = `✓ Created ${steps.length} tasks (${assigned} assigned).`;
+  btn.disabled=false;
+  setTimeout(()=>{ closeAIPlanner(); renderProjects(); }, 1300);
+}
 
 function openPMIWizard(id) {
   _pmiPhaseIndex = 0;
@@ -4972,6 +5145,7 @@ Object.assign(window, {
   renderMyTasks, updateMyTaskStatus,
   renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject, openProjectDetail, closeProjectDetail, postProjectUpdate,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
+  openAIPlanner, closeAIPlanner, handlePlannerFile, generatePlanAI, createPlannerTasks, addPlannerStep, removePlannerStep,
   renderEvents, switchEvTab, copyEvText, copyText,
   renderMeetingsList,
   saveAnthropicKey,
