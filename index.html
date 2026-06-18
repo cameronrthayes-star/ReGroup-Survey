@@ -1406,7 +1406,8 @@ table tr:hover td{background:#fafbff;}
     <div id="planner-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
       <div style="background:#fff;border-radius:16px;padding:28px 26px;width:680px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
         <h3 style="color:var(--primary);margin-bottom:4px;">🤖 AI Project Planner</h3>
-        <p style="font-size:0.84em;color:#666;margin-bottom:16px;">Upload a project document (PDF, text, or image) — or paste text — and AI will break it into steps. Then assign each step to a mentor and create the tasks.</p>
+        <p style="font-size:0.84em;color:#666;margin-bottom:14px;">Upload a project document (PDF, text, or image) — or paste text — and AI will break it into steps. Then assign each step to a mentor and create the tasks.</p>
+        <div id="plan-key-setup" style="margin-bottom:16px;"></div>
         <div class="form-group" style="margin-bottom:12px;">
           <label>Project Name *</label>
           <input type="text" id="plan-name" placeholder="e.g. Spring Reentry Job Fair" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.92em;">
@@ -4309,9 +4310,50 @@ function openAIPlanner(){
   document.getElementById('plan-status').textContent = '';
   document.getElementById('plan-steps').innerHTML = '';
   document.getElementById('plan-create-btn').style.display = 'none';
+  renderPlannerKeyStatus();
   document.getElementById('planner-modal').style.display = 'flex';
 }
 function closeAIPlanner(){ document.getElementById('planner-modal').style.display='none'; }
+
+// Inline Anthropic API key setup, right inside the planner
+function renderPlannerKeyStatus(forceEdit){
+  const el = document.getElementById('plan-key-setup');
+  if (!el) return;
+  const key = (localStorage.getItem('rg_anthropic_key')||'').trim();
+  if (key && !forceEdit){
+    el.innerHTML = `<div style="background:#e7f6ec;border:1px solid #b7e1c4;border-radius:10px;padding:10px 14px;font-size:0.84em;color:#15803d;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span>✓ Anthropic API key connected — AI planning is ready.</span>
+      <a onclick="renderPlannerKeyStatus(true)" style="color:#0e6e87;cursor:pointer;text-decoration:underline;white-space:nowrap;">Change key</a>
+    </div>`;
+  } else {
+    el.innerHTML = `<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:12px 14px;">
+      <div style="font-weight:600;font-size:0.85em;color:#9a3412;margin-bottom:6px;">⚙ Connect your Anthropic API key to use AI planning</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="plan-key" type="password" placeholder="sk-ant-…" style="flex:1;min-width:200px;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88em;">
+        <button class="btn btn-accent" style="font-size:0.82em;" onclick="savePlannerKey()">Save Key</button>
+      </div>
+      <div id="plan-key-msg" style="font-size:0.78em;color:#43a047;margin-top:6px;"></div>
+      <ol style="font-size:0.78em;color:#777;margin:8px 0 0;padding-left:18px;line-height:1.55;">
+        <li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:#2f9bb5;">console.anthropic.com</a>, sign in, add billing.</li>
+        <li>Create an API key (starts with <code>sk-ant-</code>) and copy it.</li>
+        <li>Paste it above and click Save Key. It's stored only on this device and shared with the rest of the app's AI features.</li>
+      </ol>
+    </div>`;
+  }
+}
+function savePlannerKey(){
+  const inp = document.getElementById('plan-key');
+  const v = (inp?.value||'').trim();
+  const msg = document.getElementById('plan-key-msg');
+  if (!v){ if(msg){msg.style.color='#e53935'; msg.textContent='Paste your API key first.';} return; }
+  if (!/^sk-ant-/.test(v)){ if(msg){msg.style.color='#e53935'; msg.textContent='That doesn’t look like an Anthropic key (should start with sk-ant-).';} return; }
+  localStorage.setItem('rg_anthropic_key', v);
+  const settingsInput = document.getElementById('anthropic-key-input');
+  if (settingsInput) settingsInput.value = v;
+  renderPlannerKeyStatus();
+  const status = document.getElementById('plan-status');
+  if (status){ status.style.color='#43a047'; status.textContent='AI key saved — you can generate steps now.'; }
+}
 
 function handlePlannerFile(input){
   const f = input.files && input.files[0];
@@ -4337,7 +4379,7 @@ function handlePlannerFile(input){
 async function generatePlanAI(){
   const key = (localStorage.getItem('rg_anthropic_key')||'').trim();
   const status = document.getElementById('plan-status');
-  if (!key){ status.style.color='#e53935'; status.innerHTML='No AI key set. Add one in Staff &amp; Settings → AI.'; return; }
+  if (!key){ status.style.color='#e53935'; status.textContent='Connect your Anthropic API key below to continue.'; renderPlannerKeyStatus(true); return; }
   const paste = document.getElementById('plan-text').value.trim();
   if (!_plannerDoc && !paste){ status.style.color='#e53935'; status.textContent='Upload a document or paste some text first.'; return; }
   const btn = document.getElementById('plan-generate-btn');
@@ -5146,6 +5188,7 @@ Object.assign(window, {
   renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject, openProjectDetail, closeProjectDetail, postProjectUpdate,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   openAIPlanner, closeAIPlanner, handlePlannerFile, generatePlanAI, createPlannerTasks, addPlannerStep, removePlannerStep,
+  renderPlannerKeyStatus, savePlannerKey,
   renderEvents, switchEvTab, copyEvText, copyText,
   renderMeetingsList,
   saveAnthropicKey,
