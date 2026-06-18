@@ -261,6 +261,7 @@ table tr:hover td{background:#fafbff;}
 
     <div class="nav-section">Reports</div>
     <a onclick="navigate('timesheets')" data-view="timesheets"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Timesheet PDF</a>
+    <a onclick="navigate('form-reports')" data-view="form-reports"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg></span> Form Downloads</a>
 
     <div class="nav-section">Directory</div>
     <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Client Directory</a>
@@ -1812,6 +1813,21 @@ table tr:hover td{background:#fafbff;}
       <div id="er-print-area" style="display:none;"></div>
     </div>
 
+    <!-- ===== FORM DOWNLOADS (admin reports) ===== -->
+    <div id="view-form-reports" class="view">
+      <div class="card no-print" style="margin-bottom:18px;">
+        <p style="font-size:0.88em;color:#555;margin:0;">Download submitted forms as PDF. Choose a form, then click Download — your browser's print dialog opens; pick <b>“Save as PDF”</b> as the destination.</p>
+      </div>
+      <div class="card" style="margin-bottom:18px;">
+        <h3>📋 Reentry Needs Assessments</h3>
+        <div id="fr-na-list"></div>
+      </div>
+      <div class="card">
+        <h3>🧾 Expense Reports</h3>
+        <div id="fr-er-list"></div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -1928,11 +1944,13 @@ onSnapshot(query(collection(db,'needsAssessments'), orderBy('_createdAt','asc'))
   _needsAssessments = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-needs-assessment')?.classList.contains('active')) renderNAList();
+  if (document.getElementById('view-form-reports')?.classList.contains('active')) renderFormReports();
 });
 onSnapshot(query(collection(db,'expenseReports'), orderBy('_createdAt','asc')), snap => {
   _expenseReports = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-expense-report')?.classList.contains('active')) renderERList();
+  if (document.getElementById('view-form-reports')?.classList.contains('active')) renderFormReports();
 });
 
 let _clients  = [];
@@ -2131,6 +2149,7 @@ const VIEW_TITLES = {
   'activity-log':'Activity Log — Non-Client Services',
   'data-view':'Data View',
   'timesheets':'Timesheets',
+  'form-reports':'Form Downloads',
   'settings':'Staff & Settings',
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
@@ -2211,7 +2230,7 @@ function changeAdminPIN() {
 }
 
 function navigate(v) {
-  if ((v === 'settings' || v === 'email-blast' || v === 'admin-inbox') && !_adminUnlocked) {
+  if ((v === 'settings' || v === 'email-blast' || v === 'admin-inbox' || v === 'form-reports') && !_adminUnlocked) {
     promptAdminPIN(() => navigate(v));
     return;
   }
@@ -2234,6 +2253,7 @@ function navigate(v) {
   if (v==='events') renderEvents();
   if (v==='meetings') renderMeetingsList();
   if (v==='fundraising') renderFundraising();
+  if (v==='form-reports') renderFormReports();
   closeNav();
 }
 
@@ -3035,6 +3055,42 @@ document.getElementById('na-form').addEventListener('submit', async function(e) 
   window.scrollTo(0,0);
   setTimeout(()=>document.getElementById('na-success').style.display='none', 5000);
 });
+
+// Admin Reports: download submitted forms as PDF (reuses printNA / printER)
+function renderFormReports() {
+  const naEl = document.getElementById('fr-na-list');
+  const erEl = document.getElementById('fr-er-list');
+  if (naEl) {
+    const na = DB.needsAssessments();
+    naEl.innerHTML = !na.length ? '<p style="color:#bbb;font-size:0.875em;">No needs assessments submitted yet.</p>' :
+      `<div class="table-wrap"><table>
+        <thead><tr><th>Date</th><th>Participant</th><th>Assistance Type</th><th>Amount</th><th>Submitted</th><th></th></tr></thead>
+        <tbody>${na.slice().reverse().map(n=>`<tr>
+          <td>${fmtDate(n.date)||'—'}</td>
+          <td>${fEsc(n.participantName)||'—'}</td>
+          <td>${fEsc(n.assistanceType)||'—'}</td>
+          <td>${n.amountRequested?'$'+parseFloat(n.amountRequested).toFixed(2):'—'}</td>
+          <td style="color:#999;font-size:0.82em;">${n.submittedAt?new Date(n.submittedAt).toLocaleDateString():'—'}</td>
+          <td><button class="btn btn-accent" style="padding:4px 10px;font-size:0.78em;white-space:nowrap;" onclick="printNA('${n._id}')">⬇️ Download PDF</button></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  }
+  if (erEl) {
+    const er = DB.expenseReports();
+    erEl.innerHTML = !er.length ? '<p style="color:#bbb;font-size:0.875em;">No expense reports submitted yet.</p>' :
+      `<div class="table-wrap"><table>
+        <thead><tr><th>Employee</th><th>Period</th><th>Purpose</th><th>Total</th><th>Submitted</th><th></th></tr></thead>
+        <tbody>${er.slice().reverse().map(r=>`<tr>
+          <td>${fEsc(r.employeeName)||'—'}</td>
+          <td>${r.periodFrom?fmtDate(r.periodFrom)+' – '+fmtDate(r.periodTo):'—'}</td>
+          <td>${fEsc(r.businessPurpose)||'—'}</td>
+          <td><b>$${(r.totalReimbursement||0).toFixed(2)}</b></td>
+          <td style="color:#999;font-size:0.82em;">${r.submittedAt?new Date(r.submittedAt).toLocaleDateString():'—'}</td>
+          <td><button class="btn btn-accent" style="padding:4px 10px;font-size:0.78em;white-space:nowrap;" onclick="printER('${r._id}')">⬇️ Download PDF</button></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  }
+}
 
 function renderNAList() {
   const list = DB.needsAssessments();
@@ -5220,6 +5276,7 @@ Object.assign(window, {
   renderAllData, renderDashboard, renderDataView, renderSettings,
   renderNAList, printNA,
   renderERList, printER, addERRow, updateERTotal,
+  renderFormReports,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
