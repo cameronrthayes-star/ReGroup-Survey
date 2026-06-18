@@ -283,6 +283,10 @@ table tr:hover td{background:#fafbff;}
 
     <!-- ===== DASHBOARD ===== -->
     <div id="view-dashboard" class="view active">
+      <div class="card no-print" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+        <div style="font-size:0.92em;color:#555;font-weight:600;">📊 Key Metrics <span id="dash-metric-count" style="color:#aaa;font-size:0.82em;font-weight:400;"></span></div>
+        <button class="btn btn-outline" style="font-size:0.82em;" onclick="openDashboardConfig()">⚙ Customize Metrics</button>
+      </div>
       <div class="stats-grid" id="stats-grid"></div>
       <div class="dash-two-col">
         <div class="card">
@@ -302,6 +306,20 @@ table tr:hover td{background:#fafbff;}
         <div class="card">
           <h3>Safety Flags</h3>
           <div id="safety-flags-dash"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Customize Modal (admin) -->
+    <div id="dash-modal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:30px 28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 style="color:var(--primary);margin-bottom:6px;">⚙ Customize Dashboard Metrics</h3>
+        <p style="font-size:0.85em;color:#666;margin-bottom:16px;">Choose which metric cards appear at the top of the dashboard. Changes apply for <strong>everyone</strong>, live.</p>
+        <div id="dash-modal-list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;"></div>
+        <div id="dash-modal-err" style="color:#e53935;font-size:0.82em;margin-top:10px;"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="closeDashboardConfig()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveDashboardConfig()">Save Dashboard</button>
         </div>
       </div>
     </div>
@@ -1703,7 +1721,7 @@ let _listenersReady   = 0;
 
 function _onReady() {
   _listenersReady++;
-  if (_listenersReady === 11) {
+  if (_listenersReady === 12) {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
@@ -1747,6 +1765,7 @@ let _projects = [];
 let _events   = [];
 let _meetings = [];
 let _fundContacts = [];
+let _dashboardConfig = null;
 
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -1779,6 +1798,12 @@ onSnapshot(query(collection(db,'fundContacts'), orderBy('_createdAt','asc')), sn
   _onReady();
   if (document.getElementById('view-fundraising')?.classList.contains('active')) renderFundraising();
   if (_fundDetailId && document.getElementById('fund-detail')?.style.display === 'flex') renderContactDetail(_fundDetailId);
+});
+onSnapshot(collection(db,'config'), snap => {
+  const d = snap.docs.find(x => x.id === 'dashboard');
+  _dashboardConfig = d ? d.data() : null;
+  _onReady();
+  if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
 });
 
 const DB = {
@@ -1813,6 +1838,9 @@ const DB = {
   async addFundContact(c)      { await addDoc(collection(db,'fundContacts'), {...c, _createdAt: serverTimestamp()}); },
   async updateFundContact(id,c){ await setDoc(doc(db,'fundContacts',id), {...c, _updatedAt: serverTimestamp()}, {merge:true}); },
   async removeFundContact(id)  { await deleteDoc(doc(db,'fundContacts',id)); },
+
+  dashboardConfig: () => _dashboardConfig,
+  async setDashboardConfig(metrics){ await setDoc(doc(db,'config','dashboard'), {metrics, _updatedAt: serverTimestamp()}); },
 
   async addSession(s) {
     await addDoc(collection(db,'sessions'), {...s, _createdAt: serverTimestamp()});
@@ -2775,6 +2803,9 @@ document.getElementById('fund-modal').addEventListener('click', function(e) {
 document.getElementById('fund-detail').addEventListener('click', function(e) {
   if (e.target === this) closeContactDetail();
 });
+document.getElementById('dash-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeDashboardConfig();
+});
 
 // ===================================================================
 // NEEDS ASSESSMENT — form handlers and list/print renderers
@@ -2994,32 +3025,62 @@ function printER(id) {
 // ===================================================================
 // DASHBOARD
 // ===================================================================
+// --- Dashboard metric catalog: every available metric in the app ---
+function dashWeekStats(){
+  const now=new Date(); const mon=new Date(now); mon.setDate(now.getDate()-((now.getDay()+6)%7));
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  const toYMD=d=>d.toISOString().slice(0,10); const ws=toYMD(mon), we=toYMD(sun);
+  const ents=DB.allEntries().filter(e=>{const d=getDate(e);return d>=ws&&d<=we;});
+  return {sessions:ents.length, hours:ents.reduce((a,e)=>a+Math.max(0,calcHours(e.startTime,e.endTime)),0)};
+}
+const _isDone = t => ['completed','done','complete','closed'].includes((t.status||'').toLowerCase());
+const DASH_METRICS = [
+  {id:'sessions',         group:'Client Work', label:'Client Services',     color:'#1e3a8a', calc:()=>DB.sessions().length},
+  {id:'activities',       group:'Client Work', label:'Activities Logged',   color:'#7c4dff', calc:()=>DB.activities().length},
+  {id:'totalHours',       group:'Client Work', label:'Total Hours',         color:'#43a047', calc:()=>DB.allEntries().reduce((s,e)=>s+Math.max(0,calcHours(e.startTime,e.endTime)),0).toFixed(1)},
+  {id:'uniqueClients',    group:'Client Work', label:'Unique Clients Served',color:'#fb8c00', calc:()=>new Set(DB.sessions().map(s=>s.clientId).filter(Boolean)).size},
+  {id:'avgSessionHours',  group:'Client Work', label:'Avg Hours / Session', color:'#00897b', calc:()=>{const s=DB.sessions();if(!s.length)return '0.0';return (s.reduce((a,e)=>a+Math.max(0,calcHours(e.startTime,e.endTime)),0)/s.length).toFixed(1);}},
+  {id:'weekSessions',     group:'This Week',   label:'Sessions This Week',  color:'#2f9bb5', calc:()=>dashWeekStats().sessions},
+  {id:'weekHours',        group:'This Week',   label:'Hours This Week',     color:'#2f9bb5', calc:()=>dashWeekStats().hours.toFixed(1)},
+  {id:'safetyFlags',      group:'Client Work', label:'Safety Flags',        color:'#e53935', calc:()=>DB.allEntries().filter(e=>e.safetyConcerns&&e.safetyConcerns!=='No concerns'&&e.safetyConcerns!=='no').length},
+  {id:'clientsTotal',     group:'Directory',   label:'Clients in Directory',color:'#1e3a8a', calc:()=>DB.clients().length},
+  {id:'openTasks',        group:'Tasks',       label:'Open Tasks',          color:'#fb8c00', calc:()=>DB.tasks().filter(t=>!_isDone(t)).length},
+  {id:'doneTasks',        group:'Tasks',       label:'Completed Tasks',     color:'#43a047', calc:()=>DB.tasks().filter(_isDone).length},
+  {id:'projectsTotal',    group:'Work',        label:'Projects',            color:'#5b21b6', calc:()=>DB.projects().length},
+  {id:'events',           group:'Work',        label:'Events / Social Posts',color:'#d81b60', calc:()=>DB.events().length},
+  {id:'meetings',         group:'Work',        label:'Meetings Logged',     color:'#3949ab', calc:()=>DB.meetings().length},
+  {id:'needsAssessments', group:'Forms',       label:'Needs Assessments',   color:'#00897b', calc:()=>DB.needsAssessments().length},
+  {id:'expenseReports',   group:'Forms',       label:'Expense Reports',     color:'#6d4c41', calc:()=>DB.expenseReports().length},
+  {id:'staff',            group:'Team',        label:'Staff / Mentors',     color:'#1e3a8a', calc:()=>DB.staff().length},
+  {id:'fundContacts',     group:'Fundraising', label:'Fundraising Contacts',color:'#c2185b', calc:()=>DB.fundContacts().length},
+  {id:'donors',           group:'Fundraising', label:'Donors',              color:'#43a047', calc:()=>DB.fundContacts().filter(c=>fundGiftTotal(c)>0).length},
+  {id:'totalGiving',      group:'Fundraising', label:'Total Giving',        color:'#2e7d32', calc:()=>fmtMoney(DB.fundContacts().reduce((s,c)=>s+fundGiftTotal(c),0))},
+  {id:'followupsDue',     group:'Fundraising', label:'Follow-ups Due (3+ mo)',color:'#9a3412', calc:()=>DB.fundContacts().filter(fundNeedsFollowup).length},
+];
+const DASH_DEFAULT = ['sessions','activities','totalHours','uniqueClients'];
+function getDashboardMetrics(){
+  const ids = (_dashboardConfig && Array.isArray(_dashboardConfig.metrics)) ? _dashboardConfig.metrics : null;
+  const valid = (ids || DASH_DEFAULT).filter(id => DASH_METRICS.some(m=>m.id===id));
+  return valid.length ? valid : DASH_DEFAULT;
+}
+
 function renderDashboard() {
   const entries = DB.allEntries();
   const sessions = DB.sessions();
   const activities = DB.activities();
 
-  const totalHours = entries.reduce((sum,e) => sum + Math.max(0, calcHours(e.startTime, e.endTime)), 0);
-  const uniqueClients = new Set(sessions.map(s=>s.clientId).filter(Boolean)).size;
-
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card">
-      <div class="num">${sessions.length}</div>
-      <div class="lbl">Client Services</div>
-    </div>
-    <div class="stat-card" style="border-top-color:#7c4dff">
-      <div class="num">${activities.length}</div>
-      <div class="lbl">Activities Logged</div>
-    </div>
-    <div class="stat-card" style="border-top-color:#43a047">
-      <div class="num">${totalHours.toFixed(1)}</div>
-      <div class="lbl">Total Hours</div>
-    </div>
-    <div class="stat-card" style="border-top-color:#fb8c00">
-      <div class="num">${uniqueClients}</div>
-      <div class="lbl">Unique Clients</div>
-    </div>
-  `;
+  const selected = getDashboardMetrics();
+  const countEl = document.getElementById('dash-metric-count');
+  if (countEl) countEl.textContent = `(${selected.length} shown)`;
+  document.getElementById('stats-grid').innerHTML = selected.map(id => {
+    const m = DASH_METRICS.find(x=>x.id===id);
+    if (!m) return '';
+    let val; try { val = m.calc(); } catch(e){ val = '—'; }
+    return `<div class="stat-card" style="border-top-color:${m.color}">
+      <div class="num">${val}</div>
+      <div class="lbl">${m.label}</div>
+    </div>`;
+  }).join('');
 
   // Hours by mentor bar chart
   const mhrs = {};
@@ -3106,6 +3167,33 @@ function renderDashboard() {
         </div>
       </div>
     `).join('') : '<p style="color:#bbb;font-size:0.875em;">No safety flags reported.</p>';
+}
+
+// Admin-only: customize which metric cards show on the dashboard
+function openDashboardConfig(){
+  requireAdmin(()=>{
+    const selected = getDashboardMetrics();
+    const groups = [...new Set(DASH_METRICS.map(m=>m.group))];
+    document.getElementById('dash-modal-list').innerHTML = groups.map(g=>
+      `<div style="grid-column:1/-1;font-size:0.72em;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--primary);margin:8px 0 2px;">${g}</div>` +
+      DASH_METRICS.filter(m=>m.group===g).map(m=>
+        `<label style="display:flex;align-items:center;gap:8px;font-size:0.88em;padding:3px 0;cursor:pointer;">
+          <input type="checkbox" value="${m.id}" ${selected.includes(m.id)?'checked':''}> ${m.label}
+        </label>`).join('')
+    ).join('');
+    document.getElementById('dash-modal-err').textContent = '';
+    document.getElementById('dash-modal').style.display = 'flex';
+  });
+}
+function closeDashboardConfig(){ document.getElementById('dash-modal').style.display = 'none'; }
+async function saveDashboardConfig(){
+  const checked = [...document.querySelectorAll('#dash-modal-list input:checked')].map(c=>c.value);
+  if (!checked.length) { document.getElementById('dash-modal-err').textContent = 'Pick at least one metric.'; return; }
+  // Preserve catalog order for a tidy layout
+  const ordered = DASH_METRICS.filter(m=>checked.includes(m.id)).map(m=>m.id);
+  await DB.setDashboardConfig(ordered);
+  closeDashboardConfig();
+  renderDashboard();
 }
 
 // ===================================================================
@@ -4484,6 +4572,7 @@ Object.assign(window, {
   renderFundraising, openContactModal, closeContactModal, saveFundContact,
   openContactDetail, closeContactDetail, editContactDetails, deleteFundContact,
   addInteraction, deleteInteraction, addGift, deleteGift,
+  openDashboardConfig, closeDashboardConfig, saveDashboardConfig,
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
