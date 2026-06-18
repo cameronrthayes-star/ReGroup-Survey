@@ -311,6 +311,10 @@ table tr:hover td{background:#fafbff;}
           <button class="btn btn-outline" onclick="navigate('admin-inbox')">📨 Admin Inbox <span id="dash-admin-unread"></span></button>
         </div>
       </div>
+      <div class="card no-print" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:14px;">Team Activity</h3>
+        <div id="dash-staff-grid" style="display:flex;flex-wrap:wrap;gap:12px;"></div>
+      </div>
       <div class="dash-two-col">
         <div class="card">
           <h3>Hours by Mentor</h3>
@@ -1918,6 +1922,7 @@ onSnapshot(collection(db,'staff'), snap => {
   if (document.getElementById('view-settings')?.classList.contains('active')) renderSettings();
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
   if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
+  if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
 });
 onSnapshot(query(collection(db,'needsAssessments'), orderBy('_createdAt','asc')), snap => {
   _needsAssessments = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -1950,6 +1955,7 @@ onSnapshot(query(collection(db,'tasks'),    orderBy('_createdAt','asc')), snap =
   if (document.getElementById('view-admin-inbox')?.classList.contains('active')) renderAdminTasks();
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
   if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
+  if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
 });
 onSnapshot(query(collection(db,'projects'), orderBy('_createdAt','asc')), snap => {
   _projects = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -3280,6 +3286,7 @@ function renderDashboard() {
   const adminUnread = DB.messages().filter(m=>m.mentorName==='Admin' && !m.read).length;
   const auEl = document.getElementById('dash-admin-unread');
   if (auEl) auEl.innerHTML = adminUnread ? `<span class="badge badge-danger" style="margin-left:4px;">${adminUnread}</span>` : '';
+  renderDashboardStaff();
   document.getElementById('stats-grid').innerHTML = selected.map(id => {
     const m = DASH_METRICS.find(x=>x.id===id);
     if (!m) return '';
@@ -3375,6 +3382,34 @@ function renderDashboard() {
         </div>
       </div>
     `).join('') : '<p style="color:#bbb;font-size:0.875em;">No safety flags reported.</p>';
+}
+
+// Team activity strip: each staff member with active task + message counts
+function renderDashboardStaff(){
+  const el = document.getElementById('dash-staff-grid');
+  if (!el) return;
+  const staff = DB.staff().slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if (!staff.length){ el.innerHTML='<p style="color:#bbb;font-size:0.85em;">No staff yet. Add team members in Staff &amp; Settings.</p>'; return; }
+  const tasks = DB.tasks(), msgs = DB.messages();
+  const colors = ['#1e3a8a','#7c4dff','#2f9bb5','#43a047','#fb8c00','#d81b60','#00897b','#5b21b6','#3949ab','#c2185b'];
+  el.innerHTML = staff.map(s=>{
+    const name = s.name||'';
+    const initials = name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) || '?';
+    let h=0; for (let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))>>>0;
+    const color = colors[h % colors.length];
+    const activeTasks = tasks.filter(t=>t.mentorName===name && t.status!=='Done').length;
+    const activeMsgs  = msgs.filter(m=>m.mentorName===name && !m.read).length;
+    const nm = name.replace(/'/g,"\\'");
+    return `<div onclick="openMentorMessages('${nm}')" title="Open ${fEsc(name)}'s messages"
+        style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;width:112px;padding:13px 8px;border:1px solid #e5e9f0;border-radius:14px;background:#fff;">
+      <div style="width:48px;height:48px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1em;">${initials}</div>
+      <div style="font-size:0.78em;font-weight:600;text-align:center;line-height:1.2;color:#333;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fEsc(name)}</div>
+      <div style="display:flex;gap:6px;">
+        <span title="Active tasks" style="font-size:0.7em;background:#fff4e5;color:#b25e00;border-radius:20px;padding:2px 7px;font-weight:700;">🗒 ${activeTasks}</span>
+        <span title="Unread messages" style="font-size:0.7em;background:${activeMsgs?'#fdecea':'#eef3fb'};color:${activeMsgs?'#c62828':'#5a6b8c'};border-radius:20px;padding:2px 7px;font-weight:700;">✉ ${activeMsgs}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // Admin-only: customize which metric cards show on the dashboard
