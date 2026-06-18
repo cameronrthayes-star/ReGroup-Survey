@@ -4403,7 +4403,7 @@ async function generatePlanAI(){
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers,
-      body:JSON.stringify({model:'claude-opus-4-8', max_tokens:3072, messages:[{role:'user',content},{role:'assistant',content:'['}]})
+      body:JSON.stringify({model:'claude-opus-4-8', max_tokens:3072, messages:[{role:'user',content}]})
     });
     if (!resp.ok){
       let detail=''; try{ const e=await resp.json(); detail = (e.error && e.error.message) || ''; }catch(_){}
@@ -4411,7 +4411,8 @@ async function generatePlanAI(){
     }
     const j = await resp.json();
     let txt = (j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
-    txt = ('['+txt).replace(/^```(?:json)?/i,'').replace(/```$/,'').trim();
+    const s = txt.indexOf('['), e = txt.lastIndexOf(']');     // extract the JSON array from any surrounding text
+    if (s>=0 && e>s) txt = txt.slice(s, e+1);
     const arr = JSON.parse(txt);
     _plannerSteps = (Array.isArray(arr)?arr:[]).filter(s=>s && (s.title||s.description));
     if (!_plannerSteps.length){ status.style.color='#e53935'; status.textContent='No steps could be extracted. Try a clearer document.'; }
@@ -4847,7 +4848,6 @@ async function generateAllPostsAI(data) {
       max_tokens: 2048,
       messages: [
         { role: 'user', content: prompt },
-        { role: 'assistant', content: '{' },  // prefill to force a JSON object
       ],
     }),
   });
@@ -4855,8 +4855,9 @@ async function generateAllPostsAI(data) {
   const j = await resp.json();
   let txt = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
   if (!txt) return null;
-  // Re-attach the prefilled "{" and strip any stray code fences before parsing.
-  txt = ('{' + txt).replace(/^```(?:json)?/i, '').replace(/```$/,'').trim();
+  // Extract the JSON object from any surrounding text/code fences.
+  const s = txt.indexOf('{'), e = txt.lastIndexOf('}');
+  if (s>=0 && e>s) txt = txt.slice(s, e+1);
   const parsed = JSON.parse(txt);
   const out = {};
   ['instagram','facebook','twitter','linkedin','newsletter'].forEach(k => {
