@@ -254,6 +254,7 @@ table tr:hover td{background:#fafbff;}
     <div class="nav-section">Directory</div>
     <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Client Directory</a>
     <a onclick="navigate('email-blast')" data-view="email-blast"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span> Email Blast</a>
+    <a onclick="navigate('fundraising')" data-view="fundraising"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> Fundraising</a>
 
     <div class="nav-section">Forms</div>
     <a onclick="navigate('needs-assessment')" data-view="needs-assessment"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Needs Assessment</a>
@@ -1000,6 +1001,134 @@ table tr:hover td{background:#fafbff;}
       </div>
     </div>
 
+    <!-- ===== FUNDRAISING CRM ===== -->
+    <div id="view-fundraising" class="view">
+      <div id="fund-followup-banner" class="card no-print" style="display:none;margin-bottom:14px;background:#fff7ed;border:1.5px solid #fdba74;color:#9a3412;font-size:0.9em;"></div>
+      <div class="card no-print" style="margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <input id="fund-search" type="text" placeholder="Search by name, organization, email, phone, or tag…"
+            style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;"
+            oninput="renderFundraising()">
+          <select id="fund-filter" onchange="renderFundraising()" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;">
+            <option value="all">All contacts</option>
+            <option value="followup">⚠ Needs follow-up (3+ mo)</option>
+            <option value="donors">Donors only</option>
+          </select>
+          <button class="btn btn-accent" onclick="openContactModal(null)">+ Add Contact</button>
+          <span id="fund-count" style="color:#999;font-size:0.82em;white-space:nowrap;"></span>
+        </div>
+        <p style="margin-top:10px;font-size:0.78em;color:#999;">Anyone can add contacts and log interactions or gifts. Editing or deleting existing information requires the admin PIN.</p>
+      </div>
+      <div class="card">
+        <div class="table-wrap" id="fund-table-wrap">
+          <p style="color:#bbb;font-size:0.875em;">Loading…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fundraising Contact Add/Edit Modal -->
+    <div id="fund-modal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:32px 28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 id="fund-modal-title" style="color:var(--primary);margin-bottom:20px;">Add Contact</h3>
+        <input type="hidden" id="fm-id">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" id="fm-firstName">
+          </div>
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" id="fm-lastName">
+          </div>
+          <div class="form-group">
+            <label>Organization</label>
+            <input type="text" id="fm-org" placeholder="Company / foundation">
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select id="fm-type">
+              <option value="">—</option>
+              <option>Individual</option>
+              <option>Foundation</option>
+              <option>Corporate</option>
+              <option>Government</option>
+              <option>Faith-Based</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Email Address</label>
+            <input type="email" id="fm-email">
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="text" id="fm-phone">
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <input type="text" id="fm-address">
+          </div>
+          <div class="form-group full">
+            <label>Tags <span style="color:#aaa;font-weight:400;">(comma-separated)</span></label>
+            <input type="text" id="fm-tags" placeholder="e.g. major donor, board prospect, grants">
+          </div>
+          <div class="form-group full">
+            <label>Common Contacts / Connections</label>
+            <textarea id="fm-commonContacts" rows="2" style="min-height:48px;" placeholder="Mutual contacts, who introduced them, relationships…"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Notes</label>
+            <textarea id="fm-notes" rows="3" style="min-height:60px;"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="closeContactModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveFundContact()">Save Contact</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fundraising Contact Detail Modal -->
+    <div id="fund-detail" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:28px 26px;width:680px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <div id="fd-header"></div>
+        <div id="fd-body" style="margin-top:8px;"></div>
+
+        <h4 style="color:var(--primary);margin:22px 0 8px;border-bottom:1.5px solid #eef;padding-bottom:6px;">📞 Interactions</h4>
+        <div id="fd-interactions"></div>
+        <div style="background:#f8f9fa;border-radius:10px;padding:12px;margin-top:10px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;"><label style="font-size:0.72em;color:#777;">Date</label><input type="date" id="fd-int-date" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;"></div>
+            <div style="display:flex;flex-direction:column;"><label style="font-size:0.72em;color:#777;">Type</label>
+              <select id="fd-int-method" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;"><option>Call</option><option>Email</option><option>Meeting</option><option>Text</option><option>Event</option><option>Other</option></select>
+            </div>
+            <div style="display:flex;flex-direction:column;flex:1;min-width:160px;"><label style="font-size:0.72em;color:#777;">Summary / notes</label><input type="text" id="fd-int-summary" placeholder="What was discussed…" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;"></div>
+            <button class="btn btn-accent" style="font-size:0.8em;" onclick="addInteraction()">+ Log</button>
+          </div>
+        </div>
+
+        <h4 style="color:var(--primary);margin:22px 0 8px;border-bottom:1.5px solid #eef;padding-bottom:6px;">Giving History <span id="fd-gift-total" style="font-weight:400;font-size:0.8em;color:#43a047;"></span></h4>
+        <div id="fd-gifts"></div>
+        <div style="background:#f8f9fa;border-radius:10px;padding:12px;margin-top:10px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;"><label style="font-size:0.72em;color:#777;">Date</label><input type="date" id="fd-gift-date" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;"></div>
+            <div style="display:flex;flex-direction:column;width:110px;"><label style="font-size:0.72em;color:#777;">Amount ($)</label><input type="number" id="fd-gift-amount" min="0" step="0.01" placeholder="0.00" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;"></div>
+            <div style="display:flex;flex-direction:column;"><label style="font-size:0.72em;color:#777;">Fund / campaign</label><input type="text" id="fd-gift-fund" placeholder="General Fund" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;"></div>
+            <div style="display:flex;flex-direction:column;flex:1;min-width:120px;"><label style="font-size:0.72em;color:#777;">Note</label><input type="text" id="fd-gift-note" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;"></div>
+            <button class="btn btn-accent" style="font-size:0.8em;" onclick="addGift()">+ Add</button>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:24px;justify-content:space-between;">
+          <button class="btn btn-danger" onclick="deleteFundContact()">🔒 Delete Contact</button>
+          <div style="display:flex;gap:10px;margin-left:auto;">
+            <button class="btn btn-outline" onclick="editContactDetails()">🔒 Edit Details</button>
+            <button class="btn btn-primary" onclick="closeContactDetail()">Done</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== EMAIL BLAST ===== -->
     <div id="view-email-blast" class="view">
       <div class="card">
@@ -1574,7 +1703,7 @@ let _listenersReady   = 0;
 
 function _onReady() {
   _listenersReady++;
-  if (_listenersReady === 10) {
+  if (_listenersReady === 11) {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
@@ -1617,6 +1746,7 @@ let _tasks    = [];
 let _projects = [];
 let _events   = [];
 let _meetings = [];
+let _fundContacts = [];
 
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -1643,6 +1773,12 @@ onSnapshot(query(collection(db,'meetings'), orderBy('_createdAt','asc')), snap =
   _meetings = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-meetings')?.classList.contains('active')) renderMeetingsList();
+});
+onSnapshot(query(collection(db,'fundContacts'), orderBy('_createdAt','asc')), snap => {
+  _fundContacts = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('view-fundraising')?.classList.contains('active')) renderFundraising();
+  if (_fundDetailId && document.getElementById('fund-detail')?.style.display === 'flex') renderContactDetail(_fundDetailId);
 });
 
 const DB = {
@@ -1672,6 +1808,11 @@ const DB = {
   async addEvent(e)         { await addDoc(collection(db,'events'),   {...e, _createdAt: serverTimestamp()}); },
   async addMeeting(m)       { await addDoc(collection(db,'meetings'), {...m, _createdAt: serverTimestamp()}); },
   meetings: () => _meetings,
+
+  fundContacts: () => _fundContacts,
+  async addFundContact(c)      { await addDoc(collection(db,'fundContacts'), {...c, _createdAt: serverTimestamp()}); },
+  async updateFundContact(id,c){ await setDoc(doc(db,'fundContacts',id), {...c, _updatedAt: serverTimestamp()}, {merge:true}); },
+  async removeFundContact(id)  { await deleteDoc(doc(db,'fundContacts',id)); },
 
   async addSession(s) {
     await addDoc(collection(db,'sessions'), {...s, _createdAt: serverTimestamp()});
@@ -1779,6 +1920,7 @@ const VIEW_TITLES = {
   'projects':'Projects',
   'events':'Events & Social Media',
   'meetings':'Meeting Log',
+  'fundraising':'Fundraising CRM',
 };
 
 // ===================================================================
@@ -1870,6 +2012,14 @@ function navigate(v) {
   if (v==='projects') renderProjects();
   if (v==='events') renderEvents();
   if (v==='meetings') renderMeetingsList();
+  if (v==='fundraising') renderFundraising();
+}
+
+// Run cb immediately if admin already unlocked this session, otherwise prompt
+// for the admin PIN first. Used to gate editing/deleting existing information.
+function requireAdmin(cb) {
+  if (_adminUnlocked) cb();
+  else promptAdminPIN(cb);
 }
 
 // ===================================================================
@@ -2303,6 +2453,261 @@ function deleteClient() {
 }
 
 // ===================================================================
+// FUNDRAISING CRM
+// ===================================================================
+let _fundDetailId = null;
+const FUND_FOLLOWUP_DAYS = 90;  // remind to reach out after ~3 months
+
+function fEsc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtMoney(n){ const v=Number(n)||0; return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function fundLastContact(c){
+  const dates = (c.interactions||[]).map(i=>i.date).filter(Boolean);
+  if (dates.length) return dates.sort().slice(-1)[0];
+  return c.createdDate || '';
+}
+function fundDaysSince(dateStr){
+  if (!dateStr) return Infinity;
+  const d = new Date(dateStr + 'T12:00:00');
+  if (isNaN(d)) return Infinity;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+function fundNeedsFollowup(c){ return fundDaysSince(fundLastContact(c)) > FUND_FOLLOWUP_DAYS; }
+function fundGiftTotal(c){ return (c.gifts||[]).reduce((s,g)=>s+(Number(g.amount)||0),0); }
+function fundRelative(dateStr){
+  const days = fundDaysSince(dateStr);
+  if (days === Infinity) return 'never';
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 60) return days+' days ago';
+  return Math.round(days/30)+' months ago';
+}
+
+function renderFundraising(){
+  const q = (document.getElementById('fund-search')?.value || '').toLowerCase();
+  const filter = document.getElementById('fund-filter')?.value || 'all';
+  const all = DB.fundContacts();
+  let list = all.slice();
+  if (q) {
+    list = list.filter(c => {
+      const name = ((c.firstName||'')+' '+(c.lastName||'')).toLowerCase();
+      return name.includes(q) || (c.org||'').toLowerCase().includes(q) ||
+             (c.email||'').toLowerCase().includes(q) || (c.phone||'').includes(q) ||
+             (c.tags||'').toLowerCase().includes(q) || (c.notes||'').toLowerCase().includes(q);
+    });
+  }
+  if (filter === 'followup') list = list.filter(fundNeedsFollowup);
+  else if (filter === 'donors') list = list.filter(c => fundGiftTotal(c) > 0);
+  // Sort: needs-followup first, then by most-overdue
+  list.sort((a,b)=> fundDaysSince(fundLastContact(b)) - fundDaysSince(fundLastContact(a)));
+
+  const banner = document.getElementById('fund-followup-banner');
+  const due = all.filter(fundNeedsFollowup).length;
+  if (banner) {
+    if (due) { banner.style.display='block'; banner.innerHTML = `⏰ <strong>${due}</strong> contact${due>1?'s have':' has'} had no contact in 3+ months — time to call, email, or meet. <a href="#" onclick="document.getElementById('fund-filter').value='followup';renderFundraising();return false;" style="color:#9a3412;text-decoration:underline;">Show them</a>`; }
+    else banner.style.display='none';
+  }
+  const countEl = document.getElementById('fund-count');
+  if (countEl) countEl.textContent = `${list.length} of ${all.length} contacts`;
+
+  const wrap = document.getElementById('fund-table-wrap');
+  if (!wrap) return;
+  if (!all.length) { wrap.innerHTML = '<p style="color:#bbb;font-size:0.875em;">No contacts yet. Click “+ Add Contact” to start your fundraising list.</p>'; return; }
+  if (!list.length) { wrap.innerHTML = '<p style="color:#bbb;font-size:0.875em;">No contacts match your search/filter.</p>'; return; }
+
+  wrap.innerHTML = `<table>
+    <thead><tr>
+      <th>Name</th><th>Organization</th><th style="width:90px">Type</th>
+      <th style="width:110px">Last contact</th><th style="width:90px">Giving</th><th style="width:140px">Status</th>
+    </tr></thead>
+    <tbody>${list.map(c=>{
+      const name = [c.firstName,c.lastName].filter(Boolean).join(' ') || '<span style="color:#bbb">—</span>';
+      const total = fundGiftTotal(c);
+      const follow = fundNeedsFollowup(c);
+      const status = follow ? '<span class="badge badge-warn">⚠ Follow up</span>' : '<span class="badge badge-success">✓ Recent</span>';
+      return `<tr style="cursor:pointer;" onclick="openContactDetail('${c._id}')">
+        <td style="font-weight:600;color:var(--primary);">${fEsc(name)}</td>
+        <td style="font-size:0.85em;color:#555;">${fEsc(c.org)||'—'}</td>
+        <td>${c.type?`<span class="badge badge-info">${fEsc(c.type)}</span>`:'—'}</td>
+        <td style="font-size:0.82em;color:${follow?'#c2410c':'#555'};">${fundRelative(fundLastContact(c))}</td>
+        <td style="font-size:0.85em;font-weight:600;color:${total>0?'#43a047':'#bbb'};">${total>0?fmtMoney(total):'—'}</td>
+        <td>${status}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function openContactModal(id){
+  const modal = document.getElementById('fund-modal');
+  const fields = {fm:'',firstName:'',lastName:'',org:'',type:'',email:'',phone:'',address:'',tags:'',commonContacts:'',notes:''};
+  if (id) {
+    const c = DB.fundContacts().find(x=>x._id===id);
+    if (!c) return;
+    document.getElementById('fund-modal-title').textContent = 'Edit Contact';
+    document.getElementById('fm-id').value = id;
+    document.getElementById('fm-firstName').value = c.firstName||'';
+    document.getElementById('fm-lastName').value = c.lastName||'';
+    document.getElementById('fm-org').value = c.org||'';
+    document.getElementById('fm-type').value = c.type||'';
+    document.getElementById('fm-email').value = c.email||'';
+    document.getElementById('fm-phone').value = c.phone||'';
+    document.getElementById('fm-address').value = c.address||'';
+    document.getElementById('fm-tags').value = c.tags||'';
+    document.getElementById('fm-commonContacts').value = c.commonContacts||'';
+    document.getElementById('fm-notes').value = c.notes||'';
+  } else {
+    document.getElementById('fund-modal-title').textContent = 'Add Contact';
+    document.getElementById('fm-id').value = '';
+    ['fm-firstName','fm-lastName','fm-org','fm-email','fm-phone','fm-address','fm-tags','fm-commonContacts','fm-notes'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('fm-type').value = '';
+  }
+  modal.style.display = 'flex';
+}
+function closeContactModal(){ document.getElementById('fund-modal').style.display = 'none'; }
+
+async function saveFundContact(){
+  const id = document.getElementById('fm-id').value;
+  const data = {
+    firstName: document.getElementById('fm-firstName').value.trim(),
+    lastName: document.getElementById('fm-lastName').value.trim(),
+    org: document.getElementById('fm-org').value.trim(),
+    type: document.getElementById('fm-type').value,
+    email: document.getElementById('fm-email').value.trim(),
+    phone: document.getElementById('fm-phone').value.trim(),
+    address: document.getElementById('fm-address').value.trim(),
+    tags: document.getElementById('fm-tags').value.trim(),
+    commonContacts: document.getElementById('fm-commonContacts').value.trim(),
+    notes: document.getElementById('fm-notes').value.trim(),
+  };
+  if (!data.firstName && !data.lastName && !data.org) { alert('Enter at least a name or organization.'); return; }
+  if (id) {
+    await DB.updateFundContact(id, data);   // merge — preserves interactions/gifts
+  } else {
+    await DB.addFundContact({...data, interactions:[], gifts:[], createdDate:new Date().toISOString().slice(0,10)});
+  }
+  closeContactModal();
+  if (id && _fundDetailId === id) renderContactDetail(id);
+}
+
+function openContactDetail(id){
+  const c = DB.fundContacts().find(x=>x._id===id);
+  if (!c) return;
+  _fundDetailId = id;
+  document.getElementById('fund-detail').style.display = 'flex';
+  const today = new Date().toISOString().slice(0,10);
+  const di = document.getElementById('fd-int-date'); if (di) di.value = today;
+  const dg = document.getElementById('fd-gift-date'); if (dg) dg.value = today;
+  renderContactDetail(id);
+}
+function closeContactDetail(){ document.getElementById('fund-detail').style.display='none'; _fundDetailId = null; }
+
+function renderContactDetail(id){
+  const c = DB.fundContacts().find(x=>x._id===id);
+  if (!c) { closeContactDetail(); return; }
+  const name = [c.firstName,c.lastName].filter(Boolean).join(' ') || c.org || 'Contact';
+  const follow = fundNeedsFollowup(c);
+  const last = fundLastContact(c);
+  document.getElementById('fd-header').innerHTML =
+    `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:1.3em;font-weight:700;color:var(--primary);">${fEsc(name)}</div>
+        ${c.org && (c.firstName||c.lastName) ? `<div style="color:#666;font-size:0.9em;">${fEsc(c.org)}</div>`:''}
+        <div style="margin-top:4px;">${c.type?`<span class="badge badge-info">${fEsc(c.type)}</span> `:''}${follow?'<span class="badge badge-warn">⚠ Follow up — 3+ mo</span>':'<span class="badge badge-success">✓ Recently contacted</span>'}</div>
+      </div>
+      <div style="text-align:right;font-size:0.8em;color:#888;">
+        <div>Last contact: <strong style="color:${follow?'#c2410c':'#555'};">${fundRelative(last)}</strong></div>
+        <div>Total giving: <strong style="color:#43a047;">${fmtMoney(fundGiftTotal(c))}</strong></div>
+      </div>
+    </div>`;
+
+  const infoRow = (label,val)=> val ? `<div style="margin-bottom:6px;"><span style="color:#999;font-size:0.78em;">${label}: </span><span style="font-size:0.9em;">${fEsc(val)}</span></div>` : '';
+  document.getElementById('fd-body').innerHTML =
+    `<div style="background:#f8f9fa;border-radius:10px;padding:14px;margin-top:10px;">
+      ${infoRow('Email', c.email)}${infoRow('Phone', c.phone)}${infoRow('Address', c.address)}
+      ${c.tags?`<div style="margin:6px 0;">${c.tags.split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span class="badge badge-info" style="margin-right:4px;">${fEsc(t)}</span>`).join('')}</div>`:''}
+      ${c.commonContacts?`<div style="margin-top:8px;"><span style="color:#999;font-size:0.78em;">Common contacts: </span><div style="font-size:0.88em;white-space:pre-wrap;">${fEsc(c.commonContacts)}</div></div>`:''}
+      ${c.notes?`<div style="margin-top:8px;"><span style="color:#999;font-size:0.78em;">Notes: </span><div style="font-size:0.88em;white-space:pre-wrap;">${fEsc(c.notes)}</div></div>`:''}
+      ${!c.email&&!c.phone&&!c.address&&!c.tags&&!c.commonContacts&&!c.notes?'<span style="color:#bbb;font-size:0.85em;">No details yet — use “Edit Details” to add them.</span>':''}
+    </div>`;
+
+  const ints = (c.interactions||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('fd-interactions').innerHTML = ints.length ? ints.map(i=>
+    `<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid #f0f0f0;font-size:0.86em;">
+      <div><span class="badge badge-info" style="margin-right:6px;">${fEsc(i.method||'Note')}</span><strong>${i.date?fmtDate(i.date):''}</strong> — ${fEsc(i.summary)} ${i.by?`<span style="color:#bbb;">(${fEsc(i.by)})</span>`:''}</div>
+      <button title="Delete (admin)" onclick="deleteInteraction('${i.id}')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:1.1em;line-height:1;">×</button>
+    </div>`).join('') : '<p style="color:#bbb;font-size:0.83em;">No interactions logged yet.</p>';
+
+  const gifts = (c.gifts||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  document.getElementById('fd-gift-total').textContent = gifts.length ? '· '+fmtMoney(fundGiftTotal(c))+' total' : '';
+  document.getElementById('fd-gifts').innerHTML = gifts.length ? gifts.map(g=>
+    `<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid #f0f0f0;font-size:0.86em;">
+      <div><strong style="color:#43a047;">${fmtMoney(g.amount)}</strong> ${g.date?`<span style="color:#888;">${fmtDate(g.date)}</span>`:''} ${g.fund?`<span class="badge badge-info">${fEsc(g.fund)}</span>`:''} ${g.note?`— ${fEsc(g.note)}`:''}</div>
+      <button title="Delete (admin)" onclick="deleteGift('${g.id}')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:1.1em;line-height:1;">×</button>
+    </div>`).join('') : '<p style="color:#bbb;font-size:0.83em;">No gifts recorded yet.</p>';
+}
+
+async function addInteraction(){
+  if (!_fundDetailId) return;
+  const c = DB.fundContacts().find(x=>x._id===_fundDetailId); if (!c) return;
+  const date = document.getElementById('fd-int-date').value;
+  const method = document.getElementById('fd-int-method').value;
+  const summary = document.getElementById('fd-int-summary').value.trim();
+  if (!summary && !date) { alert('Add a date or a summary for the interaction.'); return; }
+  const entry = {id:uuid(), date, method, summary};
+  const interactions = [...(c.interactions||[]), entry];
+  await DB.updateFundContact(_fundDetailId, {interactions});
+  document.getElementById('fd-int-summary').value = '';
+  renderContactDetail(_fundDetailId);
+}
+function deleteInteraction(entryId){
+  if (!_fundDetailId) return;
+  requireAdmin(async ()=>{
+    if (!confirm('Delete this interaction? This cannot be undone.')) return;
+    const c = DB.fundContacts().find(x=>x._id===_fundDetailId); if (!c) return;
+    const interactions = (c.interactions||[]).filter(i=>i.id!==entryId);
+    await DB.updateFundContact(_fundDetailId, {interactions});
+    renderContactDetail(_fundDetailId);
+  });
+}
+
+async function addGift(){
+  if (!_fundDetailId) return;
+  const c = DB.fundContacts().find(x=>x._id===_fundDetailId); if (!c) return;
+  const date = document.getElementById('fd-gift-date').value;
+  const amount = parseFloat(document.getElementById('fd-gift-amount').value);
+  const fund = document.getElementById('fd-gift-fund').value.trim();
+  const note = document.getElementById('fd-gift-note').value.trim();
+  if (!(amount > 0)) { alert('Enter a gift amount greater than 0.'); return; }
+  const entry = {id:uuid(), date, amount, fund, note};
+  const gifts = [...(c.gifts||[]), entry];
+  await DB.updateFundContact(_fundDetailId, {gifts});
+  document.getElementById('fd-gift-amount').value = '';
+  document.getElementById('fd-gift-fund').value = '';
+  document.getElementById('fd-gift-note').value = '';
+  renderContactDetail(_fundDetailId);
+}
+function deleteGift(entryId){
+  if (!_fundDetailId) return;
+  requireAdmin(async ()=>{
+    if (!confirm('Delete this gift record? This cannot be undone.')) return;
+    const c = DB.fundContacts().find(x=>x._id===_fundDetailId); if (!c) return;
+    const gifts = (c.gifts||[]).filter(g=>g.id!==entryId);
+    await DB.updateFundContact(_fundDetailId, {gifts});
+    renderContactDetail(_fundDetailId);
+  });
+}
+
+function editContactDetails(){ if (!_fundDetailId) return; requireAdmin(()=>openContactModal(_fundDetailId)); }
+function deleteFundContact(){
+  if (!_fundDetailId) return;
+  requireAdmin(async ()=>{
+    if (!confirm('Delete this contact and all their logged interactions and gifts? This cannot be undone.')) return;
+    await DB.removeFundContact(_fundDetailId);
+    closeContactDetail();
+  });
+}
+
+// ===================================================================
 // EMAIL BLAST
 // ===================================================================
 function getEBRecipients() {
@@ -2363,6 +2768,12 @@ function showEBMsg(type, html) {
 
 document.getElementById('client-modal').addEventListener('click', function(e) {
   if (e.target === this) closeClientModal();
+});
+document.getElementById('fund-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeContactModal();
+});
+document.getElementById('fund-detail').addEventListener('click', function(e) {
+  if (e.target === this) closeContactDetail();
 });
 
 // ===================================================================
@@ -4070,6 +4481,9 @@ Object.assign(window, {
   renderEvents, switchEvTab, copyEvText, copyText,
   renderMeetingsList,
   saveAnthropicKey,
+  renderFundraising, openContactModal, closeContactModal, saveFundContact,
+  openContactDetail, closeContactDetail, editContactDetails, deleteFundContact,
+  addInteraction, deleteInteraction, addGift, deleteGift,
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
