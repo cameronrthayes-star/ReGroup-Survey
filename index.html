@@ -2650,9 +2650,10 @@ function fEsc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/<
 function fmtMoney(n){ const v=Number(n)||0; return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function fundLastContact(c){
+  // "Last contact" reflects only actual logged interactions — NOT the date the
+  // record was created. A contact with no interactions has never been contacted.
   const dates = (c.interactions||[]).map(i=>i.date).filter(Boolean);
-  if (dates.length) return dates.sort().slice(-1)[0];
-  return c.createdDate || '';
+  return dates.length ? dates.sort().slice(-1)[0] : '';
 }
 function fundDaysSince(dateStr){
   if (!dateStr) return Infinity;
