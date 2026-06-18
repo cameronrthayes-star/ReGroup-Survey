@@ -3289,8 +3289,11 @@ function printDoc(html){
   const root = document.getElementById('print-root');
   if (!root) { window.print(); return; }
   root.innerHTML = html;
+  // Clear only once printing is finished — never on a blind timer (so the
+  // document can't get wiped while the print dialog is still open).
+  const clear = () => { root.innerHTML=''; window.removeEventListener('afterprint', clear); };
+  window.addEventListener('afterprint', clear);
   setTimeout(()=>window.print(), 120);
-  setTimeout(()=>{ root.innerHTML=''; }, 3000);
 }
 
 // Download the built timesheet (copies the on-screen output into the print root)
@@ -3467,7 +3470,7 @@ function renderDashboardStaff(){
     const activeTasks = tasks.filter(t=>t.mentorName===name && t.status!=='Done').length;
     const activeMsgs  = msgs.filter(m=>m.mentorName===name && !m.read).length;
     const nm = name.replace(/'/g,"\\'");
-    return `<div onclick="openMentorMessages('${nm}')" title="Open ${fEsc(name)}'s messages"
+    return `<div onclick="openMentorTasks('${nm}','breakdown')" title="View ${fEsc(name)}'s tasks &amp; breakdown"
         style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;width:112px;padding:13px 8px;border:1px solid #e5e9f0;border-radius:14px;background:#fff;">
       <div style="width:48px;height:48px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1em;">${initials}</div>
       <div style="font-size:0.78em;font-weight:600;text-align:center;line-height:1.2;color:#333;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fEsc(name)}</div>
@@ -4218,18 +4221,29 @@ function renderAdminMessages(){
 function openMentorTasks(name, mode){
   _mtaskMentor = name;
   const all = DB.tasks().filter(t=>t.mentorName===name);
-  const list = mode==='inprogress' ? all.filter(t=>t.status==='In Progress') : all.filter(t=>t.status!=='Done');
-  document.getElementById('mtask-modal-title').textContent =
-    (mode==='inprogress' ? 'In-Progress Tasks — ' : 'Uncompleted Tasks — ') + name;
-  const el = document.getElementById('mtask-list');
-  el.innerHTML = list.length ? list.slice().reverse().map(t=>{
-    const col = t.status==='In Progress'?'var(--accent)':'var(--warn)';
+  const open = all.filter(t=>t.status==='Open' || !t.status).length;
+  const prog = all.filter(t=>t.status==='In Progress').length;
+  const done = all.filter(t=>t.status==='Done').length;
+  let list, titleWord;
+  if (mode==='inprogress'){ list = all.filter(t=>t.status==='In Progress'); titleWord='In-Progress Tasks'; }
+  else if (mode==='uncompleted'){ list = all.filter(t=>t.status!=='Done'); titleWord='Uncompleted Tasks'; }
+  else { list = all; titleWord='Tasks'; }   // 'breakdown' / 'all'
+  document.getElementById('mtask-modal-title').textContent = titleWord + ' — ' + name;
+  const chip=(label,n,color)=>`<div style="flex:1;min-width:74px;text-align:center;background:#f4f6fb;border:1px solid #e2e8f0;border-radius:10px;padding:9px 6px;">
+    <div style="font-size:1.45em;font-weight:800;color:${color};line-height:1;">${n}</div>
+    <div style="font-size:0.64em;color:#666;text-transform:uppercase;letter-spacing:.3px;margin-top:3px;">${label}</div></div>`;
+  const breakdown = `<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    ${chip('Open',open,'#fb8c00')}${chip('In Progress',prog,'#2f9bb5')}${chip('Done',done,'#43a047')}${chip('Total',all.length,'#1e3a8a')}</div>`;
+  const listHtml = list.length ? list.slice().reverse().map(t=>{
+    const col = t.status==='Done'?'var(--success)':t.status==='In Progress'?'var(--accent)':'var(--warn)';
+    const badgeCls = t.status==='Done'?'badge-success':t.status==='In Progress'?'badge-info':'badge-warn';
     return `<div class="card" style="border-left:4px solid ${col};margin-bottom:10px;">
       <div style="font-weight:600;color:var(--primary);">${fEsc(t.clientName||'General Task')}</div>
       <div style="font-size:0.86em;color:#555;margin:4px 0;">${fEsc(t.description||'')}</div>
-      <div style="font-size:0.76em;color:#999;">${t.dueDate?'Due '+fmtDate(t.dueDate)+' · ':''}<span class="badge ${t.status==='In Progress'?'badge-info':'badge-warn'}">${fEsc(t.status||'Open')}</span></div>
+      <div style="font-size:0.76em;color:#999;">${t.dueDate?'Due '+fmtDate(t.dueDate)+' · ':''}<span class="badge ${badgeCls}">${fEsc(t.status||'Open')}</span></div>
     </div>`;
-  }).join('') : '<p style="color:#bbb;font-size:0.875em;text-align:center;padding:20px;">None right now. 🎉</p>';
+  }).join('') : '<p style="color:#bbb;font-size:0.875em;text-align:center;padding:20px;">No tasks in this group. 🎉</p>';
+  document.getElementById('mtask-list').innerHTML = breakdown + listHtml;
   document.getElementById('mtask-modal').style.display = 'flex';
 }
 function closeMentorTasks(){ document.getElementById('mtask-modal').style.display='none'; _mtaskMentor=null; }
