@@ -273,7 +273,7 @@ table tr:hover td{background:#fafbff;}
 
     <div class="nav-section">Alerts & Tasks</div>
     <a onclick="navigate('admin-inbox')" data-view="admin-inbox"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Admin Inbox</a>
-    <a onclick="navigate('my-tasks')" data-view="my-tasks"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> My Tasks</a>
+    <a onclick="navigate('my-tasks')" data-view="my-tasks"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Mentor Inbox</a>
 
     <div class="nav-section">Work</div>
     <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Projects</a>
@@ -304,6 +304,13 @@ table tr:hover td{background:#fafbff;}
         <button class="btn btn-outline" style="font-size:0.82em;" onclick="openDashboardConfig()">⚙ Customize Metrics</button>
       </div>
       <div class="stats-grid" id="stats-grid"></div>
+      <div class="card no-print" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:14px;">Inboxes</h3>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-accent" onclick="navigate('my-tasks')">✉ Mentor Inbox — Messages &amp; Tasks</button>
+          <button class="btn btn-outline" onclick="navigate('admin-inbox')">📨 Admin Inbox <span id="dash-admin-unread"></span></button>
+        </div>
+      </div>
       <div class="dash-two-col">
         <div class="card">
           <h3>Hours by Mentor</h3>
@@ -1209,6 +1216,7 @@ table tr:hover td{background:#fafbff;}
         <button class="tab-btn active" onclick="switchTab('ai-tab-alerts',this)">🔔 Client Alerts</button>
         <button class="tab-btn" onclick="switchTab('ai-tab-tasks',this);renderAdminTasks()">📋 All Tasks</button>
         <button class="tab-btn" onclick="switchTab('ai-tab-mentors',this);renderMentorPanel()">👥 Mentors</button>
+        <button class="tab-btn" onclick="switchTab('ai-tab-amsgs',this);renderAdminMessages()">📨 Messages</button>
       </div>
       <div id="ai-tab-alerts" class="tab-content active">
         <div class="card" style="margin-bottom:16px;">
@@ -1234,6 +1242,13 @@ table tr:hover td{background:#fafbff;}
           <p style="color:#666;font-size:0.85em;">Each mentor's unread messages, uncompleted tasks, and tasks in progress. Send a direct message from here.</p>
         </div>
         <div id="mentor-panel"></div>
+      </div>
+      <div id="ai-tab-amsgs" class="tab-content">
+        <div class="card" style="margin-bottom:16px;">
+          <h3 style="margin-bottom:4px;">Messages to Admin</h3>
+          <p style="color:#666;font-size:0.85em;">Messages mentors have sent to you. Click Reply to open the conversation.</p>
+        </div>
+        <div id="admin-msgs-list"></div>
       </div>
     </div>
 
@@ -1286,17 +1301,33 @@ table tr:hover td{background:#fafbff;}
       </div>
     </div>
 
-    <!-- ===== MY TASKS ===== -->
+    <!-- ===== MENTOR INBOX (MESSAGES & TASKS) ===== -->
     <div id="view-my-tasks" class="view">
       <div class="card" style="margin-bottom:18px;">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-          <label style="font-weight:600;color:#333;">Viewing tasks for:</label>
+          <label style="font-weight:600;color:#333;">Your name:</label>
           <select id="my-tasks-mentor" onchange="renderMyTasks()" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;min-width:200px;">
             <option value="">— Select your name —</option>
           </select>
           <span id="my-tasks-count" style="font-size:0.85em;color:#999;"></span>
         </div>
       </div>
+      <div id="my-compose" class="card no-print" style="display:none;margin-bottom:18px;">
+        <h3 style="margin-bottom:12px;">✉ Send a Message</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="display:flex;flex-direction:column;">
+            <label style="font-size:0.75em;color:#777;margin-bottom:3px;">To</label>
+            <select id="mim-to" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;min-width:180px;"></select>
+          </div>
+          <div style="display:flex;flex-direction:column;flex:1;min-width:200px;">
+            <label style="font-size:0.75em;color:#777;margin-bottom:3px;">Message</label>
+            <textarea id="mim-text" rows="2" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;min-height:46px;resize:vertical;"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="sendMyMessage()">Send</button>
+          <span id="mim-status" style="font-size:0.82em;color:#43a047;"></span>
+        </div>
+      </div>
+      <div id="my-inbox-msgs"></div>
       <div id="my-tasks-list"></div>
     </div>
 
@@ -1861,7 +1892,9 @@ onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap =
   _messages = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
+  if (document.getElementById('ai-tab-amsgs')?.classList.contains('active')) renderAdminMessages();
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
+  if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
   if (_msgMentor && document.getElementById('msg-modal')?.style.display === 'flex') renderMessageThread();
 });
 
@@ -2008,7 +2041,7 @@ const VIEW_TITLES = {
   'clients':'Client Directory',
   'email-blast':'Email Blast',
   'admin-inbox':'Admin Inbox — Client Alerts & Tasks',
-  'my-tasks':'My Tasks',
+  'my-tasks':'Mentor Inbox — Messages & Tasks',
   'projects':'Projects',
   'events':'Events & Social Media',
   'meetings':'Meeting Log',
@@ -3147,6 +3180,9 @@ function renderDashboard() {
   const selected = getDashboardMetrics();
   const countEl = document.getElementById('dash-metric-count');
   if (countEl) countEl.textContent = `(${selected.length} shown)`;
+  const adminUnread = DB.messages().filter(m=>m.mentorName==='Admin' && !m.read).length;
+  const auEl = document.getElementById('dash-admin-unread');
+  if (auEl) auEl.innerHTML = adminUnread ? `<span class="badge badge-danger" style="margin-left:4px;">${adminUnread}</span>` : '';
   document.getElementById('stats-grid').innerHTML = selected.map(id => {
     const m = DASH_METRICS.find(x=>x.id===id);
     if (!m) return '';
@@ -3796,17 +3832,32 @@ function renderMyTasks() {
   sel.innerHTML = '<option value="">— Select your name —</option>' +
     DB.staff().map(s=>'<option value="' + s.name + '"' + (s.name===current?' selected':'') + '>' + s.name + '</option>').join('');
   const el = document.getElementById('my-tasks-list');
+  const msgsEl = document.getElementById('my-inbox-msgs');
+  const compose = document.getElementById('my-compose');
   if (!el) return;
-  if (!current) { el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">Select your name above to see your messages and tasks.</div>'; return; }
-  // Direct messages from admin — show them and mark unread as read on view
+  if (!current) {
+    if (compose) compose.style.display='none';
+    if (msgsEl) msgsEl.innerHTML='';
+    el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">Select your name above to see your messages and tasks.</div>';
+    return;
+  }
+  // Compose: recipients = Admin + every other mentor
+  if (compose) {
+    compose.style.display='block';
+    const toSel = document.getElementById('mim-to');
+    const prev = toSel.value;
+    const opts = ['Admin', ...mentorNames().filter(n=>n!==current)];
+    toSel.innerHTML = opts.map(o=>`<option value="${fEsc(o)}"${o===prev?' selected':''}>${o==='Admin'?'Admin':o}</option>`).join('');
+  }
+  // Inbox: messages addressed to me — show them and mark unread as read on view
   const myMsgs = DB.messages().filter(m=>m.mentorName===current);
   myMsgs.filter(m=>!m.read).forEach(m=>DB.markMessageRead(m._id));
-  const msgHtml = renderMyMessagesCard(myMsgs);
+  if (msgsEl) msgsEl.innerHTML = renderMyMessagesCard(myMsgs);
   const tasks = DB.tasks().filter(t=>t.mentorName===current);
   const countEl = document.getElementById('my-tasks-count');
   if (countEl) countEl.textContent = tasks.filter(t=>t.status!=='Done').length + ' open';
-  if (!tasks.length) { el.innerHTML = msgHtml + '<div class="card" style="color:#bbb;text-align:center;padding:32px;">🎉 No tasks assigned to you right now.</div>'; return; }
-  el.innerHTML = msgHtml + tasks.slice().reverse().map(t => {
+  if (!tasks.length) { el.innerHTML = '<div class="card" style="color:#bbb;text-align:center;padding:32px;">🎉 No tasks assigned to you right now.</div>'; return; }
+  el.innerHTML = tasks.slice().reverse().map(t => {
     const col = t.status==='Done'?'var(--success)':t.status==='In Progress'?'var(--accent)':'var(--warn)';
     return '<div class="card" style="border-left:4px solid ' + col + ';margin-bottom:14px;">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
@@ -3828,6 +3879,20 @@ function renderMyTasks() {
 
 async function updateMyTaskStatus(id, status) {
   await DB.updateTask(id, {status});
+}
+
+// Mentor composes a message to Admin or another mentor
+async function sendMyMessage(){
+  const from = document.getElementById('my-tasks-mentor').value;
+  const status = document.getElementById('mim-status');
+  if (!from) { if(status){status.style.color='#e53935';status.textContent='Select your name first.';} return; }
+  const to = document.getElementById('mim-to').value;
+  const text = document.getElementById('mim-text').value.trim();
+  if (!to) { if(status){status.style.color='#e53935';status.textContent='Choose a recipient.';} return; }
+  if (!text) { if(status){status.style.color='#e53935';status.textContent='Type a message.';} return; }
+  await DB.addMessage({mentorName:to, from, text, read:false});
+  document.getElementById('mim-text').value='';
+  if (status){ status.style.color='#43a047'; status.textContent='Sent to '+to+' ✓'; setTimeout(()=>{status.textContent='';},4000); }
 }
 
 // ===================================================================
@@ -3881,6 +3946,8 @@ function openMentorMessages(name){
   document.getElementById('msg-modal-title').textContent = 'Messages — ' + name;
   document.getElementById('msg-text').value = '';
   document.getElementById('msg-modal').style.display = 'flex';
+  // Mark this mentor's messages to Admin as read (admin is reading them now)
+  DB.messages().filter(m=>m.mentorName==='Admin' && m.from===name && !m.read).forEach(m=>DB.markMessageRead(m._id));
   renderMessageThread();
 }
 function closeMentorMessages(){ document.getElementById('msg-modal').style.display='none'; _msgMentor=null; }
@@ -3894,15 +3961,21 @@ function deleteMessage(id){
 function renderMessageThread(){
   const wrap = document.getElementById('msg-thread');
   if (!wrap || !_msgMentor) return;
-  const msgs = DB.messages().filter(m=>m.mentorName===_msgMentor);
-  wrap.innerHTML = msgs.length ? msgs.map(m=>
-    `<div style="margin-bottom:10px;">
-      <div style="display:flex;align-items:flex-start;gap:8px;">
-        <div style="flex:1;background:#fff;border:1px solid #e8edf5;border-radius:10px;padding:9px 12px;font-size:0.88em;white-space:pre-wrap;">${fEsc(m.text)}</div>
+  // Two-way conversation between Admin and this mentor
+  const msgs = DB.messages().filter(m=>
+    (m.mentorName===_msgMentor && (m.from==='Admin' || !m.from)) ||
+    (m.mentorName==='Admin' && m.from===_msgMentor)
+  ).slice().sort((a,b)=>((a._createdAt&&a._createdAt.seconds)||0)-((b._createdAt&&b._createdAt.seconds)||0));
+  wrap.innerHTML = msgs.length ? msgs.map(m=>{
+    const fromMentor = m.from===_msgMentor;   // message sent BY the mentor to Admin
+    return `<div style="margin-bottom:10px;display:flex;flex-direction:column;align-items:${fromMentor?'flex-start':'flex-end'};">
+      <div style="display:flex;align-items:flex-start;gap:8px;max-width:85%;">
+        <div style="background:${fromMentor?'#eef3fb':'#e8f6fa'};border:1px solid ${fromMentor?'#dbe6f7':'#cdebf3'};border-radius:10px;padding:9px 12px;font-size:0.88em;white-space:pre-wrap;">${fEsc(m.text)}</div>
         <button title="Delete (admin)" onclick="deleteMessage('${m._id}')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:1.1em;line-height:1;">×</button>
       </div>
-      <div style="font-size:0.7em;color:#aaa;margin-top:3px;">${fEsc(m.from||'Admin')} · ${fmtMsgTime(m)} · ${m.read?'✓ read':'• unread'}</div>
-    </div>`).join('') : '<p style="color:#bbb;font-size:0.85em;text-align:center;padding:16px;">No messages yet. Send the first one below.</p>';
+      <div style="font-size:0.7em;color:#aaa;margin-top:3px;">${fEsc(m.from||'Admin')} → ${fEsc(m.mentorName)} · ${fmtMsgTime(m)}${fromMentor?'':(' · '+(m.read?'✓ read':'• unread'))}</div>
+    </div>`;
+  }).join('') : '<p style="color:#bbb;font-size:0.85em;text-align:center;padding:16px;">No messages yet. Send the first one below.</p>';
   wrap.scrollTop = wrap.scrollHeight;
 }
 async function sendMentorMessage(){
@@ -3912,6 +3985,31 @@ async function sendMentorMessage(){
   await DB.addMessage({mentorName:_msgMentor, text:t, from:'Admin', read:false});
   document.getElementById('msg-text').value = '';
   renderMessageThread();
+}
+
+// Admin's inbox: messages mentors sent to Admin
+function renderAdminMessages(){
+  const el = document.getElementById('admin-msgs-list');
+  if (!el) return;
+  const msgs = DB.messages().filter(m=>m.mentorName==='Admin').slice().reverse();
+  msgs.filter(m=>!m.read).forEach(m=>DB.markMessageRead(m._id));   // admin is viewing
+  if (!msgs.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">No messages from mentors yet.</div>'; return; }
+  el.innerHTML = msgs.map(m=>{
+    const nm=(m.from||'').replace(/'/g,"\\'");
+    return `<div class="card" style="margin-bottom:12px;${m.read?'':'border-left:4px solid var(--accent);'}">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;color:var(--primary);">👤 ${fEsc(m.from||'Unknown')} ${m.read?'':'<span class="badge badge-info">new</span>'}</div>
+          <div style="font-size:0.9em;color:#444;margin:5px 0;white-space:pre-wrap;">${fEsc(m.text)}</div>
+          <div style="font-size:0.72em;color:#aaa;">${fmtMsgTime(m)}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button class="btn btn-accent" style="font-size:0.8em;" onclick="openMentorMessages('${nm}')">Reply</button>
+          <button class="btn btn-danger" style="font-size:0.78em;" onclick="deleteMessage('${m._id}')">×</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function openMentorTasks(name, mode){
@@ -3934,13 +4032,13 @@ function openMentorTasks(name, mode){
 function closeMentorTasks(){ document.getElementById('mtask-modal').style.display='none'; _mtaskMentor=null; }
 
 function renderMyMessagesCard(msgs){
-  if (!msgs.length) return '';
+  if (!msgs.length) return '<div class="card" style="color:#bbb;text-align:center;padding:20px;margin-bottom:18px;">No messages in your inbox yet.</div>';
   return '<div class="card" style="margin-bottom:18px;border-left:4px solid var(--accent);">' +
-    '<h3 style="margin-bottom:12px;">✉ Messages from Admin</h3>' +
+    '<h3 style="margin-bottom:12px;">✉ My Messages</h3>' +
     msgs.slice().reverse().map(m=>
       '<div style="padding:8px 0;border-bottom:1px solid #f3f3f3;">' +
         '<div style="font-size:0.9em;white-space:pre-wrap;">' + fEsc(m.text) + '</div>' +
-        '<div style="font-size:0.72em;color:#aaa;margin-top:3px;">' + fEsc(m.from||'Admin') + ' · ' + fmtMsgTime(m) + '</div>' +
+        '<div style="font-size:0.72em;color:#aaa;margin-top:3px;">From <b>' + fEsc(m.from||'Admin') + '</b> · ' + fmtMsgTime(m) + '</div>' +
       '</div>').join('') +
   '</div>';
 }
@@ -4769,7 +4867,7 @@ Object.assign(window, {
   openDashboardConfig, closeDashboardConfig, saveDashboardConfig,
   toggleNav, closeNav,
   renderMentorPanel, openMentorMessages, closeMentorMessages, sendMentorMessage, deleteMessage,
-  openMentorTasks, closeMentorTasks,
+  openMentorTasks, closeMentorTasks, sendMyMessage, renderAdminMessages,
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
