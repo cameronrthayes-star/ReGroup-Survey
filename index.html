@@ -45,8 +45,11 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);display:flex
 /* === MAIN === */
 #main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
 #topbar{background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);padding:14px 32px;border-bottom:1px solid rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 12px rgba(0,0,0,0.05);}
-#topbar-title{color:var(--primary);font-size:1.1em;font-weight:700;letter-spacing:-0.01em;}
-#topbar-date{font-size:0.78em;color:var(--text-muted);font-weight:500;}
+#topbar-title{color:var(--primary);font-size:1.1em;font-weight:700;letter-spacing:-0.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#topbar-date{font-size:0.78em;color:var(--text-muted);font-weight:500;white-space:nowrap;}
+#menu-toggle{display:none;background:none;border:none;font-size:1.5em;line-height:1;color:var(--primary);cursor:pointer;padding:2px 6px;border-radius:8px;flex-shrink:0;}
+#menu-toggle:active{background:rgba(0,0,0,0.06);}
+#nav-backdrop{display:none;}
 #content{padding:28px 32px;flex:1;}
 
 /* === CARDS === */
@@ -216,13 +219,21 @@ table tr:hover td{background:#fafbff;}
 }
 
 @media(max-width:900px){
-  :root{--sidebar-w:0px;}
-  #sidebar{display:none;}
+  #sidebar{width:265px;transform:translateX(-100%);transition:transform .25s ease;}
+  body.nav-open #sidebar{transform:translateX(0);}
   #main{margin-left:0;}
+  #menu-toggle{display:inline-flex;}
+  #nav-backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:150;opacity:0;pointer-events:none;transition:opacity .25s;}
+  body.nav-open #nav-backdrop{opacity:1;pointer-events:auto;}
+  #content{padding:18px 15px;}
+  #topbar{padding:12px 15px;}
   .form-grid{grid-template-columns:1fr;}
   .dash-two-col{grid-template-columns:1fr;}
   .ts-meta-row{grid-template-columns:repeat(2,1fr);}
   .ts-finance-grid{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 }
 </style>
 </head>
@@ -273,10 +284,15 @@ table tr:hover td{background:#fafbff;}
   </nav>
 </div>
 
+<div id="nav-backdrop" onclick="closeNav()"></div>
+
 <!-- MAIN -->
 <div id="main">
   <div id="topbar">
-    <div id="topbar-title">Dashboard</div>
+    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+      <button id="menu-toggle" onclick="toggleNav()" aria-label="Open menu">☰</button>
+      <div id="topbar-title">Dashboard</div>
+    </div>
     <div id="topbar-date"></div>
   </div>
   <div id="content">
@@ -1192,6 +1208,7 @@ table tr:hover td{background:#fafbff;}
       <div class="tabs no-print">
         <button class="tab-btn active" onclick="switchTab('ai-tab-alerts',this)">🔔 Client Alerts</button>
         <button class="tab-btn" onclick="switchTab('ai-tab-tasks',this);renderAdminTasks()">📋 All Tasks</button>
+        <button class="tab-btn" onclick="switchTab('ai-tab-mentors',this);renderMentorPanel()">👥 Mentors</button>
       </div>
       <div id="ai-tab-alerts" class="tab-content active">
         <div class="card" style="margin-bottom:16px;">
@@ -1210,6 +1227,13 @@ table tr:hover td{background:#fafbff;}
           <h3>All Assigned Tasks</h3>
           <div id="admin-tasks-list"></div>
         </div>
+      </div>
+      <div id="ai-tab-mentors" class="tab-content">
+        <div class="card" style="margin-bottom:16px;">
+          <h3 style="margin-bottom:4px;">Mentor Overview</h3>
+          <p style="color:#666;font-size:0.85em;">Each mentor's unread messages, uncompleted tasks, and tasks in progress. Send a direct message from here.</p>
+        </div>
+        <div id="mentor-panel"></div>
       </div>
     </div>
 
@@ -1233,6 +1257,31 @@ table tr:hover td{background:#fafbff;}
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
           <button class="btn btn-outline" onclick="closeAssignModal()">Cancel</button>
           <button class="btn btn-primary" onclick="saveAssignedTask()">Assign Task</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Direct Message Modal (admin -> mentor) -->
+    <div id="msg-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:26px 24px;width:540px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 id="msg-modal-title" style="color:var(--primary);margin-bottom:4px;">Messages</h3>
+        <p style="font-size:0.78em;color:#999;margin-bottom:12px;">Direct messages to this mentor. They see them in “My Tasks”.</p>
+        <div id="msg-thread" style="flex:1;overflow-y:auto;max-height:46vh;background:#f8f9fa;border-radius:10px;padding:12px;margin-bottom:12px;"></div>
+        <textarea id="msg-text" rows="3" placeholder="Type a message…" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.92em;resize:vertical;min-height:64px;"></textarea>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+          <button class="btn btn-outline" onclick="closeMentorMessages()">Close</button>
+          <button class="btn btn-primary" onclick="sendMentorMessage()">Send Message</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mentor Task List Modal -->
+    <div id="mtask-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:26px 24px;width:560px;max-width:95vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 id="mtask-modal-title" style="color:var(--primary);margin-bottom:14px;">Tasks</h3>
+        <div id="mtask-list"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+          <button class="btn btn-primary" onclick="closeMentorTasks()">Done</button>
         </div>
       </div>
     </div>
@@ -1721,7 +1770,7 @@ let _listenersReady   = 0;
 
 function _onReady() {
   _listenersReady++;
-  if (_listenersReady === 12) {
+  if (_listenersReady === 13) {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
@@ -1747,6 +1796,7 @@ onSnapshot(collection(db,'staff'), snap => {
   refreshStaffDatalist();
   if (document.getElementById('view-settings')?.classList.contains('active')) renderSettings();
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
+  if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
 });
 onSnapshot(query(collection(db,'needsAssessments'), orderBy('_createdAt','asc')), snap => {
   _needsAssessments = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -1766,6 +1816,7 @@ let _events   = [];
 let _meetings = [];
 let _fundContacts = [];
 let _dashboardConfig = null;
+let _messages = [];
 
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -1777,6 +1828,7 @@ onSnapshot(query(collection(db,'tasks'),    orderBy('_createdAt','asc')), snap =
   _onReady();
   if (document.getElementById('view-admin-inbox')?.classList.contains('active')) renderAdminTasks();
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
+  if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
 });
 onSnapshot(query(collection(db,'projects'), orderBy('_createdAt','asc')), snap => {
   _projects = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -1804,6 +1856,13 @@ onSnapshot(collection(db,'config'), snap => {
   _dashboardConfig = d ? d.data() : null;
   _onReady();
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
+});
+onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap => {
+  _messages = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
+  if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
+  if (_msgMentor && document.getElementById('msg-modal')?.style.display === 'flex') renderMessageThread();
 });
 
 const DB = {
@@ -1841,6 +1900,11 @@ const DB = {
 
   dashboardConfig: () => _dashboardConfig,
   async setDashboardConfig(metrics){ await setDoc(doc(db,'config','dashboard'), {metrics, _updatedAt: serverTimestamp()}); },
+
+  messages: () => _messages,
+  async addMessage(m)        { await addDoc(collection(db,'messages'), {...m, _createdAt: serverTimestamp()}); },
+  async markMessageRead(id)  { await setDoc(doc(db,'messages',id), {read:true, _readAt: serverTimestamp()}, {merge:true}); },
+  async removeMessage(id)    { await deleteDoc(doc(db,'messages',id)); },
 
   async addSession(s) {
     await addDoc(collection(db,'sessions'), {...s, _createdAt: serverTimestamp()});
@@ -2041,7 +2105,12 @@ function navigate(v) {
   if (v==='events') renderEvents();
   if (v==='meetings') renderMeetingsList();
   if (v==='fundraising') renderFundraising();
+  closeNav();
 }
+
+// Mobile off-canvas navigation drawer
+function toggleNav(){ document.body.classList.toggle('nav-open'); }
+function closeNav(){ document.body.classList.remove('nav-open'); }
 
 // Run cb immediately if admin already unlocked this session, otherwise prompt
 // for the admin PIN first. Used to gate editing/deleting existing information.
@@ -2806,6 +2875,12 @@ document.getElementById('fund-detail').addEventListener('click', function(e) {
 document.getElementById('dash-modal').addEventListener('click', function(e) {
   if (e.target === this) closeDashboardConfig();
 });
+document.getElementById('msg-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeMentorMessages();
+});
+document.getElementById('mtask-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeMentorTasks();
+});
 
 // ===================================================================
 // NEEDS ASSESSMENT — form handlers and list/print renderers
@@ -3057,7 +3132,7 @@ const DASH_METRICS = [
   {id:'totalGiving',      group:'Fundraising', label:'Total Giving',        color:'#2e7d32', calc:()=>fmtMoney(DB.fundContacts().reduce((s,c)=>s+fundGiftTotal(c),0))},
   {id:'followupsDue',     group:'Fundraising', label:'Follow-ups Due (3+ mo)',color:'#9a3412', calc:()=>DB.fundContacts().filter(fundNeedsFollowup).length},
 ];
-const DASH_DEFAULT = ['sessions','activities','totalHours','uniqueClients'];
+const DASH_DEFAULT = ['sessions','activities','totalHours','uniqueClients','fundContacts','totalGiving','followupsDue'];
 function getDashboardMetrics(){
   const ids = (_dashboardConfig && Array.isArray(_dashboardConfig.metrics)) ? _dashboardConfig.metrics : null;
   const valid = (ids || DASH_DEFAULT).filter(id => DASH_METRICS.some(m=>m.id===id));
@@ -3722,12 +3797,16 @@ function renderMyTasks() {
     DB.staff().map(s=>'<option value="' + s.name + '"' + (s.name===current?' selected':'') + '>' + s.name + '</option>').join('');
   const el = document.getElementById('my-tasks-list');
   if (!el) return;
-  if (!current) { el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">Select your name above to see your tasks.</div>'; return; }
+  if (!current) { el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">Select your name above to see your messages and tasks.</div>'; return; }
+  // Direct messages from admin — show them and mark unread as read on view
+  const myMsgs = DB.messages().filter(m=>m.mentorName===current);
+  myMsgs.filter(m=>!m.read).forEach(m=>DB.markMessageRead(m._id));
+  const msgHtml = renderMyMessagesCard(myMsgs);
   const tasks = DB.tasks().filter(t=>t.mentorName===current);
   const countEl = document.getElementById('my-tasks-count');
   if (countEl) countEl.textContent = tasks.filter(t=>t.status!=='Done').length + ' open';
-  if (!tasks.length) { el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">🎉 No tasks assigned to you right now.</div>'; return; }
-  el.innerHTML = tasks.slice().reverse().map(t => {
+  if (!tasks.length) { el.innerHTML = msgHtml + '<div class="card" style="color:#bbb;text-align:center;padding:32px;">🎉 No tasks assigned to you right now.</div>'; return; }
+  el.innerHTML = msgHtml + tasks.slice().reverse().map(t => {
     const col = t.status==='Done'?'var(--success)':t.status==='In Progress'?'var(--accent)':'var(--warn)';
     return '<div class="card" style="border-left:4px solid ' + col + ';margin-bottom:14px;">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
@@ -3749,6 +3828,121 @@ function renderMyTasks() {
 
 async function updateMyTaskStatus(id, status) {
   await DB.updateTask(id, {status});
+}
+
+// ===================================================================
+// MENTOR PANEL & DIRECT MESSAGING (admin portal)
+// ===================================================================
+let _msgMentor = null;
+let _mtaskMentor = null;
+
+function mentorNames(){
+  return [...new Set(DB.staff().map(s=>s.name).filter(Boolean))].sort();
+}
+function fmtMsgTime(m){
+  const ts = m._createdAt || m._readAt;
+  const d = (ts && typeof ts.toDate === 'function') ? ts.toDate() : null;
+  if (!d) return 'just now';
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+
+function renderMentorPanel(){
+  const el = document.getElementById('mentor-panel');
+  if (!el) return;
+  const names = mentorNames();
+  if (!names.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">No staff yet. Add mentors in Staff &amp; Settings.</div>'; return; }
+  const tasks = DB.tasks(); const msgs = DB.messages();
+  const stat = (label,count,color,onclick)=>
+    `<button class="btn" onclick="${onclick}" style="flex:1;min-width:104px;background:#f4f6fb;border:1.5px solid #e2e8f0;color:#333;display:flex;flex-direction:column;gap:2px;align-items:center;padding:11px 8px;">
+      <span style="font-size:1.5em;font-weight:800;color:${color};line-height:1;">${count}</span>
+      <span style="font-size:0.68em;color:#666;text-transform:uppercase;letter-spacing:.3px;text-align:center;">${label}</span>
+    </button>`;
+  el.innerHTML = names.map(name=>{
+    const unread = msgs.filter(m=>m.mentorName===name && !m.read).length;
+    const uncompleted = tasks.filter(t=>t.mentorName===name && t.status!=='Done').length;
+    const inprog = tasks.filter(t=>t.mentorName===name && t.status==='In Progress').length;
+    const nm = name.replace(/'/g,"\\'");
+    return `<div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="font-weight:700;color:var(--primary);font-size:1.05em;">👤 ${fEsc(name)}</div>
+        <button class="btn btn-accent" style="font-size:0.82em;" onclick="openMentorMessages('${nm}')">✉ Message</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        ${stat('Unread Messages',unread,unread?'#e53935':'#9aa6b2',`openMentorMessages('${nm}')`)}
+        ${stat('Uncompleted Tasks',uncompleted,uncompleted?'#fb8c00':'#9aa6b2',`openMentorTasks('${nm}','uncompleted')`)}
+        ${stat('In Progress',inprog,inprog?'#2f9bb5':'#9aa6b2',`openMentorTasks('${nm}','inprogress')`)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openMentorMessages(name){
+  _msgMentor = name;
+  document.getElementById('msg-modal-title').textContent = 'Messages — ' + name;
+  document.getElementById('msg-text').value = '';
+  document.getElementById('msg-modal').style.display = 'flex';
+  renderMessageThread();
+}
+function closeMentorMessages(){ document.getElementById('msg-modal').style.display='none'; _msgMentor=null; }
+function deleteMessage(id){
+  requireAdmin(async ()=>{
+    if (!confirm('Delete this message? This cannot be undone.')) return;
+    await DB.removeMessage(id);
+    renderMessageThread();
+  });
+}
+function renderMessageThread(){
+  const wrap = document.getElementById('msg-thread');
+  if (!wrap || !_msgMentor) return;
+  const msgs = DB.messages().filter(m=>m.mentorName===_msgMentor);
+  wrap.innerHTML = msgs.length ? msgs.map(m=>
+    `<div style="margin-bottom:10px;">
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <div style="flex:1;background:#fff;border:1px solid #e8edf5;border-radius:10px;padding:9px 12px;font-size:0.88em;white-space:pre-wrap;">${fEsc(m.text)}</div>
+        <button title="Delete (admin)" onclick="deleteMessage('${m._id}')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:1.1em;line-height:1;">×</button>
+      </div>
+      <div style="font-size:0.7em;color:#aaa;margin-top:3px;">${fEsc(m.from||'Admin')} · ${fmtMsgTime(m)} · ${m.read?'✓ read':'• unread'}</div>
+    </div>`).join('') : '<p style="color:#bbb;font-size:0.85em;text-align:center;padding:16px;">No messages yet. Send the first one below.</p>';
+  wrap.scrollTop = wrap.scrollHeight;
+}
+async function sendMentorMessage(){
+  if (!_msgMentor) return;
+  const t = document.getElementById('msg-text').value.trim();
+  if (!t) { alert('Type a message first.'); return; }
+  await DB.addMessage({mentorName:_msgMentor, text:t, from:'Admin', read:false});
+  document.getElementById('msg-text').value = '';
+  renderMessageThread();
+}
+
+function openMentorTasks(name, mode){
+  _mtaskMentor = name;
+  const all = DB.tasks().filter(t=>t.mentorName===name);
+  const list = mode==='inprogress' ? all.filter(t=>t.status==='In Progress') : all.filter(t=>t.status!=='Done');
+  document.getElementById('mtask-modal-title').textContent =
+    (mode==='inprogress' ? 'In-Progress Tasks — ' : 'Uncompleted Tasks — ') + name;
+  const el = document.getElementById('mtask-list');
+  el.innerHTML = list.length ? list.slice().reverse().map(t=>{
+    const col = t.status==='In Progress'?'var(--accent)':'var(--warn)';
+    return `<div class="card" style="border-left:4px solid ${col};margin-bottom:10px;">
+      <div style="font-weight:600;color:var(--primary);">${fEsc(t.clientName||'General Task')}</div>
+      <div style="font-size:0.86em;color:#555;margin:4px 0;">${fEsc(t.description||'')}</div>
+      <div style="font-size:0.76em;color:#999;">${t.dueDate?'Due '+fmtDate(t.dueDate)+' · ':''}<span class="badge ${t.status==='In Progress'?'badge-info':'badge-warn'}">${fEsc(t.status||'Open')}</span></div>
+    </div>`;
+  }).join('') : '<p style="color:#bbb;font-size:0.875em;text-align:center;padding:20px;">None right now. 🎉</p>';
+  document.getElementById('mtask-modal').style.display = 'flex';
+}
+function closeMentorTasks(){ document.getElementById('mtask-modal').style.display='none'; _mtaskMentor=null; }
+
+function renderMyMessagesCard(msgs){
+  if (!msgs.length) return '';
+  return '<div class="card" style="margin-bottom:18px;border-left:4px solid var(--accent);">' +
+    '<h3 style="margin-bottom:12px;">✉ Messages from Admin</h3>' +
+    msgs.slice().reverse().map(m=>
+      '<div style="padding:8px 0;border-bottom:1px solid #f3f3f3;">' +
+        '<div style="font-size:0.9em;white-space:pre-wrap;">' + fEsc(m.text) + '</div>' +
+        '<div style="font-size:0.72em;color:#aaa;margin-top:3px;">' + fEsc(m.from||'Admin') + ' · ' + fmtMsgTime(m) + '</div>' +
+      '</div>').join('') +
+  '</div>';
 }
 
 // ===================================================================
@@ -4573,6 +4767,9 @@ Object.assign(window, {
   openContactDetail, closeContactDetail, editContactDetails, deleteFundContact,
   addInteraction, deleteInteraction, addGift, deleteGift,
   openDashboardConfig, closeDashboardConfig, saveDashboardConfig,
+  toggleNav, closeNav,
+  renderMentorPanel, openMentorMessages, closeMentorMessages, sendMentorMessage, deleteMessage,
+  openMentorTasks, closeMentorTasks,
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
