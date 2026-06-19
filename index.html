@@ -1189,7 +1189,7 @@ table tr:hover td{background:#fafbff;}
     <div id="view-email-blast" class="view">
       <div class="card">
         <h3>📧 Email Blast</h3>
-        <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Compose a message to send to clients. Your email app will open with all addresses in the BCC field. For large lists, use the <b>Copy Addresses</b> button and paste into Gmail/Outlook BCC manually.</p>
+        <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Compose a message for everyone on the list. Click <b>Open in Gmail</b> — a Gmail compose window opens with every recipient already in BCC plus your subject and message; just review and press Send. (No size limit like the old mail-app link.)</p>
 
         <div class="form-group">
           <label>From</label>
@@ -1218,8 +1218,9 @@ table tr:hover td{background:#fafbff;}
         </div>
 
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
+          <button class="btn btn-primary" onclick="openEBGmail()">📨 Open in Gmail — everyone BCC'd</button>
+          <button class="btn btn-outline" onclick="openEBMailto()">Open default mail app</button>
           <button class="btn btn-outline" onclick="copyEBAddresses()">📋 Copy All Addresses</button>
-          <button class="btn btn-primary" onclick="openEBMailto()">📨 Open in Email App</button>
         </div>
         <div id="eb-msg" style="display:none;margin-top:14px;"></div>
       </div>
@@ -2991,6 +2992,21 @@ function copyEBAddresses() {
   });
 }
 
+function openEBGmail() {
+  const emails = getEBRecipients();
+  if (!emails.length) { showEBMsg('warn', '⚠️ No email addresses found for the selected recipients.'); return; }
+  const subject = document.getElementById('eb-subject').value.trim();
+  const body    = document.getElementById('eb-body').value.trim();
+  if (!subject) { showEBMsg('warn', '⚠️ Please enter a subject.'); return; }
+  // Gmail web compose handles long BCC lists (unlike mailto:'s ~2000-char cap)
+  const url = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1'
+    + '&bcc=' + encodeURIComponent(emails.join(','))
+    + '&su='  + encodeURIComponent(subject)
+    + '&body='+ encodeURIComponent(body);
+  window.open(url, '_blank');
+  showEBMsg('success', `✅ Opening Gmail with all ${emails.length} recipients in BCC — review and click Send. (If a different Google account opens, switch to chayes@tjcoregon.org.)`);
+}
+
 function openEBMailto() {
   const emails = getEBRecipients();
   if (!emails.length) { showEBMsg('warn', '⚠️ No email addresses found.'); return; }
@@ -3001,7 +3017,7 @@ function openEBMailto() {
   const bcc = emails.join(',');
   const url = `mailto:?from=chayes%40tjcoregon.org&bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   if (url.length > 2000) {
-    showEBMsg('warn', `⚠️ Too many recipients for mailto: (${emails.length} addresses). Use <b>Copy All Addresses</b> and paste into Gmail/Outlook BCC instead.`);
+    showEBMsg('warn', `⚠️ Too many recipients (${emails.length}) for the default mail app. Use <b>Open in Gmail</b> instead — it has no size limit.`);
     return;
   }
   window.open(url, '_blank');
@@ -5305,7 +5321,7 @@ Object.assign(window, {
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
-  updateEBPreview, copyEBAddresses, openEBMailto,
+  updateEBPreview, copyEBAddresses, openEBMailto, openEBGmail,
   refreshAlerts, renderAdminInbox, renderAdminTasks, openAssignModal, closeAssignModal, saveAssignedTask, adminRemoveTask,
   renderMyTasks, updateMyTaskStatus,
   renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject, openProjectDetail, closeProjectDetail, postProjectUpdate,
