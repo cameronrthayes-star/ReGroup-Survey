@@ -263,7 +263,7 @@ table tr:hover td{background:#fafbff;}
 
     <div class="nav-section">Reports</div>
     <a onclick="navigate('timesheets')" data-view="timesheets"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Timesheet PDF</a>
-    <a onclick="navigate('form-reports')" data-view="form-reports"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg></span> Form Downloads</a>
+    <a onclick="navigate('form-reports')" data-view="form-reports"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg></span> Reports</a>
 
     <div class="nav-section">Directory</div>
     <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Client Directory</a>
@@ -1829,19 +1829,12 @@ table tr:hover td{background:#fafbff;}
       <div id="er-print-area" style="display:none;"></div>
     </div>
 
-    <!-- ===== FORM DOWNLOADS (admin reports) ===== -->
+    <!-- ===== REPORTS (all submitted forms) ===== -->
     <div id="view-form-reports" class="view">
       <div class="card no-print" style="margin-bottom:18px;">
-        <p style="font-size:0.88em;color:#555;margin:0;">Download submitted forms as PDF. Choose a form, then click Download — your browser's print dialog opens; pick <b>“Save as PDF”</b> as the destination.</p>
+        <p style="font-size:0.88em;color:#555;margin:0;">Every submitted form, kept on record. <b>Edit</b> a form you submitted (you'll confirm your name), <b>Download</b> a PDF where available, or <b>Delete</b> (admin PIN required — reports are never removed otherwise).</p>
       </div>
-      <div class="card" style="margin-bottom:18px;">
-        <h3>📋 Reentry Needs Assessments</h3>
-        <div id="fr-na-list"></div>
-      </div>
-      <div class="card">
-        <h3>🧾 Expense Reports</h3>
-        <div id="fr-er-list"></div>
-      </div>
+      <div id="fr-all"></div>
     </div>
 
   </div><!-- /content -->
@@ -1849,6 +1842,20 @@ table tr:hover td{background:#fafbff;}
 
 <!-- Dedicated print target (kept outside .view so print CSS can show it) -->
 <div id="print-root"></div>
+
+<!-- Shared post-submit panel (3 buttons) -->
+<div id="form-success-panel" style="display:none;position:fixed;inset:0;z-index:8700;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:30px 28px;width:440px;max-width:94vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);text-align:center;">
+    <div style="font-size:2.4em;line-height:1;margin-bottom:8px;">✅</div>
+    <h3 style="color:var(--primary);margin-bottom:6px;">Form Submitted</h3>
+    <p id="fsp-msg" style="font-size:0.86em;color:#666;margin-bottom:22px;">Your form was saved.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-primary" onclick="fspSubmitAnother()">➕ Submit Another Form</button>
+      <button class="btn btn-accent" onclick="fspEdit()">✏️ Edit Submitted Form</button>
+      <button class="btn btn-outline" onclick="fspDashboard()">🏠 Return to Dashboard</button>
+    </div>
+  </div>
+</div>
 
 <!-- PIN OVERLAY -->
 <div id="pin-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(10,20,60,0.72);align-items:center;justify-content:center;">
@@ -2072,6 +2079,11 @@ const DB = {
   async markMessageRead(id)  { await setDoc(doc(db,'messages',id), {read:true, _readAt: serverTimestamp()}, {merge:true}); },
   async removeMessage(id)    { await deleteDoc(doc(db,'messages',id)); },
 
+  // Generic helpers (used by the form add/edit/delete framework)
+  async addRecord(coll, data)        { const r = await addDoc(collection(db,coll), {...data, _createdAt: serverTimestamp()}); return r.id; },
+  async updateRecord(coll, id, data) { await setDoc(doc(db,coll,id), {...data, _updatedAt: serverTimestamp()}, {merge:true}); },
+  async removeRecord(coll, id)       { await deleteDoc(doc(db,coll,id)); },
+
   async addSession(s) {
     await addDoc(collection(db,'sessions'), {...s, _createdAt: serverTimestamp()});
   },
@@ -2168,7 +2180,7 @@ const VIEW_TITLES = {
   'activity-log':'Activity Log — Non-Client Services',
   'data-view':'Data View',
   'timesheets':'Timesheets',
-  'form-reports':'Form Downloads',
+  'form-reports':'Reports — All Submitted Forms',
   'settings':'Staff & Settings',
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
@@ -2250,7 +2262,7 @@ function changeAdminPIN() {
 
 let _navHistory = [];
 function navigate(v, isBack) {
-  if ((v === 'settings' || v === 'email-blast' || v === 'admin-inbox' || v === 'form-reports') && !_adminUnlocked) {
+  if ((v === 'settings' || v === 'email-blast' || v === 'admin-inbox') && !_adminUnlocked) {
     promptAdminPIN(() => navigate(v, isBack));
     return;
   }
@@ -2437,15 +2449,14 @@ document.getElementById('progress-note-form').addEventListener('submit', async f
   data.referralsMade = fd.getAll('referralsMade');
   data.serviceCategories = fd.getAll('serviceCategories');
   data.attemptMethods = fd.getAll('attemptMethods');
-  await DB.addSession(data);
+  const _sid = await saveForm('progress-note', data);
   btn.textContent = 'Submit Progress Note'; btn.disabled = false;
-  document.getElementById('pn-success').style.display='block';
   this.reset();
   document.getElementById('successful-fields').style.display='block';
   document.getElementById('unsuccessful-fields').style.display='none';
   document.getElementById('pn-hours-preview').value='';
   window.scrollTo(0,0);
-  setTimeout(()=>document.getElementById('pn-success').style.display='none',5000);
+  showFormSuccess('progress-note', _sid, data);
 });
 
 document.getElementById('activity-log-form').addEventListener('submit', async function(e) {
@@ -2457,14 +2468,107 @@ document.getElementById('activity-log-form').addEventListener('submit', async fu
   for (const [k,v] of fd.entries()) { data[k]=v; }
   data.whoInvolved = fd.getAll('whoInvolved');
   data.serviceAreas = fd.getAll('serviceAreas');
-  await DB.addActivity(data);
+  const _sid = await saveForm('activity-log', data);
   btn.textContent = 'Submit Activity Log'; btn.disabled = false;
-  document.getElementById('al-success').style.display='block';
   this.reset();
   document.getElementById('al-hours-preview').value='';
   window.scrollTo(0,0);
-  setTimeout(()=>document.getElementById('al-success').style.display='none',5000);
+  showFormSuccess('activity-log', _sid, data);
 });
+
+// ===================================================================
+// FORM FRAMEWORK — submit panel, add/edit, name-locked editing
+// ===================================================================
+const FORM_DEF = {
+  'progress-note':   {coll:'sessions',         formId:'progress-note-form', submitter:'mentorName',   view:'progress-note',    label:'Progress Note'},
+  'activity-log':    {coll:'activities',       formId:'activity-log-form',  submitter:'mentorName',   view:'activity-log',     label:'Activity Log'},
+  'needs-assessment':{coll:'needsAssessments', formId:'na-form',            submitter:'referredBy',   view:'needs-assessment', label:'Needs Assessment'},
+  'expense-report':  {coll:'expenseReports',   formId:'er-form',            submitter:'employeeName', view:'expense-report',   label:'Expense Report'},
+  'events':          {coll:'events',           formId:'event-form',         submitter:'postedBy',     view:'events',           label:'Event / Social Post'},
+  'meetings':        {coll:'meetings',         formId:'meetings-form',      submitter:'loggedBy',     view:'meetings',         label:'Meeting'},
+};
+let _formEditId = {};            // form key -> id currently being edited
+let _fspKey=null, _fspId=null, _fspRecord=null;
+let _erEditReceipts=null, _evEditPhotos=null;   // preserve images across an edit
+
+function collData(coll){
+  return ({sessions:DB.sessions(),activities:DB.activities(),needsAssessments:DB.needsAssessments(),
+           expenseReports:DB.expenseReports(),events:DB.events(),meetings:DB.meetings()})[coll]||[];
+}
+function recordById(coll,id){ return collData(coll).find(x=>x._id===id); }
+
+// Add (returns new id) or, when editing, update the existing record
+async function saveForm(key, data){
+  const def=FORM_DEF[key];
+  if(_formEditId[key]){ const id=_formEditId[key]; await DB.updateRecord(def.coll, id, data); _formEditId[key]=null; return id; }
+  return await DB.addRecord(def.coll, data);
+}
+
+function showFormSuccess(key, id, data){
+  _fspKey=key; _fspId=id; _fspRecord = data ? {...data, _id:id} : recordById(FORM_DEF[key].coll, id);
+  const editing = !!data && false;
+  document.getElementById('fsp-msg').textContent = FORM_DEF[key].label + ' saved. What would you like to do next?';
+  document.getElementById('form-success-panel').style.display='flex';
+}
+function fspClose(){ document.getElementById('form-success-panel').style.display='none'; }
+function fspSubmitAnother(){ if(_fspKey) _formEditId[_fspKey]=null; fspClose(); }
+function fspDashboard(){ fspClose(); navigate('dashboard'); }
+function fspEdit(){ const k=_fspKey,id=_fspId,rec=_fspRecord; fspClose(); editForm(k,id,true,rec); }
+
+// Edit a submitted form. Unless skipNameCheck (just submitted by this person),
+// require the name on the form to match before allowing edits.
+function editForm(key, id, skipNameCheck, rec){
+  const def=FORM_DEF[key];
+  rec = rec || recordById(def.coll,id);
+  if(!rec){ alert('Record not found — it may still be saving. Try again in a moment.'); return; }
+  if(!skipNameCheck){
+    const owner=(rec[def.submitter]||'').trim();
+    if(!owner){ alert('This '+def.label+' has no submitter name on file, so it can only be removed by an admin.'); return; }
+    const entered=(prompt('To edit this '+def.label+', enter the name it was submitted under:')||'').trim();
+    if(!entered) return;
+    if(entered.toLowerCase()!==owner.toLowerCase()){ alert('That name does not match the person who submitted this form. Only they can edit it.'); return; }
+  }
+  navigate(def.view);
+  _formEditId[key]=id;
+  if(key==='expense-report') _erEditReceipts = rec.receipts||[];
+  if(key==='events') _evEditPhotos = rec.photos||[];
+  prefillForm(key, rec);
+  const form=document.getElementById(def.formId);
+  const btn=form.querySelector('[type="submit"]');
+  if(btn) btn.textContent='Update '+def.label;
+  form.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function prefillForm(key, rec){
+  const def=FORM_DEF[key];
+  const form=document.getElementById(def.formId);
+  if(!form) return;
+  const skip=new Set(['id','generatedPosts','items','photos','receipts','submittedAt','type','subtotal','totalReimbursement']);
+  form.querySelectorAll('input[name],select[name],textarea[name]').forEach(el=>{
+    const name=el.name; if(!name||skip.has(name)||name.endsWith('[]')) return;
+    if(!(name in rec)) return;
+    const val=rec[name];
+    if(el.type==='checkbox'){ el.checked = Array.isArray(val) ? val.includes(el.value) : !!val; }
+    else if(el.type==='radio'){ el.checked = (String(val)===el.value); }
+    else { el.value = (val==null)?'':val; }
+  });
+  if(key==='expense-report') prefillER(rec);
+  // fire change events so dependent UI (hours preview, outcome toggle, totals) refreshes
+  form.querySelectorAll('input,select,textarea').forEach(el=>el.dispatchEvent(new Event('change',{bubbles:true})));
+}
+function prefillER(rec){
+  const body=document.getElementById('er-items-body'); if(!body) return;
+  body.innerHTML='';
+  const items=rec.items||[];
+  (items.length?items:[{}]).forEach(()=>addERRow());
+  const rows=[...body.querySelectorAll('tr')];
+  items.forEach((it,i)=>{ const r=rows[i]; if(!r) return;
+    const set=(sel,v)=>{ const e=r.querySelector(sel); if(e) e.value=(v==null?'':v); };
+    set('[name="er_date[]"]', it.date); set('[name="er_desc[]"]', it.description);
+    set('[name="er_cat[]"]', it.category); set('[name="er_cost[]"]', it.cost);
+  });
+  updateERTotal();
+}
 
 // ===================================================================
 // CLIENT DIRECTORY
@@ -3130,48 +3234,53 @@ document.getElementById('na-form').addEventListener('submit', async function(e) 
   const fd = new FormData(this);
   const data = {id:uuid(), submittedAt:new Date().toISOString()};
   for (const [k,v] of fd.entries()) { data[k] = v; }
-  await DB.addNeedsAssessment(data);
+  data.assistanceType = fd.get('assistanceType') || data.assistanceType || '';
+  const _sid = await saveForm('needs-assessment', data);
   btn.textContent = 'Submit Needs Assessment'; btn.disabled = false;
-  document.getElementById('na-success').style.display = 'block';
   this.reset();
   window.scrollTo(0,0);
-  setTimeout(()=>document.getElementById('na-success').style.display='none', 5000);
+  showFormSuccess('needs-assessment', _sid, data);
 });
 
-// Admin Reports: download submitted forms as PDF (reuses printNA / printER)
+// Reports: every submitted form, with Edit (name-locked), Download, admin Delete
+const FR_SECTIONS = [
+  {key:'progress-note',    icon:'📝', title:'Progress Notes',     summary:r=>[fmtDate(getDate(r)), fEsc(r.clientName||r.participantName||''), fEsc(r.mentorName||'')]},
+  {key:'activity-log',     icon:'📋', title:'Activity Logs',      summary:r=>[fmtDate(getDate(r)), fEsc(r.activityType||''), fEsc(r.mentorName||'')]},
+  {key:'meetings',         icon:'🤝', title:'Meetings',           summary:r=>[fmtDate(r.meetingDate), fEsc(r.topic||''), fEsc(r.loggedBy||'')]},
+  {key:'events',           icon:'📣', title:'Events / Social',    summary:r=>[fmtDate(r.eventDate), fEsc(r.title||''), fEsc(r.postedBy||'')]},
+  {key:'needs-assessment', icon:'📑', title:'Needs Assessments',  summary:r=>[fmtDate(r.date), fEsc(r.participantName||''), fEsc(r.referredBy||'')], download:'printNA'},
+  {key:'expense-report',   icon:'🧾', title:'Expense Reports',    summary:r=>[fEsc(r.employeeName||''), fEsc(r.businessPurpose||''), '$'+(r.totalReimbursement||0).toFixed(2)], download:'printER'},
+];
 function renderFormReports() {
-  const naEl = document.getElementById('fr-na-list');
-  const erEl = document.getElementById('fr-er-list');
-  if (naEl) {
-    const na = DB.needsAssessments();
-    naEl.innerHTML = !na.length ? '<p style="color:#bbb;font-size:0.875em;">No needs assessments submitted yet.</p>' :
+  const host = document.getElementById('fr-all');
+  if (!host) return;
+  host.innerHTML = FR_SECTIONS.map(sec=>{
+    const def = FORM_DEF[sec.key];
+    const rows = collData(def.coll).slice().reverse();
+    const body = !rows.length ? '<p style="color:#bbb;font-size:0.85em;">None submitted yet.</p>' :
       `<div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Participant</th><th>Assistance Type</th><th>Amount</th><th>Submitted</th><th></th></tr></thead>
-        <tbody>${na.slice().reverse().map(n=>`<tr>
-          <td>${fmtDate(n.date)||'—'}</td>
-          <td>${fEsc(n.participantName)||'—'}</td>
-          <td>${fEsc(n.assistanceType)||'—'}</td>
-          <td>${n.amountRequested?'$'+parseFloat(n.amountRequested).toFixed(2):'—'}</td>
-          <td style="color:#999;font-size:0.82em;">${n.submittedAt?new Date(n.submittedAt).toLocaleDateString():'—'}</td>
-          <td><button class="btn btn-accent" style="padding:4px 10px;font-size:0.78em;white-space:nowrap;" onclick="printNA('${n._id}')">⬇️ Download PDF</button></td>
-        </tr>`).join('')}</tbody>
+        <tbody>${rows.map(r=>{
+          const cells = sec.summary(r).map(c=>`<td style="font-size:0.86em;">${c||'<span style=color:#bbb>—</span>'}</td>`).join('');
+          const dl = sec.download ? `<button class="btn btn-outline" style="padding:4px 9px;font-size:0.74em;white-space:nowrap;" onclick="${sec.download}('${r._id}')">⬇️ PDF</button>` : '';
+          return `<tr>${cells}
+            <td style="white-space:nowrap;text-align:right;">
+              ${dl}
+              <button class="btn btn-outline" style="padding:4px 9px;font-size:0.74em;" onclick="editForm('${sec.key}','${r._id}')">✏️ Edit</button>
+              <button class="btn btn-danger" style="padding:4px 9px;font-size:0.74em;" onclick="deleteReport('${def.coll}','${r._id}')">🗑</button>
+            </td></tr>`;
+        }).join('')}</tbody>
       </table></div>`;
-  }
-  if (erEl) {
-    const er = DB.expenseReports();
-    erEl.innerHTML = !er.length ? '<p style="color:#bbb;font-size:0.875em;">No expense reports submitted yet.</p>' :
-      `<div class="table-wrap"><table>
-        <thead><tr><th>Employee</th><th>Period</th><th>Purpose</th><th>Total</th><th>Submitted</th><th></th></tr></thead>
-        <tbody>${er.slice().reverse().map(r=>`<tr>
-          <td>${fEsc(r.employeeName)||'—'}</td>
-          <td>${r.periodFrom?fmtDate(r.periodFrom)+' – '+fmtDate(r.periodTo):'—'}</td>
-          <td>${fEsc(r.businessPurpose)||'—'}</td>
-          <td><b>$${(r.totalReimbursement||0).toFixed(2)}</b></td>
-          <td style="color:#999;font-size:0.82em;">${r.submittedAt?new Date(r.submittedAt).toLocaleDateString():'—'}</td>
-          <td><button class="btn btn-accent" style="padding:4px 10px;font-size:0.78em;white-space:nowrap;" onclick="printER('${r._id}')">⬇️ Download PDF</button></td>
-        </tr>`).join('')}</tbody>
-      </table></div>`;
-  }
+    return `<div class="card" style="margin-bottom:16px;"><h3>${sec.icon} ${sec.title} <span style="color:#bbb;font-weight:400;font-size:0.8em;">(${rows.length})</span></h3>${body}</div>`;
+  }).join('');
+}
+
+// Admin-only: permanently delete a report
+function deleteReport(coll, id){
+  requireAdmin(async ()=>{
+    if(!confirm('Delete this report permanently? This cannot be undone.')) return;
+    await DB.removeRecord(coll, id);
+    renderFormReports();
+  });
 }
 
 function renderNAList() {
@@ -3326,18 +3435,21 @@ document.getElementById('er-form').addEventListener('submit', async function(e) 
     items,
     subtotal,
     cashAdvance,
-    totalReimbursement: Math.max(0, subtotal - cashAdvance),
-    receipts
+    totalReimbursement: Math.max(0, subtotal - cashAdvance)
   };
-  await DB.addExpenseReport(data);
+  // Only overwrite receipts when new ones were uploaded; when editing with no
+  // new uploads, keep the existing ones (merge preserves them).
+  if (receipts.length) data.receipts = receipts;
+  else if (!_formEditId['expense-report']) data.receipts = [];
+  const _sid = await saveForm('expense-report', data);
+  _erEditReceipts = null;
   btn.textContent = 'Submit Expense Report'; btn.disabled = false;
-  document.getElementById('er-success').style.display = 'block';
   this.reset();
   document.getElementById('er-items-body').innerHTML = '';
   addERRow();
   updateERTotal();
   window.scrollTo(0,0);
-  setTimeout(()=>document.getElementById('er-success').style.display='none', 5000);
+  showFormSuccess('expense-report', _sid, data);
 });
 
 function renderERList() {
@@ -5121,6 +5233,8 @@ document.getElementById('event-form').addEventListener('submit', async function(
   if (photoInput && photoInput.files.length){
     try { data.photos = await readImagesCompressed(photoInput.files, {maxDim:1280, quality:0.7, maxCount:4, maxTotalKB:850}); }
     catch(err){ alert(err.message); btn.textContent='Generate Posts & Save'; btn.disabled=false; return; }
+  } else if (_formEditId['events'] && _evEditPhotos && _evEditPhotos.length){
+    data.photos = _evEditPhotos;   // editing with no new photos — keep existing
   }
   data.generatedPosts = generateSocialPost(data);
   // Backend AI polish for every channel + newsletter (falls back to the
@@ -5129,11 +5243,11 @@ document.getElementById('event-form').addEventListener('submit', async function(
     const ai = await generateAllPostsAI(data);
     if (ai) Object.assign(data.generatedPosts, ai);
   } catch (err) { console.warn('AI post generation failed, using templates:', err); }
-  await DB.addEvent(data);
+  const _sid = await saveForm('events', data);
+  _evEditPhotos = null;
   btn.textContent = 'Generate Posts & Save'; btn.disabled = false;
-  document.getElementById('ev-success').style.display = 'block';
   this.reset();
-  setTimeout(()=>document.getElementById('ev-success').style.display='none', 5000);
+  showFormSuccess('events', _sid, data);
 });
 
 function renderEvents() {
@@ -5221,17 +5335,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = mf.querySelector('button[type=submit]');
     btn.disabled = true; btn.textContent = 'Saving…';
     try {
-      await DB.addMeeting({
+      const data = {
         location:    fd.get('location')?.trim()||'',
         meetingDate: fd.get('meetingDate')||'',
         loggedBy:    fd.get('loggedBy')?.trim()||'',
         attendees:   fd.get('attendees')?.trim()||'',
         topic:       fd.get('topic')?.trim()||'',
         notes:       fd.get('notes')?.trim()||'',
-      });
+      };
+      const _sid = await saveForm('meetings', data);
       mf.reset();
-      const s = document.getElementById('mtg-success');
-      if (s) { s.style.display='block'; setTimeout(()=>s.style.display='none', 3000); }
+      showFormSuccess('meetings', _sid, data);
     } catch(err) { alert('Error saving meeting: '+err.message); }
     btn.disabled = false; btn.textContent = 'Save Meeting';
   });
@@ -5436,6 +5550,7 @@ Object.assign(window, {
   renderNAList, printNA,
   renderERList, printER, addERRow, updateERTotal,
   renderFormReports, printTimesheet,
+  fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
