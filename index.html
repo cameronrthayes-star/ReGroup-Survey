@@ -4537,6 +4537,9 @@ const PMI_PHASES = [
   { key:'closing',     label:'Phase 5 — Closing',                short:'Closing'      },
 ];
 
+let _pmiPhaseIndex = 0;     // 0-4 (PMI wizard phase)
+let _pmiShowingSummary = false;
+
 // ===================================================================
 // AI PROJECT PLANNER — upload a doc, AI splits it into steps, assign tasks
 // ===================================================================
