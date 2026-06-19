@@ -3910,8 +3910,14 @@ function renderDataView() {
   populateMentorFilter();
 }
 
+// Data View entries are scoped to the current user (admins see everyone)
+function dvEntries(){
+  return isAdmin() ? DB.allEntries()
+    : DB.allEntries().filter(e => ((e._owner||e.mentorName)||'') === currentUserName());
+}
+
 function renderTimesheetTable() {
-  const entries = DB.allEntries();
+  const entries = dvEntries();
   const tbody = document.querySelector('#timesheet-table tbody');
   tbody.innerHTML = entries.length ? entries.map(e=>`
     <tr>
@@ -3929,7 +3935,7 @@ function renderTimesheetTable() {
 
 function renderSummaryTable() {
   const mentorData = {};
-  DB.allEntries().forEach(e=>{
+  dvEntries().forEach(e=>{
     const n = e.mentorName||'Unknown';
     if (!mentorData[n]) mentorData[n]={sessions:0,hours:0};
     mentorData[n].sessions++;
@@ -3943,7 +3949,7 @@ function renderSummaryTable() {
 }
 
 function renderSafetyTable() {
-  const entries = DB.allEntries().filter(e=>e.safetyConcerns && e.safetyConcerns!=='No concerns' && e.safetyConcerns!=='no');
+  const entries = dvEntries().filter(e=>e.safetyConcerns && e.safetyConcerns!=='No concerns' && e.safetyConcerns!=='no');
   const tbody = document.querySelector('#safety-table tbody');
   tbody.innerHTML = entries.length ? entries.map(e=>`
     <tr>
@@ -3960,7 +3966,7 @@ function renderAllData() {
   const search = (document.getElementById('search-input').value||'').toLowerCase();
   const typeF  = document.getElementById('filter-type').value;
   const mentorF= document.getElementById('filter-mentor').value;
-  let entries = DB.allEntries();
+  let entries = dvEntries();
   if (typeF) entries = entries.filter(e=>e._type===typeF);
   if (mentorF) entries = entries.filter(e=>e.mentorName===mentorF);
   if (search) entries = entries.filter(e=>JSON.stringify(e).toLowerCase().includes(search));
@@ -3979,7 +3985,7 @@ function renderAllData() {
 }
 
 function populateMentorFilter() {
-  const mentors = [...new Set(DB.allEntries().map(e=>e.mentorName).filter(Boolean))].sort();
+  const mentors = [...new Set(dvEntries().map(e=>e.mentorName).filter(Boolean))].sort();
   const sel = document.getElementById('filter-mentor');
   sel.innerHTML = '<option value="">All mentors</option>' + mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
@@ -3987,7 +3993,7 @@ function populateMentorFilter() {
 function filterPayPeriod() {
   const start = document.getElementById('pp-start').value;
   const end   = document.getElementById('pp-end').value;
-  let entries = DB.allEntries();
+  let entries = dvEntries();
   if (start) entries = entries.filter(e=>getDate(e)>=start);
   if (end)   entries = entries.filter(e=>getDate(e)<=end);
   const tbody = document.querySelector('#pp-table tbody');
