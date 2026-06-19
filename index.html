@@ -1045,6 +1045,11 @@ table tr:hover td{background:#fafbff;}
             <label>Address</label>
             <input type="text" id="cm-address">
           </div>
+          <div class="form-group">
+            <label>Home Meeting</label>
+            <input type="text" id="cm-homeMeeting" list="home-meeting-list" placeholder="e.g. Monday Night Group">
+            <datalist id="home-meeting-list"></datalist>
+          </div>
           <div class="form-group full">
             <label>Notes</label>
             <textarea id="cm-notes" rows="2" style="min-height:54px;"></textarea>
@@ -2611,7 +2616,16 @@ async function seedClientsIfEmpty() {
   }
 }
 
+function clientHomeMeetings() {
+  return [...new Set(DB.clients().map(c=>(c.homeMeeting||'').trim()).filter(Boolean))].sort();
+}
+function populateHomeMeetingList() {
+  const dl = document.getElementById('home-meeting-list');
+  if (dl) dl.innerHTML = clientHomeMeetings().map(m=>`<option value="${m.replace(/"/g,'&quot;')}">`).join('');
+}
+
 function renderClientDirectory() {
+  populateHomeMeetingList();
   const q = (document.getElementById('client-search')?.value || '').toLowerCase();
   let list = DB.clients();
   if (q) {
@@ -2619,7 +2633,7 @@ function renderClientDirectory() {
       const name = (c.firstName+' '+c.lastName).toLowerCase();
       return name.includes(q) || (c.email||'').toLowerCase().includes(q) ||
              (c.phone||'').includes(q) || (c.clientId||'').includes(q) ||
-             (c.notes||'').toLowerCase().includes(q);
+             (c.notes||'').toLowerCase().includes(q) || (c.homeMeeting||'').toLowerCase().includes(q);
     });
   }
   const countEl = document.getElementById('client-count');
@@ -2636,6 +2650,7 @@ function renderClientDirectory() {
       <th>Name</th>
       <th>Email</th>
       <th>Phone</th>
+      <th>Home Meeting</th>
       <th style="width:90px">Status</th>
       <th style="width:40px"></th>
     </tr></thead>
@@ -2650,6 +2665,7 @@ function renderClientDirectory() {
         <td>${name}${c.notes?`<div style="font-size:0.75em;color:#888;margin-top:2px;">${c.notes}</div>`:''}</td>
         <td style="font-size:0.83em;color:#555;">${c.email||'—'}</td>
         <td style="font-size:0.85em;">${c.phone||'—'}</td>
+        <td style="font-size:0.83em;">${c.homeMeeting?`<span class="badge badge-info">${c.homeMeeting}</span>`:'—'}</td>
         <td>${badge}</td>
         <td><button class="btn btn-outline" style="padding:4px 8px;font-size:0.75em;" onclick="openClientModal('${c._id}')">Edit</button></td>
       </tr>`;
@@ -2671,13 +2687,14 @@ function openClientModal(id) {
     document.getElementById('cm-email').value = c.email||'';
     document.getElementById('cm-phone').value = c.phone||'';
     document.getElementById('cm-address').value = c.address||'';
+    document.getElementById('cm-homeMeeting').value = c.homeMeeting||'';
     document.getElementById('cm-confirmation').value = c.confirmation||'';
     document.getElementById('cm-notes').value = c.notes||'';
     deleteBtn.style.display = 'inline-flex';
   } else {
     document.getElementById('client-modal-title').textContent = 'Add Client';
     document.getElementById('cm-id').value = '';
-    ['cm-clientId','cm-firstName','cm-lastName','cm-email','cm-phone','cm-address','cm-notes'].forEach(i=>document.getElementById(i).value='');
+    ['cm-clientId','cm-firstName','cm-lastName','cm-email','cm-phone','cm-address','cm-homeMeeting','cm-notes'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('cm-confirmation').value = '';
     // Auto-assign next ID
     const ids = DB.clients().map(c=>parseInt(c.clientId)||0);
@@ -2685,6 +2702,7 @@ function openClientModal(id) {
     document.getElementById('cm-clientId').value = String(nextId);
     deleteBtn.style.display = 'none';
   }
+  populateHomeMeetingList();
   modal.style.display = 'flex';
 }
 
@@ -2701,6 +2719,7 @@ async function saveClient() {
     email: document.getElementById('cm-email').value.trim(),
     phone: document.getElementById('cm-phone').value.trim(),
     address: document.getElementById('cm-address').value.trim(),
+    homeMeeting: document.getElementById('cm-homeMeeting').value.trim(),
     confirmation: document.getElementById('cm-confirmation').value,
     notes: document.getElementById('cm-notes').value.trim(),
   };
@@ -2985,11 +3004,28 @@ function getEBRecipients() {
   const filter = document.getElementById('eb-filter')?.value || 'all';
   return DB.clients()
     .filter(c => c.email && c.email.trim())
-    .filter(c => filter === 'accurate' ? c.confirmation === 'Accurate' : true)
+    .filter(c => {
+      if (filter === 'accurate') return c.confirmation === 'Accurate';
+      if (filter.startsWith('meeting:')) return (c.homeMeeting||'').trim() === filter.slice(8);
+      return true;
+    })
     .map(c => c.email.trim());
 }
 
+// Build the recipient filter, including one entry per home meeting
+function populateEBFilter() {
+  const sel = document.getElementById('eb-filter');
+  if (!sel) return;
+  const prev = sel.value;
+  const meetings = clientHomeMeetings();
+  sel.innerHTML = '<option value="all">All clients with email addresses</option>'
+    + '<option value="accurate">Accurate confirmation only</option>'
+    + meetings.map(m=>`<option value="meeting:${m.replace(/"/g,'&quot;')}">Home meeting: ${m}</option>`).join('');
+  if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+}
+
 function updateEBPreview() {
+  populateEBFilter();
   const emails = getEBRecipients();
   const el = document.getElementById('eb-count');
   if (el) el.textContent = `${emails.length} recipient${emails.length !== 1 ? 's' : ''}`;
