@@ -2554,7 +2554,8 @@ function recordById(coll,id){ return collData(coll).find(x=>x._id===id); }
 async function saveForm(key, data){
   const def=FORM_DEF[key];
   if(_formEditId[key]){ const id=_formEditId[key]; await DB.updateRecord(def.coll, id, data); _formEditId[key]=null; return id; }
-  return await DB.addRecord(def.coll, data);
+  // Stamp the submitter so each person can find/edit only their own forms
+  return await DB.addRecord(def.coll, {...data, _owner: currentUserName()});
 }
 
 function showFormSuccess(key, id, data){
@@ -2575,11 +2576,8 @@ function editForm(key, id, skipNameCheck, rec){
   rec = rec || recordById(def.coll,id);
   if(!rec){ alert('Record not found — it may still be saving. Try again in a moment.'); return; }
   if(!skipNameCheck){
-    const owner=(rec[def.submitter]||'').trim();
-    if(!owner){ alert('This '+def.label+' has no submitter name on file, so it can only be removed by an admin.'); return; }
-    const entered=(prompt('To edit this '+def.label+', enter the name it was submitted under:')||'').trim();
-    if(!entered) return;
-    if(entered.toLowerCase()!==owner.toLowerCase()){ alert('That name does not match the person who submitted this form. Only they can edit it.'); return; }
+    const owner=(rec._owner||rec[def.submitter]||'').trim();
+    if(!(isAdmin() || owner===currentUserName())){ alert('You can only edit forms you submitted.'); return; }
   }
   navigate(def.view);
   _formEditId[key]=id;
@@ -3309,7 +3307,8 @@ function renderFormReports() {
   if (!host) return;
   host.innerHTML = FR_SECTIONS.map(sec=>{
     const def = FORM_DEF[sec.key];
-    const rows = collData(def.coll).slice().reverse();
+    let rows = collData(def.coll).slice().reverse();
+    if (!isAdmin()) rows = rows.filter(r => ((r._owner||r[def.submitter])||'') === currentUserName());  // staff see only their own
     const body = !rows.length ? '<p style="color:#bbb;font-size:0.85em;">None submitted yet.</p>' :
       `<div class="table-wrap"><table>
         <tbody>${rows.map(r=>{
@@ -4026,9 +4025,19 @@ function populateTsMentors() {
   // even with no logged sessions) plus any mentor name that has entries.
   const fromStaff   = DB.staff().map(s=>s.name).filter(Boolean);
   const fromEntries = DB.allEntries().map(e=>e.mentorName).filter(Boolean);
-  const mentors = [...new Set([...fromStaff, ...fromEntries])].sort();
+  let mentors = [...new Set([...fromStaff, ...fromEntries])].sort();
   const sel = document.getElementById('ts-mentor');
-  if (sel) sel.innerHTML = '<option value="">Select mentor…</option>' + mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if (!sel) return;
+  // Non-admins can only run their own timesheet
+  if (!isAdmin() && currentUserName()) {
+    mentors = mentors.filter(m=>m===currentUserName());
+    sel.innerHTML = mentors.map(m=>`<option value="${m}">${m}</option>`).join('') || `<option value="${currentUserName()}">${currentUserName()}</option>`;
+    sel.value = currentUserName();
+    sel.disabled = true;
+  } else {
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">Select mentor…</option>' + mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+  }
 }
 
 function tsUpdateFromStaff() { /* fields removed — defaults now pulled from staff record */ }
@@ -4402,10 +4411,12 @@ async function saveAssignedTask() {
   closeAssignModal();
 }
 
-async function adminRemoveTask(id) {
-  if (!confirm('Remove this task?')) return;
-  await DB.removeTask(id);
-  renderAdminTasks();
+function adminRemoveTask(id) {
+  requireAdmin(async ()=>{
+    if (!confirm('Remove this task?')) return;
+    await DB.removeTask(id);
+    renderAdminTasks();
+  });
 }
 
 // ===================================================================
@@ -4414,9 +4425,13 @@ async function adminRemoveTask(id) {
 function renderMyTasks() {
   const sel = document.getElementById('my-tasks-mentor');
   if (!sel) return;
-  const current = sel.value;
+  // Non-admins are locked to their own inbox; admins can switch between people
+  let current = sel.value;
+  if (!isAdmin() && currentUserName()) { current = currentUserName(); sel.disabled = true; }
+  else { sel.disabled = false; }
   sel.innerHTML = '<option value="">— Select your name —</option>' +
     DB.staff().map(s=>'<option value="' + s.name + '"' + (s.name===current?' selected':'') + '>' + s.name + '</option>').join('');
+  sel.value = current;
   const el = document.getElementById('my-tasks-list');
   const msgsEl = document.getElementById('my-inbox-msgs');
   const compose = document.getElementById('my-compose');
@@ -4682,8 +4697,8 @@ function renderProjects() {
           pmiBar +
         '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-          (isPMI&&pmiDone<5?'<button class="btn btn-accent" style="padding:6px 12px;font-size:0.78em;" onclick="openPMIWizard(\'' + p._id + '\')">Continue PMI</button>':'') +
-          '<button class="btn btn-outline" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectModal(\'' + p._id + '\')">Edit</button>' +
+          (isOwnerOrAdmin(p.assignedTo) && isPMI&&pmiDone<5?'<button class="btn btn-accent" style="padding:6px 12px;font-size:0.78em;" onclick="openPMIWizard(\'' + p._id + '\')">Continue PMI</button>':'') +
+          (isOwnerOrAdmin(p.assignedTo)?'<button class="btn btn-outline" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectModal(\'' + p._id + '\')">Edit</button>':'') +
           '<button class="btn btn-outline" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectDetail(\'' + p._id + '\')">Updates →</button>' +
         '</div>' +
       '</div>' +
@@ -4699,13 +4714,14 @@ function openProjectModal(id) {
   if (id) {
     const p = DB.projects().find(x=>x._id===id);
     if (!p) return;
+    if (!isOwnerOrAdmin(p.assignedTo)) { alert('Only the project owner or an admin can edit this project.'); return; }
     document.getElementById('pm-title').textContent = 'Edit Project';
     document.getElementById('pm-id').value = id;
     document.getElementById('pm-name').value = p.name||'';
     document.getElementById('pm-desc').value = p.description||'';
     document.getElementById('pm-status').value = p.status||'Active';
     document.getElementById('pm-assignee').value = p.assignedTo||'';
-    deleteBtn.style.display = 'inline-flex';
+    deleteBtn.style.display = isAdmin() ? 'inline-flex' : 'none';   // only admin can delete
   } else {
     document.getElementById('pm-title').textContent = 'New Project';
     document.getElementById('pm-id').value = '';
@@ -4734,11 +4750,14 @@ async function saveProject() {
   closeProjectModal();
 }
 
-async function deleteProject() {
+function deleteProject() {
   const id = document.getElementById('pm-id').value;
-  if (!id || !confirm('Delete this project and all its updates?')) return;
-  await DB.removeProject(id);
-  closeProjectModal();
+  if (!id) return;
+  requireAdmin(async ()=>{
+    if (!confirm('Delete this project and all its updates?')) return;
+    await DB.removeProject(id);
+    closeProjectModal();
+  });
 }
 
 function openProjectDetail(id) {
@@ -4777,7 +4796,8 @@ async function postProjectUpdate() {
   const status = document.getElementById('pd-update-status').value;
   const p = DB.projects().find(x=>x._id===_activeProjectId);
   if (!p) return;
-  const updates = [...(p.updates||[]), {text, status, by:'Admin', at: new Date().toISOString()}];
+  if (!isOwnerOrAdmin(p.assignedTo)) { alert('Only the project owner or an admin can post updates.'); return; }
+  const updates = [...(p.updates||[]), {text, status, by:currentUserName()||'Staff', at: new Date().toISOString()}];
   const patch = {updates};
   if (status) patch.status = status;
   await DB.updateProject(_activeProjectId, {...p, ...patch});
