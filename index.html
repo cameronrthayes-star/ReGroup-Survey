@@ -49,6 +49,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background:var(--bg);display:flex
 #topbar-date{font-size:0.78em;color:var(--text-muted);font-weight:500;white-space:nowrap;}
 #menu-toggle{display:none;background:none;border:none;font-size:1.5em;line-height:1;color:var(--primary);cursor:pointer;padding:2px 6px;border-radius:8px;flex-shrink:0;}
 #menu-toggle:active{background:rgba(0,0,0,0.06);}
+#back-btn{background:#eef3fb;border:1px solid #e2e8f0;color:var(--primary);font-size:0.8em;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+#back-btn:hover{background:#e2e9f7;}
 #nav-backdrop{display:none;}
 #content{padding:28px 32px;flex:1;}
 
@@ -292,6 +294,7 @@ table tr:hover td{background:#fafbff;}
   <div id="topbar">
     <div style="display:flex;align-items:center;gap:10px;min-width:0;">
       <button id="menu-toggle" onclick="toggleNav()" aria-label="Open menu">☰</button>
+      <button id="back-btn" onclick="goBack()" title="Back" style="visibility:hidden;">← Back</button>
       <div id="topbar-title">Dashboard</div>
     </div>
     <div id="topbar-date"></div>
@@ -2233,11 +2236,17 @@ function changeAdminPIN() {
   alert('✅ PIN changed successfully.');
 }
 
-function navigate(v) {
+let _navHistory = [];
+function navigate(v, isBack) {
   if ((v === 'settings' || v === 'email-blast' || v === 'admin-inbox' || v === 'form-reports') && !_adminUnlocked) {
-    promptAdminPIN(() => navigate(v));
+    promptAdminPIN(() => navigate(v, isBack));
     return;
   }
+  // Track history so the Back button can return to the previous page
+  const curEl = document.querySelector('.view.active');
+  const cur = curEl ? curEl.id.replace('view-','') : null;
+  if (!isBack && cur && cur !== v) _navHistory.push(cur);
+  updateBackBtn();
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('#sidebar nav a').forEach(el=>el.classList.remove('active'));
   const ve = document.getElementById('view-'+v);
@@ -2259,6 +2268,17 @@ function navigate(v) {
   if (v==='fundraising') renderFundraising();
   if (v==='form-reports') renderFormReports();
   closeNav();
+}
+
+// Back button — return to the previously viewed page
+function goBack(){
+  const prev = _navHistory.pop();
+  updateBackBtn();
+  navigate(prev || 'dashboard', true);
+}
+function updateBackBtn(){
+  const b = document.getElementById('back-btn');
+  if (b) b.style.visibility = _navHistory.length ? 'visible' : 'hidden';
 }
 
 // Mobile off-canvas navigation drawer
@@ -5309,7 +5329,7 @@ initForms();
 // Expose all functions used by inline onclick/onchange handlers to global scope
 // (required because <script type="module"> does not share scope with HTML attributes)
 Object.assign(window, {
-  navigate, switchTab, filterPayPeriod, exportTableCSV,
+  navigate, goBack, switchTab, filterPayPeriod, exportTableCSV,
   generateTimesheet, tsUpdateFromStaff, populateTsMentors,
   showAddStaff, addStaff, removeStaff,
   openStaffModal, closeStaffModal, saveStaffModal, deleteStaffFromModal,
