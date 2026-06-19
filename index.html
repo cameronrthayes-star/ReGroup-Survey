@@ -255,6 +255,7 @@ table tr:hover td{background:#fafbff;}
   <nav>
     <div class="nav-section">Analytics</div>
     <a onclick="navigate('dashboard')" data-view="dashboard"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg></span> Dashboard</a>
+    <a onclick="navigate('profile')" data-view="profile"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span> My Profile</a>
 
     <div class="nav-section">Log Entry</div>
     <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span> Progress Note</a>
@@ -357,6 +358,11 @@ table tr:hover td{background:#fafbff;}
           <button class="btn btn-primary" onclick="saveDashboardConfig()">Save Dashboard</button>
         </div>
       </div>
+    </div>
+
+    <!-- ===== MY PROFILE ===== -->
+    <div id="view-profile" class="view">
+      <div id="profile-body"></div>
     </div>
 
     <!-- ===== PROGRESS NOTE ===== -->
@@ -1969,6 +1975,7 @@ onSnapshot(collection(db,'staff'), snap => {
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
   if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
+  if (document.getElementById('view-profile')?.classList.contains('active')) renderProfile();
 });
 onSnapshot(query(collection(db,'needsAssessments'), orderBy('_createdAt','asc')), snap => {
   _needsAssessments = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -2185,6 +2192,7 @@ const VIEW_TITLES = {
   'data-view':'Data View',
   'timesheets':'Timesheets',
   'form-reports':'Reports — All Submitted Forms',
+  'profile':'My Profile',
   'settings':'Staff & Settings',
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
@@ -2335,6 +2343,7 @@ function navigate(v, isBack) {
   if (v==='meetings') renderMeetingsList();
   if (v==='fundraising') renderFundraising();
   if (v==='form-reports') renderFormReports();
+  if (v==='profile') renderProfile();
   closeNav();
 }
 
@@ -3324,6 +3333,101 @@ function deleteReport(coll, id){
     if(!confirm('Delete this report permanently? This cannot be undone.')) return;
     await DB.removeRecord(coll, id);
     renderFormReports();
+  });
+}
+
+// ===================================================================
+// MY PROFILE
+// ===================================================================
+function fileToDataURL(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('Could not read file')); r.readAsDataURL(f); }); }
+function myStaffRecord(){ return DB.staff().find(s => s.name === currentUserName()); }
+
+function renderProfile(){
+  const host=document.getElementById('profile-body'); if(!host) return;
+  const s=myStaffRecord();
+  if(!s){
+    host.innerHTML='<div class="card" style="text-align:center;color:#777;padding:40px;">'+
+      (isAdmin()?'You are signed in as <b>Administrator</b>. Staff profiles are managed under <b>Staff &amp; Settings</b>.'
+               :'No staff profile is linked to your account yet. Ask an admin to add you under Staff &amp; Settings.')+'</div>';
+    return;
+  }
+  const photo = s.photo
+    ? `<img src="${s.photo}" alt="" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0;">`
+    : `<div style="width:96px;height:96px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.9em;font-weight:700;">${(firstNameOf(s.name)[0]||'?').toUpperCase()}</div>`;
+  const docs = s.documents||[];
+  host.innerHTML = `
+    <div class="card" style="margin-bottom:18px;">
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          ${photo}
+          <div style="margin-top:8px;"><label class="btn btn-outline" style="font-size:0.72em;cursor:pointer;">Change Photo<input type="file" accept="image/*" style="display:none;" onchange="uploadProfilePhoto(this)"></label></div>
+        </div>
+        <div>
+          <div style="font-size:1.35em;font-weight:700;color:var(--primary);">${fEsc(s.name)}</div>
+          <div style="color:#777;font-size:0.86em;">${fEsc(s.role||'Staff')}</div>
+          <div style="color:#aaa;font-size:0.78em;margin-top:4px;">Your login password: <b>${fEsc(firstNameOf(s.name))}1234</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>Contact Information</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>Phone Number</label><input type="text" id="pf-phone" value="${fEsc(s.phone||'')}"></div>
+        <div class="form-group"><label>Preferred Contact Method</label><select id="pf-pref"><option value="">—</option>${['Phone','Email','Text','In Person'].map(o=>`<option ${s.preferredContact===o?'selected':''}>${o}</option>`).join('')}</select></div>
+        <div class="form-group full"><label>Email Address(es)</label><input type="text" id="pf-email" value="${fEsc(s.email||'')}" placeholder="name@example.com, alt@example.com"></div>
+        <div class="form-group full"><label>Address</label><input type="text" id="pf-address" value="${fEsc(s.address||'')}"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
+      <span id="pf-status" style="font-size:0.82em;color:#43a047;margin-left:10px;"></span>
+    </div>
+    <div class="card">
+      <h3>Documents</h3>
+      <p style="font-size:0.8em;color:#888;margin-bottom:10px;">Store documents here (images or PDFs, up to ~700 KB each). You and admins can add; only admins can delete.</p>
+      <div id="pf-docs">${docs.length?docs.map((d,i)=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid #f0f0f0;font-size:0.86em;">
+          <a href="${d.data}" download="${fEsc(d.name)}" style="color:#2f9bb5;text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${fEsc(d.name)}</a>
+          <span style="color:#bbb;font-size:0.8em;white-space:nowrap;">${d.addedBy?('by '+fEsc(d.addedBy)):''}</span>
+          <button class="btn btn-danger" style="padding:3px 8px;font-size:0.72em;" onclick="deleteProfileDoc('${s._id}',${i})">🗑</button>
+        </div>`).join(''):'<p style="color:#bbb;font-size:0.85em;">No documents yet.</p>'}</div>
+      <label class="btn btn-accent" style="margin-top:12px;cursor:pointer;font-size:0.82em;">+ Add Document<input type="file" accept="image/*,.pdf" style="display:none;" onchange="uploadProfileDoc(this,'${s._id}')"></label>
+      <span id="pf-doc-status" style="font-size:0.82em;color:#888;margin-left:10px;"></span>
+    </div>`;
+}
+async function saveProfile(){
+  const s=myStaffRecord(); if(!s) return;
+  await DB.updateRecord('staff', s._id, {
+    phone:document.getElementById('pf-phone').value.trim(),
+    preferredContact:document.getElementById('pf-pref').value,
+    email:document.getElementById('pf-email').value.trim(),
+    address:document.getElementById('pf-address').value.trim(),
+  });
+  const st=document.getElementById('pf-status'); if(st){ st.textContent='Saved ✓'; setTimeout(()=>{if(st)st.textContent='';},3000); }
+}
+async function uploadProfilePhoto(input){
+  const s=myStaffRecord(); const f=input.files&&input.files[0]; if(!s||!f) return;
+  try{ const url=await compressImage(f,400,0.7); await DB.updateRecord('staff', s._id, {photo:url}); renderProfile(); }
+  catch(e){ alert(e.message); }
+}
+async function uploadProfileDoc(input, staffId){
+  const f=input.files&&input.files[0]; if(!f) return;
+  const st=document.getElementById('pf-doc-status'); if(st){ st.style.color='#888'; st.textContent='Uploading…'; }
+  try{
+    let data;
+    if(f.type.startsWith('image/')) data=await compressImage(f,1400,0.65);
+    else { if(f.size>720*1024) throw new Error('File too large (max ~700 KB). Please upload a smaller file.'); data=await fileToDataURL(f); }
+    const s=DB.staff().find(x=>x._id===staffId); if(!s) return;
+    const documents=[...(s.documents||[]), {name:f.name, data, addedBy:currentUserName(), addedAt:new Date().toISOString()}];
+    await DB.updateRecord('staff', staffId, {documents});
+    renderProfile();
+  }catch(e){ if(st){st.style.color='#e53935';st.textContent=e.message;} else alert(e.message); }
+}
+function deleteProfileDoc(staffId, idx){
+  requireAdmin(async ()=>{
+    if(!confirm('Delete this document? This cannot be undone.')) return;
+    const s=DB.staff().find(x=>x._id===staffId); if(!s) return;
+    const documents=(s.documents||[]).filter((_,i)=>i!==idx);
+    await DB.updateRecord('staff', staffId, {documents});
+    renderProfile();
   });
 }
 
@@ -5596,6 +5700,7 @@ Object.assign(window, {
   renderERList, printER, addERRow, updateERTotal,
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
+  renderProfile, saveProfile, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
