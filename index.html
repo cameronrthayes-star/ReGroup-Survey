@@ -2209,7 +2209,7 @@ const VIEW_TITLES = {
 // ===================================================================
 // AUTH — PIN gate for Settings view
 // ===================================================================
-const DEFAULT_ADMIN_PIN = '1234';
+const DEFAULT_ADMIN_PIN = '118824';
 let _adminUnlocked = false;
 
 function getAdminPIN() {
@@ -2284,13 +2284,15 @@ function submitAppLogin() {
   const entered = (document.getElementById('app-password-input').value||'').trim();
   const err = document.getElementById('app-login-error');
   if (!entered) return;
-  // Admin login: master password, admin PIN, or "Admin1234"
-  if (entered === APP_PASSWORD || entered === getAdminPIN() || entered.toLowerCase()==='admin1234'){
+  // Admin login: admin password (118824 by default, changeable) or ELITE master fallback
+  if (entered === getAdminPIN() || entered === APP_PASSWORD){
     setCurrentUser({name:'Administrator', firstName:'Admin', isAdmin:true});
     document.getElementById('app-password-input').value=''; return;
   }
-  // Staff login: FirstName + 1234 (e.g. Cameron1234)
-  const staff = DB.staff().find(s => (firstNameOf(s.name).toLowerCase()+'1234') === entered.toLowerCase());
+  // Staff login: custom password if set, otherwise FirstName + 1234 (e.g. Cameron1234)
+  const staff = DB.staff().find(s => s.password
+    ? entered === s.password
+    : (firstNameOf(s.name).toLowerCase()+'1234') === entered.toLowerCase());
   if (staff){
     setCurrentUser({name:staff.name, firstName:firstNameOf(staff.name), isAdmin:!!staff.isAdmin});
     document.getElementById('app-password-input').value=''; return;
@@ -3364,7 +3366,7 @@ function renderProfile(){
         <div>
           <div style="font-size:1.35em;font-weight:700;color:var(--primary);">${fEsc(s.name)}</div>
           <div style="color:#777;font-size:0.86em;">${fEsc(s.role||'Staff')}</div>
-          <div style="color:#aaa;font-size:0.78em;margin-top:4px;">Your login password: <b>${fEsc(firstNameOf(s.name))}1234</b></div>
+          <div style="color:#aaa;font-size:0.78em;margin-top:4px;">Login password: <b>${s.password ? '•••••• (custom)' : fEsc(firstNameOf(s.name))+'1234'}</b></div>
         </div>
       </div>
     </div>
@@ -3378,6 +3380,17 @@ function renderProfile(){
       </div>
       <button class="btn btn-primary" onclick="saveProfile()">Save Profile</button>
       <span id="pf-status" style="font-size:0.82em;color:#43a047;margin-left:10px;"></span>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>Change Password</h3>
+      <p style="font-size:0.8em;color:#888;margin-bottom:10px;">Set your own login password. Default is your first name + 1234 (e.g. ${fEsc(firstNameOf(s.name))}1234).</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="form-group" style="margin:0;"><label>New Password</label><input type="password" id="pf-newpw" placeholder="At least 4 characters"></div>
+        <div class="form-group" style="margin:0;"><label>Confirm</label><input type="password" id="pf-newpw2" placeholder="Re-enter"></div>
+        <button class="btn btn-primary" onclick="savePassword()">Update Password</button>
+        ${s.password?'<button class="btn btn-outline" onclick="resetPassword()">Reset to default</button>':''}
+      </div>
+      <div id="pf-pw-status" style="font-size:0.82em;margin-top:8px;"></div>
     </div>
     <div class="card">
       <h3>Documents</h3>
@@ -3401,6 +3414,23 @@ async function saveProfile(){
     address:document.getElementById('pf-address').value.trim(),
   });
   const st=document.getElementById('pf-status'); if(st){ st.textContent='Saved ✓'; setTimeout(()=>{if(st)st.textContent='';},3000); }
+}
+async function savePassword(){
+  const s=myStaffRecord(); if(!s) return;
+  const st=document.getElementById('pf-pw-status');
+  const pw=document.getElementById('pf-newpw').value;
+  const pw2=document.getElementById('pf-newpw2').value;
+  const show=(msg,ok)=>{ if(st){ st.style.color=ok?'#43a047':'#e53935'; st.textContent=msg; } };
+  if(!pw || pw.length<4){ show('Password must be at least 4 characters.',false); return; }
+  if(pw!==pw2){ show('Passwords do not match.',false); return; }
+  await DB.updateRecord('staff', s._id, {password:pw});
+  show('Password updated ✓ Use it next time you log in.',true);
+  document.getElementById('pf-newpw').value=''; document.getElementById('pf-newpw2').value='';
+}
+function resetPassword(){
+  const s=myStaffRecord(); if(!s) return;
+  if(!confirm('Reset your password back to the default ('+firstNameOf(s.name)+'1234)?')) return;
+  DB.updateRecord('staff', s._id, {password:''}).then(()=>renderProfile());
 }
 async function uploadProfilePhoto(input){
   const s=myStaffRecord(); const f=input.files&&input.files[0]; if(!s||!f) return;
@@ -5726,7 +5756,7 @@ Object.assign(window, {
   renderERList, printER, addERRow, updateERTotal,
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
-  renderProfile, saveProfile, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
+  renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
