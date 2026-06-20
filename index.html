@@ -462,8 +462,13 @@ table tr:hover td{background:#fafbff;}
                 </select>
               </div>
               <div class="form-group">
-                <label>Client ID</label>
-                <input type="text" name="clientId" placeholder="Look up from contact sheet">
+                <label>Client Name</label>
+                <input type="text" name="clientName" id="pn-clientName" list="client-name-list" placeholder="Start typing a name…" oninput="fillClientId('pn')">
+                <datalist id="client-name-list"></datalist>
+              </div>
+              <div class="form-group">
+                <label>Client ID <span style="color:#aaa;font-weight:400;">(auto-fills from name)</span></label>
+                <input type="text" name="clientId" id="pn-clientId" placeholder="Auto from name">
               </div>
             </div>
           </div>
@@ -712,6 +717,14 @@ table tr:hover td{background:#fafbff;}
                 <label>Date of Activity *</label>
                 <input type="date" name="dateOfActivity" required>
               </div>
+              <div class="form-group">
+                <label>Client Name <span style="color:#aaa;font-weight:400;">(if applicable)</span></label>
+                <input type="text" name="clientName" id="al-clientName" list="client-name-list" placeholder="Start typing a name…" oninput="fillClientId('al')">
+              </div>
+              <div class="form-group">
+                <label>Client ID <span style="color:#aaa;font-weight:400;">(auto-fills)</span></label>
+                <input type="text" name="clientId" id="al-clientId" placeholder="Auto from name">
+              </div>
             </div>
           </div>
 
@@ -932,8 +945,8 @@ table tr:hover td{background:#fafbff;}
             </select>
           </div>
           <div class="form-group" style="margin:0">
-            <label>Pay Period Start</label>
-            <input type="date" id="ts-start">
+            <label>Pay Cycle (14 days)</label>
+            <select id="ts-start"></select>
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1084,9 +1097,13 @@ table tr:hover td{background:#fafbff;}
       <div class="card no-print" style="margin-bottom:18px;">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <input id="client-search" type="text" placeholder="Search by name, email, phone, or ID…"
-            style="flex:1;min-width:220px;padding:9px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;"
+            style="flex:1;min-width:200px;padding:9px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;"
             oninput="renderClientDirectory()">
-          <button class="btn btn-accent" onclick="openClientModal(null)">+ Add Client</button>
+          <select id="client-rel-filter" onchange="renderClientDirectory()" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;">
+            <option value="">All relationships</option>
+            <option>Client</option><option>Supporter</option><option>Funder</option><option>Unknown</option><option>Other</option>
+          </select>
+          <button class="btn btn-accent" onclick="openClientModal(null)">+ Add Contact</button>
           <span id="client-count" style="color:#999;font-size:0.82em;white-space:nowrap;"></span>
         </div>
       </div>
@@ -1135,6 +1152,13 @@ table tr:hover td{background:#fafbff;}
           <div class="form-group">
             <label>Address</label>
             <input type="text" id="cm-address">
+          </div>
+          <div class="form-group">
+            <label>Relationship</label>
+            <select id="cm-relationship">
+              <option>Client</option><option>Supporter</option><option>Funder</option>
+              <option>Unknown</option><option>Other</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Home Meeting</label>
@@ -1319,6 +1343,14 @@ table tr:hover td{background:#fafbff;}
             </select>
             <span id="eb-count" style="font-size:0.85em;color:#666;"></span>
           </div>
+          <div id="eb-customlist" style="display:none;margin-top:12px;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;max-height:300px;overflow-y:auto;">
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+              <input id="eb-cust-search" type="text" placeholder="Search names…" oninput="renderEBCustomList()" style="flex:1;min-width:160px;padding:7px 10px;border:1.5px solid #ddd;border-radius:7px;font-size:0.85em;">
+              <button class="btn btn-outline" style="font-size:0.78em;" onclick="ebCustCheckAll(true)">Check all</button>
+              <button class="btn btn-outline" style="font-size:0.78em;" onclick="ebCustCheckAll(false)">Clear</button>
+            </div>
+            <div id="eb-cust-rows"></div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -1474,10 +1506,12 @@ table tr:hover td{background:#fafbff;}
           <button class="btn btn-accent" onclick="openPMIWizard(null)">🏗 New PMI Project</button>
           <button class="btn btn-primary" onclick="openAIPlanner()">🤖 AI Planner</button>
           <button class="btn btn-outline" id="proj-view-toggle" onclick="toggleProjectsView()">📋 Kanban Board</button>
+          <button class="btn btn-outline" id="proj-gantt-toggle" onclick="toggleGanttView()">📊 Gantt</button>
         </div>
       </div>
       <div id="projects-list"></div>
       <div id="projects-kanban" style="display:none;"></div>
+      <div id="projects-gantt" style="display:none;"></div>
     </div>
 
     <!-- AI Project Planner Modal -->
@@ -2090,6 +2124,7 @@ onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-clients')?.classList.contains('active')) renderClientDirectory();
+  populateClientNameList();
 });
 onSnapshot(query(collection(db,'tasks'),    orderBy('_createdAt','asc')), snap => {
   _tasks = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -2439,7 +2474,7 @@ function navigate(v, isBack) {
   document.getElementById('topbar-title').textContent = VIEW_TITLES[v]||v;
   if (v==='dashboard') renderDashboard();
   if (v==='data-view') renderDataView();
-  if (v==='timesheets') populateTsMentors();
+  if (v==='timesheets') { populateTsMentors(); populateTsCycles(); }
   if (v==='settings') { renderSettings(); refreshAlerts(); }
   if (v==='clients') renderClientDirectory();
   if (v==='email-blast') updateEBPreview();
@@ -2451,6 +2486,7 @@ function navigate(v, isBack) {
   if (v==='form-reports') renderFormReports();
   if (v==='profile') renderProfile();
   if (v==='calendar') renderCalendar();
+  if (v==='progress-note' || v==='activity-log') populateClientNameList();
   closeNav();
 }
 
@@ -2892,10 +2928,25 @@ function populateHomeMeetingList() {
   const dl = document.getElementById('home-meeting-list');
   if (dl) dl.innerHTML = clientHomeMeetings().map(m=>`<option value="${m.replace(/"/g,'&quot;')}">`).join('');
 }
+function clientFullName(c){ return [c.firstName,c.lastName].filter(Boolean).join(' '); }
+function populateClientNameList(){
+  const dl=document.getElementById('client-name-list');
+  if (dl) dl.innerHTML = DB.clients().map(c=>`<option value="${fEsc(clientFullName(c))}">`).join('');
+}
+// Auto-fill the client ID when a client name is typed/selected on a note form
+function fillClientId(prefix){
+  const nameEl=document.getElementById(prefix+'-clientName');
+  const idEl=document.getElementById(prefix+'-clientId');
+  if(!nameEl||!idEl) return;
+  const v=nameEl.value.trim().toLowerCase();
+  const c=DB.clients().find(x=>clientFullName(x).toLowerCase()===v);
+  if(c) idEl.value=c.clientId||'';
+}
 
 function renderClientDirectory() {
   populateHomeMeetingList();
   const q = (document.getElementById('client-search')?.value || '').toLowerCase();
+  const rel = document.getElementById('client-rel-filter')?.value || '';
   let list = DB.clients();
   if (q) {
     list = list.filter(c => {
@@ -2905,8 +2956,9 @@ function renderClientDirectory() {
              (c.notes||'').toLowerCase().includes(q) || (c.homeMeeting||'').toLowerCase().includes(q);
     });
   }
+  if (rel) list = list.filter(c => (c.relationship||'Client') === rel);
   const countEl = document.getElementById('client-count');
-  if (countEl) countEl.textContent = `${list.length} of ${DB.clients().length} clients`;
+  if (countEl) countEl.textContent = `${list.length} of ${DB.clients().length} contacts`;
   const wrap = document.getElementById('client-table-wrap');
   if (!wrap) return;
   if (!list.length) {
@@ -2919,6 +2971,7 @@ function renderClientDirectory() {
       <th>Name</th>
       <th>Email</th>
       <th>Phone</th>
+      <th style="width:100px">Relationship</th>
       <th>Home Meeting</th>
       <th style="width:90px">Status</th>
       <th style="width:40px"></th>
@@ -2934,6 +2987,7 @@ function renderClientDirectory() {
         <td>${name}${c.notes?`<div style="font-size:0.75em;color:#888;margin-top:2px;">${c.notes}</div>`:''}</td>
         <td style="font-size:0.83em;color:#555;">${c.email||'—'}</td>
         <td style="font-size:0.85em;">${c.phone||'—'}</td>
+        <td style="font-size:0.8em;"><span class="badge badge-info">${c.relationship||'Client'}</span></td>
         <td style="font-size:0.83em;">${c.homeMeeting?`<span class="badge badge-info">${c.homeMeeting}</span>`:'—'}</td>
         <td>${badge}</td>
         <td><button class="btn btn-outline" style="padding:4px 8px;font-size:0.75em;" onclick="openClientModal('${c._id}')">Edit</button></td>
@@ -2957,6 +3011,7 @@ function openClientModal(id) {
     document.getElementById('cm-phone').value = c.phone||'';
     document.getElementById('cm-address').value = c.address||'';
     document.getElementById('cm-homeMeeting').value = c.homeMeeting||'';
+    document.getElementById('cm-relationship').value = c.relationship||'Client';
     document.getElementById('cm-confirmation').value = c.confirmation||'';
     document.getElementById('cm-notes').value = c.notes||'';
     deleteBtn.style.display = 'inline-flex';
@@ -2965,6 +3020,7 @@ function openClientModal(id) {
     document.getElementById('cm-id').value = '';
     ['cm-clientId','cm-firstName','cm-lastName','cm-email','cm-phone','cm-address','cm-homeMeeting','cm-notes'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('cm-confirmation').value = '';
+    document.getElementById('cm-relationship').value = 'Client';
     // Auto-assign next ID
     const ids = DB.clients().map(c=>parseInt(c.clientId)||0);
     const nextId = ids.length ? Math.max(...ids)+1 : 1241;
@@ -2989,6 +3045,7 @@ async function saveClient() {
     phone: document.getElementById('cm-phone').value.trim(),
     address: document.getElementById('cm-address').value.trim(),
     homeMeeting: document.getElementById('cm-homeMeeting').value.trim(),
+    relationship: document.getElementById('cm-relationship').value,
     confirmation: document.getElementById('cm-confirmation').value,
     notes: document.getElementById('cm-notes').value.trim(),
   };
@@ -3329,6 +3386,9 @@ function getEBRecipients() {
     const rel = filter.slice(9);
     return DB.fundContacts().filter(c=>(c.relationship||'')===rel && c.email && c.email.trim()).map(c=>c.email.trim());
   }
+  if (filter === 'customize') {
+    return [...document.querySelectorAll('#eb-cust-rows input:checked')].map(c=>c.value).filter(Boolean);
+  }
   return DB.clients()
     .filter(c => c.email && c.email.trim())
     .filter(c => {
@@ -3337,6 +3397,30 @@ function getEBRecipients() {
       return true;
     })
     .map(c => c.email.trim());
+}
+
+// Render the directory checklist for the "Customize" recipient option
+function renderEBCustomList(){
+  const wrap=document.getElementById('eb-cust-rows'); if(!wrap) return;
+  const q=(document.getElementById('eb-cust-search')?.value||'').toLowerCase();
+  const checked=new Set([...wrap.querySelectorAll('input:checked')].map(c=>c.value));
+  let list=DB.clients().filter(c=>c.email && c.email.trim());
+  if(q) list=list.filter(c=>(clientFullName(c)+' '+(c.email||'')).toLowerCase().includes(q));
+  list.sort((a,b)=>clientFullName(a).localeCompare(clientFullName(b)));
+  wrap.innerHTML = list.length ? list.map(c=>{
+    const em=c.email.trim();
+    return `<label style="display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:0.86em;cursor:pointer;border-bottom:1px solid #f3f3f3;">
+      <input type="checkbox" value="${fEsc(em)}" ${checked.has(em)?'checked':''} onchange="updateEBCount()">
+      <span style="font-weight:600;">${fEsc(clientFullName(c)||'—')}</span>
+      <span style="color:#999;margin-left:auto;font-size:0.92em;">${fEsc(em)}</span>
+    </label>`;
+  }).join('') : '<p style="color:#bbb;font-size:0.84em;">No contacts with email match.</p>';
+}
+function ebCustCheckAll(on){ document.querySelectorAll('#eb-cust-rows input[type=checkbox]').forEach(c=>c.checked=on); updateEBCount(); }
+function updateEBCount(){
+  const emails=getEBRecipients();
+  const el=document.getElementById('eb-count');
+  if(el) el.textContent=`${emails.length} recipient${emails.length!==1?'s':''}`;
 }
 
 // Build the recipient filter: clients (all / accurate / by home meeting) + fundraiser lists
@@ -3355,7 +3439,8 @@ function populateEBFilter() {
       + `<option value="fund-selected">Selected fundraiser contacts (${_fundEmailList.length})</option>`
       + '<option value="fundraisers">All fundraiser contacts</option>'
       + relsInUse.map(r=>`<option value="fund-rel:${r.replace(/"/g,'&quot;')}">Relationship: ${r}</option>`).join('')
-    + '</optgroup>';
+    + '</optgroup>'
+    + '<optgroup label="Custom"><option value="customize">✓ Customize — pick names from the directory</option></optgroup>';
   if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
 }
 
@@ -3371,6 +3456,9 @@ function ebCanSend() { return /@tjcoregon\.org$/i.test(ebSenderEmail()); }
 
 function updateEBPreview() {
   populateEBFilter();
+  const isCustom = (document.getElementById('eb-filter')?.value === 'customize');
+  const cl = document.getElementById('eb-customlist');
+  if (cl) { cl.style.display = isCustom ? 'block' : 'none'; if (isCustom) renderEBCustomList(); }
   const emails = getEBRecipients();
   const el = document.getElementById('eb-count');
   if (el) el.textContent = `${emails.length} recipient${emails.length !== 1 ? 's' : ''}`;
@@ -4334,6 +4422,23 @@ function exportTableCSV(tableId, filename) {
 // ===================================================================
 // TIMESHEET GENERATOR
 // ===================================================================
+const PAY_ANCHOR = '2026-06-12';   // a known 14-day pay-cycle start
+function populateTsCycles() {
+  const sel = document.getElementById('ts-start');
+  if (!sel) return;
+  const anchor = new Date(PAY_ANCHOR + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const curIdx = Math.floor((today - anchor) / (14*86400000));
+  let opts = '';
+  for (let i = curIdx + 2; i >= curIdx - 12; i--) {
+    const s = new Date(anchor); s.setDate(anchor.getDate() + i*14);
+    const e = new Date(s); e.setDate(s.getDate() + 13);
+    const sv = s.toISOString().slice(0,10);
+    const label = fmtDate(sv) + ' – ' + fmtDate(e.toISOString().slice(0,10)) + (i===curIdx ? '  (current)' : '');
+    opts += `<option value="${sv}" ${i===curIdx?'selected':''}>${label}</option>`;
+  }
+  sel.innerHTML = opts;
+}
 function populateTsMentors() {
   // Include everyone in staff (so salaried roles like ReGroup Director appear
   // even with no logged sessions) plus any mentor name that has entries.
@@ -4980,6 +5085,7 @@ let _activeProjectId = null;
 
 function renderProjects() {
   if (_projectsView==='kanban') renderKanban();
+  if (_projectsView==='gantt') renderGantt();
   const el = document.getElementById('projects-list');
   if (!el) return;
   const projects = DB.projects();
@@ -5046,12 +5152,54 @@ async function saveTaskModal(){
 // ---- Kanban board for projects ----
 let _projectsView = 'list';
 const KANBAN_COLS = ['Active','On Hold','Completed','Cancelled'];
-function toggleProjectsView(){
-  _projectsView = _projectsView==='list' ? 'kanban' : 'list';
-  const listEl=document.getElementById('projects-list'), kb=document.getElementById('projects-kanban');
-  const btn=document.getElementById('proj-view-toggle');
-  if(_projectsView==='kanban'){ listEl.style.display='none'; kb.style.display='block'; if(btn) btn.textContent='📄 List View'; renderKanban(); }
-  else { kb.style.display='none'; listEl.style.display='block'; if(btn) btn.textContent='📋 Kanban Board'; }
+function setProjectsView(mode){
+  // clicking the active mode toggles back to list
+  _projectsView = (_projectsView===mode) ? 'list' : mode;
+  const listEl=document.getElementById('projects-list'), kb=document.getElementById('projects-kanban'), gt=document.getElementById('projects-gantt');
+  listEl.style.display = _projectsView==='list' ? 'block':'none';
+  kb.style.display = _projectsView==='kanban' ? 'block':'none';
+  if(gt) gt.style.display = _projectsView==='gantt' ? 'block':'none';
+  const kbBtn=document.getElementById('proj-view-toggle'); if(kbBtn) kbBtn.textContent = _projectsView==='kanban'?'📄 List View':'📋 Kanban Board';
+  const gtBtn=document.getElementById('proj-gantt-toggle'); if(gtBtn) gtBtn.textContent = _projectsView==='gantt'?'📄 List View':'📊 Gantt';
+  if(_projectsView==='kanban') renderKanban();
+  if(_projectsView==='gantt') renderGantt();
+}
+function toggleProjectsView(){ setProjectsView('kanban'); }
+function toggleGanttView(){ setProjectsView('gantt'); }
+
+function renderGantt(){
+  const gt=document.getElementById('projects-gantt'); if(!gt) return;
+  const projects=DB.projects();
+  const tasks=DB.tasks();
+  const gd=t=>({ s:t.ganttStart||t.dueDate||'', e:t.ganttEnd||t.dueDate||t.ganttStart||'' });
+  // collect scheduled tasks per project
+  const blocks=projects.map(p=>{
+    const pts=tasks.filter(t=>(t.project===p.name||t.clientName===p.name)).map(t=>({t, ...gd(t)})).filter(x=>x.s);
+    return {p, pts};
+  }).filter(b=>b.pts.length);
+  if(!blocks.length){ gt.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:40px;">No scheduled tasks to chart yet. AI Planner projects auto-schedule their steps; or add due dates to tasks.</div>'; return; }
+  // global timeline range
+  let min=null,max=null;
+  blocks.forEach(b=>b.pts.forEach(x=>{ if(!min||x.s<min)min=x.s; const en=x.e||x.s; if(!max||en>max)max=en; }));
+  const minD=new Date(min+'T00:00:00'), maxD=new Date(max+'T00:00:00');
+  const span=Math.max(1,(maxD-minD)/86400000);
+  const pct=ds=>{ const d=new Date(ds+'T00:00:00'); return ((d-minD)/86400000)/span*100; };
+  gt.innerHTML = '<div class="card"><p style="font-size:0.8em;color:#999;margin-bottom:12px;">'+fmtDate(min)+' → '+fmtDate(max)+'</p>' +
+    blocks.map(b=>`<div style="margin-bottom:18px;">
+      <div style="font-weight:700;color:var(--primary);margin-bottom:8px;">${b.p.type==='pmi'?'🏗 ':''}${fEsc(b.p.name)}</div>
+      ${b.pts.sort((a,c)=>(a.s).localeCompare(c.s)).map(x=>{
+        const left=pct(x.s); const right=pct(x.e||x.s); const w=Math.max(2,right-left+ (100/span/ (span||1)) );
+        const wpct=Math.max(3, right-left || 3);
+        const done=x.t.status==='Done';
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+          <div style="width:160px;flex-shrink:0;font-size:0.78em;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${fEsc(x.t.description||'')}">${fEsc((x.t.description||'Task').slice(0,40))}</div>
+          <div style="flex:1;position:relative;height:18px;background:#f1f5f9;border-radius:9px;">
+            <div title="${fmtDate(x.s)} – ${fmtDate(x.e||x.s)}" style="position:absolute;left:${left}%;width:${wpct}%;height:18px;border-radius:9px;background:${done?'var(--success)':'var(--accent)'};min-width:10px;"></div>
+          </div>
+          <div style="width:80px;flex-shrink:0;font-size:0.7em;color:#999;text-align:right;">${fmtDate(x.s)}</div>
+        </div>`;
+      }).join('')}
+    </div>`).join('') + '</div>';
 }
 function renderKanban(){
   const kb=document.getElementById('projects-kanban'); if(!kb) return;
@@ -5371,13 +5519,21 @@ async function createPlannerTasks(){
   const btn = document.getElementById('plan-create-btn');
   btn.disabled=true; status.style.color='#666'; status.textContent='Creating project and tasks…';
   await DB.addProject({name, description:'Created from an uploaded document via the AI Planner.', status:'Active', source:'AI Planner'});
-  for (const s of steps){
+  // Auto-schedule steps sequentially so a Gantt chart can be drawn (each step ~4 days)
+  const DAYS=4; const base=new Date(); base.setHours(0,0,0,0);
+  const addDays=(n)=>{ const d=new Date(base); d.setDate(base.getDate()+n); return d.toISOString().slice(0,10); };
+  for (let i=0;i<steps.length;i++){
+    const s=steps[i];
     await DB.addTask({
       mentorName: s.mentor||'',
       description: s.title ? (s.title + (s.description ? ' — '+s.description : '')) : s.description,
       clientName: name,
       project: name,
       status: 'Open',
+      ganttStart: addDays(i*DAYS),
+      ganttEnd: addDays(i*DAYS + DAYS-1),
+      dueDate: addDays(i*DAYS + DAYS-1),
+      seq: i+1,
       source: 'AI Planner'
     });
   }
@@ -6209,12 +6365,12 @@ Object.assign(window, {
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
-  renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
-  updateEBPreview, copyEBAddresses, openEBMailto, openEBGmail,
+  renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient, fillClientId,
+  updateEBPreview, copyEBAddresses, openEBMailto, openEBGmail, renderEBCustomList, ebCustCheckAll, updateEBCount,
   refreshAlerts, renderAdminInbox, renderAdminTasks, openAssignModal, closeAssignModal, saveAssignedTask, adminRemoveTask,
   renderMyTasks, updateMyTaskStatus,
   renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject, openProjectDetail, closeProjectDetail, postProjectUpdate,
-  openTaskModal, closeTaskModal, saveTaskModal, toggleProjectsView, renderKanban, kbDragStart, kbDrop,
+  openTaskModal, closeTaskModal, saveTaskModal, toggleProjectsView, toggleGanttView, setProjectsView, renderKanban, renderGantt, kbDragStart, kbDrop,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   openAIPlanner, closeAIPlanner, handlePlannerFile, generatePlanAI, createPlannerTasks, addPlannerStep, removePlannerStep,
   renderPlannerKeyStatus, savePlannerKey,
