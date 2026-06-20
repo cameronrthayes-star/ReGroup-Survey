@@ -431,15 +431,8 @@ table tr:hover td{background:#fafbff;}
                   <label>End Time</label>
                   <input type="time" name="endTime">
                 </div>
-                <div class="form-group">
-                  <label>Grant *</label>
-                  <select name="grant">
-                    <option value="">Select grant…</option>
-                    <option>CVI</option><option>General Fund</option><option>BeBlac</option>
-                    <option>Collins Foundation</option><option>CJC</option><option>RISE</option>
-                    <option>WHC</option><option>Vital Project Funds</option>
-                  </select>
-                </div>
+                <!-- Grant is auto-assigned from the mentor's default grant -->
+                <input type="hidden" name="grant" value="">
                 <div class="form-group">
                   <label>Hours (auto-calculated)</label>
                   <input type="text" id="pn-hours-preview" readonly placeholder="Enter start/end time" style="background:#f5f5f5;color:var(--primary);font-weight:700;">
@@ -570,15 +563,8 @@ table tr:hover td{background:#fafbff;}
                   <label>End Time</label>
                   <input type="time" name="endTime">
                 </div>
-                <div class="form-group">
-                  <label>Grant</label>
-                  <select name="grant">
-                    <option value="">Select grant…</option>
-                    <option>CVI</option><option>General Fund</option><option>BeBlac</option>
-                    <option>Collins Foundation</option><option>CJC</option><option>RISE</option>
-                    <option>WHC</option><option>Vital Project Funds</option>
-                  </select>
-                </div>
+                <!-- Grant is auto-assigned from the mentor's default grant -->
+                <input type="hidden" name="grant" value="">
               </div>
               <div class="form-group">
                 <label>Attempt Method (check all that apply)</label>
@@ -699,15 +685,8 @@ table tr:hover td{background:#fafbff;}
                 <label>Hours (auto-calculated)</label>
                 <input type="text" id="al-hours-preview" readonly placeholder="Enter start/end time" style="background:#f5f5f5;color:var(--primary);font-weight:700;">
               </div>
-              <div class="form-group">
-                <label>Grant *</label>
-                <select name="grant" required>
-                  <option value="">Select grant…</option>
-                  <option>CVI</option><option>General Fund</option><option>BeBlac</option>
-                  <option>Collins Foundation</option><option>CJC</option><option>RISE</option>
-                  <option>WHC</option><option>Vital Project Funds</option>
-                </select>
-              </div>
+              <!-- Grant is auto-assigned from the mentor's default grant -->
+              <input type="hidden" name="grant" value="">
               <div class="form-group">
                 <label>Primary Purpose</label>
                 <select name="primaryPurpose">
@@ -3926,10 +3905,15 @@ async function saveDashboardConfig(){
 // DATA VIEW
 // ===================================================================
 function switchTab(tabId, btn) {
-  document.querySelectorAll('#view-data-view .tab-content').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('#view-data-view .tab-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById(tabId).classList.add('active');
-  btn.classList.add('active');
+  // Scope to the current view so only this view's tabs swap (previously this
+  // was hardcoded to #view-data-view, so tabs in other views stacked instead
+  // of replacing each other).
+  const scope = (btn && btn.closest('.view')) || document;
+  scope.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  ((btn && btn.closest('.tabs')) || scope).querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  const target = document.getElementById(tabId);
+  if (target) target.classList.add('active');
+  if (btn) btn.classList.add('active');
 }
 
 function renderDataView() {
