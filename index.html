@@ -475,12 +475,12 @@ table tr:hover td{background:#fafbff;}
       <div id="grants-key-setup" style="margin-bottom:16px;"></div>
       <div class="card no-print" style="margin-bottom:18px;">
         <h3>🔎 Grants & Funding Agent</h3>
-        <p style="color:#666;font-size:0.86em;margin-bottom:16px;">Answer a few questions. The AI agent searches the web for matching grants, suggests other ways to fund the project, and drafts a comprehensive funding plan. A summary is sent to your inbox and the admin inbox.</p>
+        <p style="color:#666;font-size:0.86em;margin-bottom:16px;">Answer a few questions. The AI agent casts a <b>wide net</b> — grants of any kind plus corporate giving, bank &amp; credit-union community funds, sponsorships, and more — matched to the <b>project idea</b> (not limited to reentry). It suggests other funding ideas and drafts a comprehensive funding plan. A summary is sent to your inbox and the admin inbox.</p>
         <div class="form-grid">
           <div class="form-group"><label>Project / Initiative Name *</label><input type="text" id="gr-project" placeholder="e.g. Reentry Job-Readiness Program"></div>
           <div class="form-group"><label>Funding Amount Needed</label><input type="text" id="gr-amount" placeholder="e.g. $50,000"></div>
           <div class="form-group full"><label>What does the project do? (purpose, activities, impact) *</label><textarea id="gr-purpose" rows="3" placeholder="Describe the project, who it helps, and the outcomes…"></textarea></div>
-          <div class="form-group"><label>Who it serves</label><input type="text" id="gr-population" value="Returning citizens / reentry; restorative justice; Oregon community"></div>
+          <div class="form-group"><label>Who it serves</label><input type="text" id="gr-population" placeholder="e.g. youth, families, job-seekers, the community — describe this project's audience"></div>
           <div class="form-group"><label>Geography</label><input type="text" id="gr-geo" value="Oregon, USA"></div>
           <div class="form-group"><label>Timeline</label><input type="text" id="gr-timeline" placeholder="e.g. start within 6 months, 12-month program"></div>
           <div class="form-group"><label>Funding types of interest</label><input type="text" id="gr-types" value="Foundation grants, government grants, corporate giving, individual donors"></div>
@@ -6463,12 +6463,15 @@ async function runGrantsAgent(){
     'Funding types of interest: '+document.getElementById('gr-types').value.trim()+'\n'+
     'Organization: '+document.getElementById('gr-org').value.trim();
   const prompt=
-    'You are an expert grant researcher and nonprofit fundraising strategist. Using web search, find REAL, currently-open or recurring grant opportunities that fit the project below '+
-    '(prioritize Oregon / Pacific Northwest funders and national funders relevant to reentry, restorative justice, and community programs). '+
+    'You are an expert grant researcher and nonprofit fundraising strategist. Using web search, find REAL, currently-open or recurring funding opportunities that fit the PROJECT IDEA below. '+
+    'IMPORTANT: Match funders to the project\'s actual focus area and activities — do NOT limit the search to reentry or restorative-justice funders. '+
+    'The organization is a reentry/RJ nonprofit, but the funding search should follow the project topic (e.g. housing, workforce/jobs, youth, education, health/mental health, food security, technology, arts, financial literacy, small business, etc.) and pursue EVERY relevant source. '+
+    'Cast a wide net across: private & community foundations; federal, state, county and city government grants; corporate giving programs and sponsorships (name specific companies active in the project\'s sector and region); bank and CREDIT UNION community-investment / CRA / member-giving funds; civic clubs and service organizations; sector-specific funders; sponsorships; and crowdfunding. '+
+    'Prioritize Oregon / Pacific Northwest and national sources, but breadth and fit to the idea matter more than the organization\'s usual category. '+
     'Then suggest other creative ways to fund the project, then a comprehensive funding plan. '+
     'Respond in Markdown with exactly these three sections and headers:\n'+
-    '## Matching Grants\n(For each: **name** — funder, approx amount, deadline if known, one-line eligibility fit, and a link.)\n'+
-    '## Other Funding Ideas\n(Bulleted alternative strategies — events, corporate sponsorship, earned income, individual giving, etc.)\n'+
+    '## Matching Funding Sources\n(Group by type — Foundations, Government, Corporate, Banks/Credit Unions, Other. For each: **name** — funder/type, approx amount, deadline if known, one-line fit to the idea, and a link.)\n'+
+    '## Other Funding Ideas\n(Bulleted creative strategies — events, corporate sponsorship, earned income, memberships, individual/major giving, crowdfunding, in-kind, etc.)\n'+
     '## Comprehensive Funding Plan\n(A prioritized, time-phased plan combining the above into a realistic strategy, with rough dollar targets.)\n\n'+
     'PROJECT DETAILS:\n'+details;
   const btn=document.getElementById('grants-run-btn');
@@ -6489,7 +6492,7 @@ async function runGrantsAgent(){
   status.style.color='#43a047'; status.textContent='✓ Done'+(searched?' (web search)':' (general knowledge — enable web search for live grants)')+'. Summary sent to your inbox and the admin inbox.';
   document.getElementById('grants-results').innerHTML=`<div class="card"><div style="font-weight:700;color:var(--primary);margin-bottom:10px;">💰 Funding research — ${fEsc(project)}</div><div style="white-space:pre-wrap;font-size:0.9em;line-height:1.6;">${fEsc(text)}</div></div>`;
   // Send the matching-grants summary to the staff inbox + admin inbox
-  let section=text; const m=text.match(/##\s*Matching Grants([\s\S]*?)(?=\n##\s|$)/i); if(m) section=m[1].trim();
+  let section=text; const m=text.match(/##\s*Matching Funding Sources([\s\S]*?)(?=\n##\s|$)/i); if(m) section=m[1].trim();
   const msg='🔎 Grant research for "'+project+'":\n\n'+section.slice(0,1500)+(section.length>1500?'…\n\n(See the Grants tab for the full plan.)':'');
   const me=currentUserName();
   try{ if(me) await DB.addMessage({mentorName:me, from:'Grants Agent', text:msg, read:false}); await DB.addMessage({mentorName:'Admin', from:'Grants Agent', text:msg, read:false}); }catch(_){}
