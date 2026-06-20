@@ -261,6 +261,7 @@ table tr:hover td{background:#fafbff;}
     <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span> Progress Note</a>
     <a onclick="navigate('activity-log')" data-view="activity-log"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Activity Log</a>
     <a onclick="navigate('meetings')" data-view="meetings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Meetings</a>
+    <a onclick="navigate('calendar')" data-view="calendar"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Calendar</a>
 
     <div class="nav-section">Reports</div>
     <a onclick="navigate('timesheets')" data-view="timesheets"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Timesheet PDF</a>
@@ -382,6 +383,57 @@ table tr:hover td{background:#fafbff;}
     <!-- ===== MY PROFILE ===== -->
     <div id="view-profile" class="view">
       <div id="profile-body"></div>
+    </div>
+
+    <!-- ===== SHARED CALENDAR ===== -->
+    <div id="view-calendar" class="view">
+      <div class="card no-print" style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="btn btn-outline" style="padding:6px 12px;" onclick="calShiftMonth(-1)">‹</button>
+          <span id="cal-month-label" style="font-weight:700;color:var(--primary);min-width:170px;text-align:center;"></span>
+          <button class="btn btn-outline" style="padding:6px 12px;" onclick="calShiftMonth(1)">›</button>
+          <button class="btn btn-outline" style="font-size:0.8em;" onclick="calToday()">Today</button>
+        </div>
+        <button class="btn btn-accent" onclick="openCalEvent(null)">＋ Add Event</button>
+      </div>
+      <div class="card"><div id="cal-grid"></div></div>
+    </div>
+
+    <!-- Calendar Event Add/Edit Modal -->
+    <div id="cal-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:28px 26px;width:560px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 id="cal-modal-title" style="color:var(--primary);margin-bottom:16px;">Add Event</h3>
+        <input type="hidden" id="ce-id">
+        <div class="form-grid">
+          <div class="form-group full"><label>Title *</label><input type="text" id="ce-title"></div>
+          <div class="form-group"><label>Date *</label><input type="date" id="ce-date"></div>
+          <div class="form-group"><label>Time</label><input type="text" id="ce-time" placeholder="e.g. 2:00–3:00 PM"></div>
+          <div class="form-group full"><label>Video Chat Link <span style="color:#aaa;font-weight:400;">(Zoom/Meet/Teams URL)</span></label><input type="text" id="ce-video" placeholder="https://…"></div>
+          <div class="form-group full"><label>Physical Address</label><input type="text" id="ce-address"></div>
+          <div class="form-group full"><label>Who's Invited (internal) <span style="color:#aaa;font-weight:400;">— staff, comma-separated</span></label><input type="text" id="ce-invited" list="staff-name-list" placeholder="e.g. Cameron Hayes, Steven Chambers"></div>
+          <div class="form-group full"><label>External Attendees <span style="color:#aaa;font-weight:400;">— people outside the org, comma-separated</span></label><input type="text" id="ce-external" placeholder="e.g. Jane Doe (City Council), john@partner.org"></div>
+          <div class="form-group full"><label>What's the meeting about? (Notes)</label><textarea id="ce-notes" rows="3" style="min-height:64px;"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;justify-content:space-between;">
+          <button id="ce-delete-btn" class="btn btn-danger" onclick="deleteCalEvent()" style="display:none;">Delete</button>
+          <div style="display:flex;gap:10px;margin-left:auto;">
+            <button class="btn btn-outline" onclick="closeCalEvent()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveCalEvent()">Save Event</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <datalist id="staff-name-list"></datalist>
+
+    <!-- Calendar Event Detail Modal -->
+    <div id="cal-detail" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:28px 26px;width:600px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <div id="cal-detail-body"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button id="cal-detail-edit" class="btn btn-outline" onclick="editCalFromDetail()">Edit</button>
+          <button class="btn btn-primary" onclick="closeCalDetail()">Done</button>
+        </div>
+      </div>
     </div>
 
     <!-- ===== PROGRESS NOTE ===== -->
@@ -1429,12 +1481,14 @@ table tr:hover td{background:#fafbff;}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
         <h2 style="color:var(--primary);font-size:1.1em;font-weight:700;">Projects</h2>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-outline" onclick="openProjectModal(null)">+ Quick Project</button>
+          <button class="btn btn-outline" onclick="openTaskModal()">＋ Create Task</button>
           <button class="btn btn-accent" onclick="openPMIWizard(null)">🏗 New PMI Project</button>
           <button class="btn btn-primary" onclick="openAIPlanner()">🤖 AI Planner</button>
+          <button class="btn btn-outline" id="proj-view-toggle" onclick="toggleProjectsView()">📋 Kanban Board</button>
         </div>
       </div>
       <div id="projects-list"></div>
+      <div id="projects-kanban" style="display:none;"></div>
     </div>
 
     <!-- AI Project Planner Modal -->
@@ -1487,6 +1541,33 @@ table tr:hover td{background:#fafbff;}
             <button class="btn btn-outline" onclick="closeProjectModal()">Cancel</button>
             <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Task Modal -->
+    <div id="task-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:30px 28px;width:480px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 style="color:var(--primary);margin-bottom:18px;">＋ Create Task</h3>
+        <div class="form-group">
+          <label>Assign To *</label>
+          <select id="tm-mentor" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;"></select>
+        </div>
+        <div class="form-group">
+          <label>Task Description *</label>
+          <textarea id="tm-desc" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;resize:vertical;min-height:70px;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Related To <span style="color:#aaa;font-weight:400;">(client/project, optional)</span></label>
+          <input type="text" id="tm-related" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;">
+        </div>
+        <div class="form-group">
+          <label>Due Date</label>
+          <input type="date" id="tm-due" style="width:100%;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;">
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+          <button class="btn btn-outline" onclick="closeTaskModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveTaskModal()">Create Task</button>
         </div>
       </div>
     </div>
@@ -1958,7 +2039,7 @@ let _listenersReady   = 0;
 
 function _onReady() {
   _listenersReady++;
-  if (_listenersReady === 13) {
+  if (_listenersReady === 14) {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
@@ -2009,7 +2090,13 @@ let _meetings = [];
 let _fundContacts = [];
 let _dashboardConfig = null;
 let _messages = [];
+let _calendar = [];
 
+onSnapshot(collection(db,'calendar'), snap => {
+  _calendar = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('view-calendar')?.classList.contains('active')) renderCalendar();
+});
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
@@ -2095,6 +2182,11 @@ const DB = {
 
   dashboardConfig: () => _dashboardConfig,
   async setDashboardConfig(metrics){ await setDoc(doc(db,'config','dashboard'), {metrics, _updatedAt: serverTimestamp()}); },
+
+  calendar: () => _calendar,
+  async addCalEvent(e)       { await addDoc(collection(db,'calendar'), {...e, _createdAt: serverTimestamp()}); },
+  async updateCalEvent(id,e) { await setDoc(doc(db,'calendar',id), {...e, _updatedAt: serverTimestamp()}, {merge:true}); },
+  async removeCalEvent(id)   { await deleteDoc(doc(db,'calendar',id)); },
 
   messages: () => _messages,
   async addMessage(m)        { await addDoc(collection(db,'messages'), {...m, _createdAt: serverTimestamp()}); },
@@ -2204,6 +2296,7 @@ const VIEW_TITLES = {
   'timesheets':'Timesheets',
   'form-reports':'Reports — All Submitted Forms',
   'profile':'My Profile',
+  'calendar':'Shared Calendar',
   'settings':'Staff & Settings',
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
@@ -2357,6 +2450,7 @@ function navigate(v, isBack) {
   if (v==='fundraising') renderFundraising();
   if (v==='form-reports') renderFormReports();
   if (v==='profile') renderProfile();
+  if (v==='calendar') renderCalendar();
   closeNav();
 }
 
@@ -3365,6 +3459,15 @@ document.getElementById('dash-modal').addEventListener('click', function(e) {
 });
 document.getElementById('mymetrics-modal').addEventListener('click', function(e) {
   if (e.target === this) closeMyMetricsConfig();
+});
+document.getElementById('task-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeTaskModal();
+});
+document.getElementById('cal-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeCalEvent();
+});
+document.getElementById('cal-detail').addEventListener('click', function(e) {
+  if (e.target === this) closeCalDetail();
 });
 document.getElementById('msg-modal').addEventListener('click', function(e) {
   if (e.target === this) closeMentorMessages();
@@ -4873,6 +4976,7 @@ function renderMyMessagesCard(msgs){
 let _activeProjectId = null;
 
 function renderProjects() {
+  if (_projectsView==='kanban') renderKanban();
   const el = document.getElementById('projects-list');
   if (!el) return;
   const projects = DB.projects();
@@ -4913,6 +5017,70 @@ function renderProjects() {
       (last?'<div style="margin-top:8px;border-top:1px solid #eee;padding-top:8px;font-size:0.82em;color:#888;">Last update: <b>' + last.text.slice(0,80) + (last.text.length>80?'…':'') + '</b> <span style="color:#bbb;margin-left:6px;">' + new Date(last.at).toLocaleDateString() + '</span></div>':'') +
     '</div>';
   }).join('');
+}
+
+// ---- Create Task (standalone) ----
+function openTaskModal(){
+  const sel=document.getElementById('tm-mentor');
+  const me=currentUserName();
+  sel.innerHTML = '<option value="">— Select mentor —</option>' + DB.staff().map(s=>`<option ${s.name===me?'selected':''}>${fEsc(s.name)}</option>`).join('');
+  document.getElementById('tm-desc').value='';
+  document.getElementById('tm-related').value='';
+  document.getElementById('tm-due').value='';
+  document.getElementById('task-modal').style.display='flex';
+}
+function closeTaskModal(){ document.getElementById('task-modal').style.display='none'; }
+async function saveTaskModal(){
+  const mentorName=document.getElementById('tm-mentor').value;
+  const description=document.getElementById('tm-desc').value.trim();
+  if(!mentorName){ alert('Choose who the task is for.'); return; }
+  if(!description){ alert('Enter a task description.'); return; }
+  await DB.addTask({ mentorName, description, clientName:document.getElementById('tm-related').value.trim(),
+    dueDate:document.getElementById('tm-due').value, status:'Open', createdBy:currentUserName(), source:'manual' });
+  closeTaskModal();
+}
+
+// ---- Kanban board for projects ----
+let _projectsView = 'list';
+const KANBAN_COLS = ['Active','On Hold','Completed','Cancelled'];
+function toggleProjectsView(){
+  _projectsView = _projectsView==='list' ? 'kanban' : 'list';
+  const listEl=document.getElementById('projects-list'), kb=document.getElementById('projects-kanban');
+  const btn=document.getElementById('proj-view-toggle');
+  if(_projectsView==='kanban'){ listEl.style.display='none'; kb.style.display='block'; if(btn) btn.textContent='📄 List View'; renderKanban(); }
+  else { kb.style.display='none'; listEl.style.display='block'; if(btn) btn.textContent='📋 Kanban Board'; }
+}
+function renderKanban(){
+  const kb=document.getElementById('projects-kanban'); if(!kb) return;
+  const projects=DB.projects();
+  const col=(status)=>{
+    const items=projects.filter(p=>(p.status||'Active')===status);
+    const cards=items.map(p=>{
+      const isPMI=p.type==='pmi';
+      const canEdit=isOwnerOrAdmin(p.assignedTo);
+      return `<div draggable="${canEdit}" ondragstart="kbDragStart(event,'${p._id}')"
+        onclick="openProjectDetail('${p._id}')"
+        style="background:#fff;border:1px solid #e5e9f0;border-left:4px solid ${isPMI?'var(--purple)':'var(--accent)'};border-radius:10px;padding:11px 12px;margin-bottom:10px;cursor:${canEdit?'grab':'pointer'};box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+        <div style="font-weight:700;font-size:0.9em;color:var(--primary);">${isPMI?'<span style="font-size:0.7em;background:var(--purple);color:#fff;border-radius:4px;padding:1px 5px;margin-right:5px;">PMI</span>':''}${fEsc(p.name||'Untitled')}</div>
+        ${p.assignedTo?`<div style="font-size:0.74em;color:#777;margin-top:4px;">👤 ${fEsc(p.assignedTo)}</div>`:''}
+      </div>`;
+    }).join('') || '<div style="color:#cbd5e1;font-size:0.8em;text-align:center;padding:14px 0;">Drop here</div>';
+    return `<div ondragover="event.preventDefault()" ondrop="kbDrop(event,'${status}')"
+      style="flex:1;min-width:210px;background:#f4f6fb;border-radius:12px;padding:12px;">
+      <div style="font-weight:700;font-size:0.82em;text-transform:uppercase;letter-spacing:.4px;color:#64748b;margin-bottom:10px;">${status} <span style="color:#cbd5e1;">(${items.length})</span></div>
+      ${cards}</div>`;
+  };
+  kb.innerHTML = `<p style="font-size:0.78em;color:#999;margin-bottom:10px;">Drag a project card between columns to change its status (owner/admin only).</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">${KANBAN_COLS.map(col).join('')}</div>`;
+}
+function kbDragStart(e,id){ e.dataTransfer.setData('text/plain', id); }
+async function kbDrop(e,status){
+  e.preventDefault();
+  const id=e.dataTransfer.getData('text/plain'); if(!id) return;
+  const p=DB.projects().find(x=>x._id===id); if(!p) return;
+  if(!isOwnerOrAdmin(p.assignedTo)){ alert('Only the project owner or an admin can move this project.'); return; }
+  await DB.updateProject(id, {...p, status});
+  renderKanban();
 }
 
 function openProjectModal(id) {
@@ -5909,6 +6077,112 @@ function clearAllData() {
 }
 
 // ===================================================================
+// SHARED CALENDAR
+// ===================================================================
+let _calMonth = (()=>{ const d=new Date(); d.setDate(1); return d; })();
+let _calDetailId = null;
+function calShiftMonth(n){ _calMonth.setMonth(_calMonth.getMonth()+n); renderCalendar(); }
+function calToday(){ _calMonth=new Date(); _calMonth.setDate(1); renderCalendar(); }
+function populateStaffNameList(){ const dl=document.getElementById('staff-name-list'); if(dl) dl.innerHTML=DB.staff().map(s=>`<option>${fEsc(s.name)}</option>`).join(''); }
+
+function renderCalendar(){
+  populateStaffNameList();
+  const label=document.getElementById('cal-month-label');
+  if(label) label.textContent=_calMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const grid=document.getElementById('cal-grid'); if(!grid) return;
+  const year=_calMonth.getFullYear(), month=_calMonth.getMonth();
+  const startDow=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const todayStr=new Date().toISOString().slice(0,10);
+  const byDate={};
+  DB.calendar().forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
+  const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let cells='';
+  for(let i=0;i<startDow;i++) cells+='<div style="background:#fafbfd;border-radius:8px;min-height:82px;"></div>';
+  for(let d=1; d<=daysInMonth; d++){
+    const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const evs=(byDate[ds]||[]).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const isToday=ds===todayStr;
+    cells+=`<div onclick="openCalEvent(null,'${ds}')" style="background:#fff;border:1px solid ${isToday?'var(--accent)':'#eef'};border-radius:8px;min-height:82px;padding:5px 6px;cursor:pointer;">
+      <div style="font-size:0.74em;font-weight:700;color:${isToday?'var(--accent)':'#94a3b8'};margin-bottom:3px;">${d}</div>
+      ${evs.slice(0,3).map(e=>`<div onclick="event.stopPropagation();openCalDetail('${e._id}')" title="${fEsc(e.title)}" style="background:#eef3fb;border-left:3px solid var(--primary);border-radius:4px;padding:1px 4px;margin-bottom:2px;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.video?'🎥 ':''}${fEsc(e.title)}</div>`).join('')}
+      ${evs.length>3?`<div style="font-size:0.64em;color:#94a3b8;">+${evs.length-3} more</div>`:''}</div>`;
+  }
+  grid.innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">
+    ${dows.map(d=>`<div style="text-align:center;font-size:0.7em;font-weight:700;color:#94a3b8;text-transform:uppercase;padding-bottom:4px;">${d}</div>`).join('')}
+    ${cells}</div>`;
+}
+function openCalEvent(id, presetDate){
+  populateStaffNameList();
+  const del=document.getElementById('ce-delete-btn');
+  if(id){
+    const e=DB.calendar().find(x=>x._id===id); if(!e) return;
+    if(!isOwnerOrAdmin(e.createdBy)){ alert('Only the event creator or an admin can edit this event.'); return; }
+    document.getElementById('cal-modal-title').textContent='Edit Event';
+    document.getElementById('ce-id').value=id;
+    document.getElementById('ce-title').value=e.title||'';
+    document.getElementById('ce-date').value=e.date||'';
+    document.getElementById('ce-time').value=e.time||'';
+    document.getElementById('ce-video').value=e.video||'';
+    document.getElementById('ce-address').value=e.address||'';
+    document.getElementById('ce-invited').value=e.invited||'';
+    document.getElementById('ce-external').value=e.external||'';
+    document.getElementById('ce-notes').value=e.notes||'';
+    del.style.display=isAdmin()?'inline-flex':'none';
+  } else {
+    document.getElementById('cal-modal-title').textContent='Add Event';
+    ['ce-id','ce-title','ce-time','ce-video','ce-address','ce-invited','ce-external','ce-notes'].forEach(i=>document.getElementById(i).value='');
+    document.getElementById('ce-date').value=presetDate||new Date().toISOString().slice(0,10);
+    del.style.display='none';
+  }
+  document.getElementById('cal-modal').style.display='flex';
+}
+function closeCalEvent(){ document.getElementById('cal-modal').style.display='none'; }
+async function saveCalEvent(){
+  const id=document.getElementById('ce-id').value;
+  const title=document.getElementById('ce-title').value.trim();
+  const date=document.getElementById('ce-date').value;
+  if(!title){ alert('Enter a title.'); return; }
+  if(!date){ alert('Pick a date.'); return; }
+  const data={ title, date, time:document.getElementById('ce-time').value.trim(),
+    video:document.getElementById('ce-video').value.trim(), address:document.getElementById('ce-address').value.trim(),
+    invited:document.getElementById('ce-invited').value.trim(), external:document.getElementById('ce-external').value.trim(),
+    notes:document.getElementById('ce-notes').value.trim() };
+  if(id) await DB.updateCalEvent(id, data);
+  else { data.createdBy=currentUserName(); await DB.addCalEvent(data); }
+  closeCalEvent(); renderCalendar();
+}
+function _extPeople(e){ return (e.external||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean); }
+function openCalDetail(id){
+  const e=DB.calendar().find(x=>x._id===id); if(!e) return;
+  _calDetailId=id;
+  const link=e.video?`<a href="${fEsc(e.video)}" target="_blank" rel="noopener" style="color:#2f9bb5;word-break:break-all;">${fEsc(e.video)}</a>`:'<span style="color:#bbb;">—</span>';
+  const mine=_extPeople(e);
+  const history=mine.length?DB.calendar().filter(o=>o._id!==id && _extPeople(o).some(p=>mine.includes(p))).sort((a,b)=>(b.date||'').localeCompare(a.date||'')):[];
+  document.getElementById('cal-detail-body').innerHTML=`
+    <div style="font-size:1.3em;font-weight:700;color:var(--primary);">${fEsc(e.title)}</div>
+    <div style="color:#777;font-size:0.88em;margin:4px 0 14px;">📅 ${fmtDate(e.date)}${e.time?' · '+fEsc(e.time):''}</div>
+    <div style="background:#f8f9fa;border-radius:10px;padding:14px;font-size:0.9em;line-height:1.7;">
+      <div><b>🎥 Video:</b> ${link}</div>
+      <div><b>📍 Address:</b> ${fEsc(e.address)||'<span style="color:#bbb;">—</span>'}</div>
+      <div><b>👥 Invited:</b> ${fEsc(e.invited)||'<span style="color:#bbb;">—</span>'}</div>
+      <div><b>🌐 External:</b> ${fEsc(e.external)||'<span style="color:#bbb;">—</span>'}</div>
+      ${e.notes?`<div style="margin-top:8px;"><b>📝 About:</b><div style="white-space:pre-wrap;margin-top:3px;">${fEsc(e.notes)}</div></div>`:''}
+      <div style="margin-top:8px;font-size:0.78em;color:#aaa;">Created by ${fEsc(e.createdBy)||'—'}</div>
+    </div>
+    <h4 style="color:var(--primary);margin:18px 0 8px;border-bottom:1.5px solid #eef;padding-bottom:6px;">📚 History with the same external people</h4>
+    ${history.length?history.map(o=>`<div style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.86em;cursor:pointer;" onclick="openCalDetail('${o._id}')"><b>${fmtDate(o.date)}</b> — ${fEsc(o.title)} <span style="color:#aaa;">(${fEsc(o.external)})</span></div>`).join(''):'<p style="color:#bbb;font-size:0.85em;">No other meetings with these external people yet.</p>'}`;
+  document.getElementById('cal-detail-edit').style.display=isOwnerOrAdmin(e.createdBy)?'inline-flex':'none';
+  document.getElementById('cal-detail').style.display='flex';
+}
+function closeCalDetail(){ document.getElementById('cal-detail').style.display='none'; _calDetailId=null; }
+function editCalFromDetail(){ const id=_calDetailId; closeCalDetail(); openCalEvent(id); }
+function deleteCalEvent(){
+  const id=document.getElementById('ce-id').value; if(!id) return;
+  requireAdmin(async ()=>{ if(!confirm('Delete this event?')) return; await DB.removeCalEvent(id); closeCalEvent(); renderCalendar(); });
+}
+
+// ===================================================================
 // INIT
 // ===================================================================
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -5929,6 +6203,7 @@ Object.assign(window, {
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
+  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient,
@@ -5936,6 +6211,7 @@ Object.assign(window, {
   refreshAlerts, renderAdminInbox, renderAdminTasks, openAssignModal, closeAssignModal, saveAssignedTask, adminRemoveTask,
   renderMyTasks, updateMyTaskStatus,
   renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject, openProjectDetail, closeProjectDetail, postProjectUpdate,
+  openTaskModal, closeTaskModal, saveTaskModal, toggleProjectsView, renderKanban, kbDragStart, kbDrop,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   openAIPlanner, closeAIPlanner, handlePlannerFile, generatePlanAI, createPlannerTasks, addPlannerStep, removePlannerStep,
   renderPlannerKeyStatus, savePlannerKey,
