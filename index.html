@@ -279,6 +279,7 @@ table tr:hover td{background:#fafbff;}
 
     <div class="nav-section">Work</div>
     <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Projects</a>
+    <a onclick="navigate('grants')" data-view="grants"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/></svg></span> Grants</a>
     <a onclick="navigate('events')" data-view="events"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> Events & Social</a>
     <a onclick="navigate('rj')" data-view="rj"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg></span> Restorative Justice</a>
 
@@ -467,6 +468,30 @@ table tr:hover td{background:#fafbff;}
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- ===== GRANTS & FUNDING AGENT ===== -->
+    <div id="view-grants" class="view">
+      <div id="grants-key-setup" style="margin-bottom:16px;"></div>
+      <div class="card no-print" style="margin-bottom:18px;">
+        <h3>🔎 Grants & Funding Agent</h3>
+        <p style="color:#666;font-size:0.86em;margin-bottom:16px;">Answer a few questions. The AI agent searches the web for matching grants, suggests other ways to fund the project, and drafts a comprehensive funding plan. A summary is sent to your inbox and the admin inbox.</p>
+        <div class="form-grid">
+          <div class="form-group"><label>Project / Initiative Name *</label><input type="text" id="gr-project" placeholder="e.g. Reentry Job-Readiness Program"></div>
+          <div class="form-group"><label>Funding Amount Needed</label><input type="text" id="gr-amount" placeholder="e.g. $50,000"></div>
+          <div class="form-group full"><label>What does the project do? (purpose, activities, impact) *</label><textarea id="gr-purpose" rows="3" placeholder="Describe the project, who it helps, and the outcomes…"></textarea></div>
+          <div class="form-group"><label>Who it serves</label><input type="text" id="gr-population" value="Returning citizens / reentry; restorative justice; Oregon community"></div>
+          <div class="form-group"><label>Geography</label><input type="text" id="gr-geo" value="Oregon, USA"></div>
+          <div class="form-group"><label>Timeline</label><input type="text" id="gr-timeline" placeholder="e.g. start within 6 months, 12-month program"></div>
+          <div class="form-group"><label>Funding types of interest</label><input type="text" id="gr-types" value="Foundation grants, government grants, corporate giving, individual donors"></div>
+          <div class="form-group full"><label>Organization background</label><textarea id="gr-org" rows="2">ReGroup Elite Squad, part of Transformative Justice Community (TJC Oregon) — a nonprofit reentry support network and restorative-justice program serving returning citizens in Oregon.</textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+          <button class="btn btn-primary" id="grants-run-btn" onclick="runGrantsAgent()">🔎 Find Grants &amp; Funding</button>
+          <span id="grants-status" style="font-size:0.85em;color:#666;"></span>
+        </div>
+      </div>
+      <div id="grants-results"></div>
     </div>
 
     <!-- ===== PROGRESS NOTE ===== -->
@@ -2370,6 +2395,7 @@ const VIEW_TITLES = {
   'profile':'My Profile',
   'calendar':'Shared Calendar',
   'rj':'Restorative Justice',
+  'grants':'Grants & Funding Agent',
   'settings':'Settings',
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
@@ -2535,6 +2561,7 @@ function navigate(v, isBack) {
   if (v==='profile') renderProfile();
   if (v==='calendar') renderCalendar();
   if (v==='rj') renderRJ();
+  if (v==='grants') renderGrantsKey();
   if (v==='progress-note' || v==='activity-log') populateClientNameList();
   closeNav();
 }
@@ -6394,6 +6421,81 @@ function deleteCalEvent(){
 }
 
 // ===================================================================
+// GRANTS & FUNDING AGENT (AI web-search agent)
+// ===================================================================
+function renderGrantsKey(){
+  const el=document.getElementById('grants-key-setup'); if(!el) return;
+  const key=(localStorage.getItem('rg_anthropic_key')||'').trim();
+  if(key){
+    el.innerHTML=`<div style="background:#e7f6ec;border:1px solid #b7e1c4;border-radius:10px;padding:10px 14px;font-size:0.84em;color:#15803d;">✓ AI key connected — the funding agent is ready.</div>`;
+  } else {
+    el.innerHTML=`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:12px 14px;">
+      <div style="font-weight:600;font-size:0.85em;color:#9a3412;margin-bottom:6px;">⚙ Connect an Anthropic API key to use the funding agent</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="grants-key" type="password" placeholder="sk-ant-…" style="flex:1;min-width:200px;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88em;">
+        <button class="btn btn-accent" style="font-size:0.82em;" onclick="saveGrantsKey()">Save Key</button>
+      </div>
+      <p style="font-size:0.76em;color:#777;margin:8px 0 0;">Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:#2f9bb5;">console.anthropic.com</a>. For live grant search, enable <b>web search</b> on your Anthropic account.</p>
+    </div>`;
+  }
+}
+function saveGrantsKey(){
+  const v=(document.getElementById('grants-key')?.value||'').trim();
+  if(!/^sk-ant-/.test(v)){ alert('That doesn’t look like an Anthropic key (it should start with sk-ant-).'); return; }
+  localStorage.setItem('rg_anthropic_key', v);
+  const si=document.getElementById('anthropic-key-input'); if(si) si.value=v;
+  renderGrantsKey();
+}
+async function runGrantsAgent(){
+  const key=(localStorage.getItem('rg_anthropic_key')||'').trim();
+  const status=document.getElementById('grants-status');
+  if(!key){ status.style.color='#e53935'; status.textContent='Connect an API key above first.'; renderGrantsKey(); return; }
+  const project=document.getElementById('gr-project').value.trim();
+  const purpose=document.getElementById('gr-purpose').value.trim();
+  if(!project || !purpose){ status.style.color='#e53935'; status.textContent='Enter at least a project name and purpose.'; return; }
+  const details=
+    'Project: '+project+'\n'+
+    'Purpose/activities/impact: '+purpose+'\n'+
+    'Who it serves: '+document.getElementById('gr-population').value.trim()+'\n'+
+    'Geography: '+document.getElementById('gr-geo').value.trim()+'\n'+
+    'Amount needed: '+document.getElementById('gr-amount').value.trim()+'\n'+
+    'Timeline: '+document.getElementById('gr-timeline').value.trim()+'\n'+
+    'Funding types of interest: '+document.getElementById('gr-types').value.trim()+'\n'+
+    'Organization: '+document.getElementById('gr-org').value.trim();
+  const prompt=
+    'You are an expert grant researcher and nonprofit fundraising strategist. Using web search, find REAL, currently-open or recurring grant opportunities that fit the project below '+
+    '(prioritize Oregon / Pacific Northwest funders and national funders relevant to reentry, restorative justice, and community programs). '+
+    'Then suggest other creative ways to fund the project, then a comprehensive funding plan. '+
+    'Respond in Markdown with exactly these three sections and headers:\n'+
+    '## Matching Grants\n(For each: **name** — funder, approx amount, deadline if known, one-line eligibility fit, and a link.)\n'+
+    '## Other Funding Ideas\n(Bulleted alternative strategies — events, corporate sponsorship, earned income, individual giving, etc.)\n'+
+    '## Comprehensive Funding Plan\n(A prioritized, time-phased plan combining the above into a realistic strategy, with rough dollar targets.)\n\n'+
+    'PROJECT DETAILS:\n'+details;
+  const btn=document.getElementById('grants-run-btn');
+  btn.disabled=true; status.style.color='#666'; status.textContent='Researching grants & funding (this can take 20–60s)…';
+  document.getElementById('grants-results').innerHTML='';
+  const mkBody=(useTool)=>JSON.stringify(Object.assign({model:'claude-opus-4-8',max_tokens:4096,messages:[{role:'user',content:prompt}]}, useTool?{tools:[{type:'web_search_20250305',name:'web_search',max_uses:6}]}:{}));
+  async function call(useTool){
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:mkBody(useTool)});
+    if(!resp.ok){ let d=''; try{const e=await resp.json(); d=(e.error&&e.error.message)||'';}catch(_){} throw new Error('Anthropic API '+resp.status+(d?': '+d:'')); }
+    const j=await resp.json();
+    return (j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+  }
+  let text='', searched=true;
+  try{ text=await call(true); }
+  catch(e){ try{ text=await call(false); searched=false; } catch(e2){ btn.disabled=false; status.style.color='#e53935'; status.textContent='AI error — '+e2.message; return; } }
+  btn.disabled=false;
+  if(!text){ status.style.color='#e53935'; status.textContent='No results returned — try again.'; return; }
+  status.style.color='#43a047'; status.textContent='✓ Done'+(searched?' (web search)':' (general knowledge — enable web search for live grants)')+'. Summary sent to your inbox and the admin inbox.';
+  document.getElementById('grants-results').innerHTML=`<div class="card"><div style="font-weight:700;color:var(--primary);margin-bottom:10px;">💰 Funding research — ${fEsc(project)}</div><div style="white-space:pre-wrap;font-size:0.9em;line-height:1.6;">${fEsc(text)}</div></div>`;
+  // Send the matching-grants summary to the staff inbox + admin inbox
+  let section=text; const m=text.match(/##\s*Matching Grants([\s\S]*?)(?=\n##\s|$)/i); if(m) section=m[1].trim();
+  const msg='🔎 Grant research for "'+project+'":\n\n'+section.slice(0,1500)+(section.length>1500?'…\n\n(See the Grants tab for the full plan.)':'');
+  const me=currentUserName();
+  try{ if(me) await DB.addMessage({mentorName:me, from:'Grants Agent', text:msg, read:false}); await DB.addMessage({mentorName:'Admin', from:'Grants Agent', text:msg, read:false}); }catch(_){}
+}
+
+// ===================================================================
 // RESTORATIVE JUSTICE (case wizard — follows the RJ Integrated Manual)
 // ===================================================================
 const RJ_STEPS = [
@@ -6572,6 +6674,7 @@ Object.assign(window, {
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
+  renderGrantsKey, saveGrantsKey, runGrantsAgent,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient, fillClientId,
