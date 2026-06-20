@@ -1067,8 +1067,16 @@ table tr:hover td{background:#fafbff;}
             <option value="followup">⚠ Needs follow-up (3+ mo)</option>
             <option value="donors">Donors only</option>
           </select>
+          <select id="fund-rel-filter" onchange="renderFundraising()" style="padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;">
+            <option value="">All relationships</option>
+          </select>
           <button class="btn btn-accent" onclick="openContactModal(null)">+ Add Contact</button>
           <span id="fund-count" style="color:#999;font-size:0.82em;white-space:nowrap;"></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-outline" style="font-size:0.8em;" onclick="checkAllFund()">☑ Check all (filtered)</button>
+          <button class="btn btn-outline" style="font-size:0.8em;" onclick="clearFundChecks()">Clear</button>
+          <button class="btn btn-primary" style="font-size:0.8em;" onclick="emailCheckedFund()">📧 Email Blast checked <span id="fund-checked-count"></span></button>
         </div>
         <p style="margin-top:10px;font-size:0.78em;color:#999;">Anyone can add contacts and log interactions or gifts. Editing or deleting existing information requires the admin PIN.</p>
       </div>
@@ -1107,6 +1115,12 @@ table tr:hover td{background:#fafbff;}
               <option>Government</option>
               <option>Faith-Based</option>
               <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Relationship</label>
+            <select id="fm-relationship">
+              <option value="">—</option>
             </select>
           </div>
           <div class="form-group full">
@@ -1189,8 +1203,9 @@ table tr:hover td{background:#fafbff;}
         <p style="color:#666;font-size:0.88em;margin-bottom:20px;">Compose a message for everyone on the list. Click <b>Open in Gmail</b> — a Gmail compose window opens with every recipient already in BCC plus your subject and message; just review and press Send. (No size limit like the old mail-app link.)</p>
 
         <div class="form-group">
-          <label>From</label>
-          <input type="text" value="chayes@tjcoregon.org" readonly style="background:#f0f4ff;font-weight:600;color:var(--primary);">
+          <label>From (must be your @tjcoregon.org address)</label>
+          <input type="text" id="eb-from" readonly style="background:#f0f4ff;font-weight:600;color:var(--primary);">
+          <div id="eb-from-warn" style="font-size:0.8em;color:#e53935;margin-top:5px;display:none;"></div>
         </div>
 
         <div class="form-group">
@@ -2295,7 +2310,7 @@ function changeAdminPIN() {
 
 let _navHistory = [];
 function navigate(v, isBack) {
-  if ((v === 'settings' || v === 'email-blast' || v === 'admin-inbox') && !isAdmin()) {
+  if ((v === 'settings' || v === 'admin-inbox') && !isAdmin()) {
     alert('That section is admin-only. Log in as an administrator to access it.');
     return;
   }
@@ -2888,7 +2903,9 @@ function deleteClient() {
 // FUNDRAISING CRM
 // ===================================================================
 let _fundDetailId = null;
+let _fundEmailList = [];   // fundraising contact ids selected for an email blast
 const FUND_FOLLOWUP_DAYS = 90;  // remind to reach out after ~3 months
+const FUND_RELATIONSHIPS = ['Donor','Major Donor','Prospect','Board Member','Volunteer','Partner Org','Grantor','Community Member','Vendor','Other'];
 
 function fEsc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtMoney(n){ const v=Number(n)||0; return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -2919,6 +2936,14 @@ function fundRelative(dateStr){
 function renderFundraising(){
   const q = (document.getElementById('fund-search')?.value || '').toLowerCase();
   const filter = document.getElementById('fund-filter')?.value || 'all';
+  // populate + read the relationship filter
+  const relSel = document.getElementById('fund-rel-filter');
+  if (relSel) {
+    const prev = relSel.value;
+    relSel.innerHTML = '<option value="">All relationships</option>' + FUND_RELATIONSHIPS.map(r=>`<option ${r===prev?'selected':''}>${r}</option>`).join('');
+    relSel.value = prev;
+  }
+  const relFilter = relSel ? relSel.value : '';
   const all = DB.fundContacts();
   let list = all.slice();
   if (q) {
@@ -2931,6 +2956,7 @@ function renderFundraising(){
   }
   if (filter === 'followup') list = list.filter(fundNeedsFollowup);
   else if (filter === 'donors') list = list.filter(c => fundGiftTotal(c) > 0);
+  if (relFilter) list = list.filter(c => (c.relationship||'') === relFilter);
   // Sort: needs-followup first, then by most-overdue
   list.sort((a,b)=> fundDaysSince(fundLastContact(b)) - fundDaysSince(fundLastContact(a)));
 
@@ -2950,29 +2976,62 @@ function renderFundraising(){
 
   wrap.innerHTML = `<table>
     <thead><tr>
-      <th>Name</th><th>Organization</th><th style="width:90px">Type</th>
-      <th style="width:110px">Last contact</th><th style="width:90px">Giving</th><th style="width:140px">Status</th>
+      <th style="width:30px"></th>
+      <th>Name</th><th>Organization</th><th style="width:90px">Type</th><th style="width:120px">Relationship</th>
+      <th style="width:110px">Last contact</th><th style="width:90px">Giving</th><th style="width:130px">Status</th>
     </tr></thead>
     <tbody>${list.map(c=>{
       const name = [c.firstName,c.lastName].filter(Boolean).join(' ') || '<span style="color:#bbb">—</span>';
       const total = fundGiftTotal(c);
       const follow = fundNeedsFollowup(c);
       const status = follow ? '<span class="badge badge-warn">⚠ Follow up</span>' : '<span class="badge badge-success">✓ Recent</span>';
+      const checked = _fundEmailList.includes(c._id) ? 'checked' : '';
       return `<tr style="cursor:pointer;" onclick="openContactDetail('${c._id}')">
+        <td onclick="event.stopPropagation()" style="text-align:center;"><input type="checkbox" class="fund-cb" value="${c._id}" ${checked} onchange="updateFundCheckedCount()"></td>
         <td style="font-weight:600;color:var(--primary);">${fEsc(name)}</td>
         <td style="font-size:0.85em;color:#555;">${fEsc(c.org)||'—'}</td>
         <td>${c.type?`<span class="badge badge-info">${fEsc(c.type)}</span>`:'—'}</td>
+        <td style="font-size:0.82em;">${c.relationship?fEsc(c.relationship):'—'}</td>
         <td style="font-size:0.82em;color:${follow?'#c2410c':'#555'};">${fundRelative(fundLastContact(c))}</td>
         <td style="font-size:0.85em;font-weight:600;color:${total>0?'#43a047':'#bbb'};">${total>0?fmtMoney(total):'—'}</td>
         <td>${status}</td>
       </tr>`;
     }).join('')}</tbody>
   </table>`;
+  updateFundCheckedCount();
+}
+
+// Selection helpers for the fundraising checkboxes
+function updateFundCheckedCount(){
+  const n = document.querySelectorAll('.fund-cb:checked').length;
+  const el = document.getElementById('fund-checked-count');
+  if (el) el.textContent = n ? '('+n+')' : '';
+}
+function checkAllFund(){
+  document.querySelectorAll('.fund-cb').forEach(cb=>cb.checked=true);
+  updateFundCheckedCount();
+}
+function clearFundChecks(){
+  _fundEmailList = [];
+  document.querySelectorAll('.fund-cb').forEach(cb=>cb.checked=false);
+  updateFundCheckedCount();
+}
+function emailCheckedFund(){
+  const ids = [...document.querySelectorAll('.fund-cb:checked')].map(cb=>cb.value);
+  const withEmail = ids.filter(id => { const c=DB.fundContacts().find(x=>x._id===id); return c && c.email && c.email.trim(); });
+  if (!ids.length){ alert('Check at least one contact first (or use “Check all”).'); return; }
+  if (!withEmail.length){ alert('None of the checked contacts have an email address on file.'); return; }
+  _fundEmailList = withEmail;
+  navigate('email-blast');
+  const sel = document.getElementById('eb-filter');
+  if (sel){ updateEBPreview(); sel.value='fund-selected'; updateEBPreview(); }
 }
 
 function openContactModal(id){
   const modal = document.getElementById('fund-modal');
-  const fields = {fm:'',firstName:'',lastName:'',org:'',type:'',email:'',phone:'',address:'',tags:'',commonContacts:'',notes:''};
+  // populate relationship options
+  const relSel = document.getElementById('fm-relationship');
+  if (relSel) relSel.innerHTML = '<option value="">—</option>' + FUND_RELATIONSHIPS.map(r=>`<option>${r}</option>`).join('');
   if (id) {
     const c = DB.fundContacts().find(x=>x._id===id);
     if (!c) return;
@@ -2982,6 +3041,7 @@ function openContactModal(id){
     document.getElementById('fm-lastName').value = c.lastName||'';
     document.getElementById('fm-org').value = c.org||'';
     document.getElementById('fm-type').value = c.type||'';
+    document.getElementById('fm-relationship').value = c.relationship||'';
     document.getElementById('fm-email').value = c.email||'';
     document.getElementById('fm-phone').value = c.phone||'';
     document.getElementById('fm-address').value = c.address||'';
@@ -2993,6 +3053,7 @@ function openContactModal(id){
     document.getElementById('fm-id').value = '';
     ['fm-firstName','fm-lastName','fm-org','fm-email','fm-phone','fm-address','fm-tags','fm-commonContacts','fm-notes'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('fm-type').value = '';
+    document.getElementById('fm-relationship').value = '';
   }
   modal.style.display = 'flex';
 }
@@ -3005,6 +3066,7 @@ async function saveFundContact(){
     lastName: document.getElementById('fm-lastName').value.trim(),
     org: document.getElementById('fm-org').value.trim(),
     type: document.getElementById('fm-type').value,
+    relationship: document.getElementById('fm-relationship').value,
     email: document.getElementById('fm-email').value.trim(),
     phone: document.getElementById('fm-phone').value.trim(),
     address: document.getElementById('fm-address').value.trim(),
@@ -3145,6 +3207,17 @@ function deleteFundContact(){
 // ===================================================================
 function getEBRecipients() {
   const filter = document.getElementById('eb-filter')?.value || 'all';
+  // Fundraiser sources draw from the fundraising CRM instead of clients
+  if (filter === 'fundraisers') {
+    return DB.fundContacts().filter(c=>c.email && c.email.trim()).map(c=>c.email.trim());
+  }
+  if (filter === 'fund-selected') {
+    return DB.fundContacts().filter(c=>_fundEmailList.includes(c._id) && c.email && c.email.trim()).map(c=>c.email.trim());
+  }
+  if (filter.startsWith('fund-rel:')) {
+    const rel = filter.slice(9);
+    return DB.fundContacts().filter(c=>(c.relationship||'')===rel && c.email && c.email.trim()).map(c=>c.email.trim());
+  }
   return DB.clients()
     .filter(c => c.email && c.email.trim())
     .filter(c => {
@@ -3155,23 +3228,50 @@ function getEBRecipients() {
     .map(c => c.email.trim());
 }
 
-// Build the recipient filter, including one entry per home meeting
+// Build the recipient filter: clients (all / accurate / by home meeting) + fundraiser lists
 function populateEBFilter() {
   const sel = document.getElementById('eb-filter');
   if (!sel) return;
   const prev = sel.value;
   const meetings = clientHomeMeetings();
-  sel.innerHTML = '<option value="all">All clients with email addresses</option>'
-    + '<option value="accurate">Accurate confirmation only</option>'
-    + meetings.map(m=>`<option value="meeting:${m.replace(/"/g,'&quot;')}">Home meeting: ${m}</option>`).join('');
+  const relsInUse = [...new Set(DB.fundContacts().map(c=>(c.relationship||'').trim()).filter(Boolean))].sort();
+  sel.innerHTML = '<optgroup label="Clients">'
+      + '<option value="all">All clients with email addresses</option>'
+      + '<option value="accurate">Accurate confirmation only</option>'
+      + meetings.map(m=>`<option value="meeting:${m.replace(/"/g,'&quot;')}">Home meeting: ${m}</option>`).join('')
+    + '</optgroup>'
+    + '<optgroup label="Fundraiser List">'
+      + `<option value="fund-selected">Selected fundraiser contacts (${_fundEmailList.length})</option>`
+      + '<option value="fundraisers">All fundraiser contacts</option>'
+      + relsInUse.map(r=>`<option value="fund-rel:${r.replace(/"/g,'&quot;')}">Relationship: ${r}</option>`).join('')
+    + '</optgroup>';
   if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
 }
+
+// The sender's @tjcoregon.org address (from their profile). Picks the first
+// tjcoregon.org address if several are listed.
+function ebSenderEmail() {
+  const s = myStaffRecord();
+  const raw = (s && s.email) ? s.email : (isAdmin() ? 'chayes@tjcoregon.org' : '');
+  const list = raw.split(/[,;\s]+/).filter(Boolean);
+  return list.find(e => /@tjcoregon\.org$/i.test(e)) || list[0] || '';
+}
+function ebCanSend() { return /@tjcoregon\.org$/i.test(ebSenderEmail()); }
 
 function updateEBPreview() {
   populateEBFilter();
   const emails = getEBRecipients();
   const el = document.getElementById('eb-count');
   if (el) el.textContent = `${emails.length} recipient${emails.length !== 1 ? 's' : ''}`;
+  // From field + tjcoregon.org gate
+  const from = ebSenderEmail();
+  const fromEl = document.getElementById('eb-from');
+  if (fromEl) fromEl.value = from || '(no email on file)';
+  const warn = document.getElementById('eb-from-warn');
+  if (warn) {
+    if (!ebCanSend()) { warn.style.display='block'; warn.innerHTML = 'Email blasts must be sent from a <b>@tjcoregon.org</b> address. Add yours in <b>My Profile → Email</b>, then reopen this page.'; }
+    else warn.style.display='none';
+  }
 }
 
 function copyEBAddresses() {
@@ -3192,21 +3292,24 @@ function copyEBAddresses() {
 }
 
 function openEBGmail() {
+  if (!ebCanSend()) { showEBMsg('warn', '⚠️ You can only send a blast from a @tjcoregon.org address. Add yours in My Profile → Email.'); return; }
   const emails = getEBRecipients();
   if (!emails.length) { showEBMsg('warn', '⚠️ No email addresses found for the selected recipients.'); return; }
   const subject = document.getElementById('eb-subject').value.trim();
   const body    = document.getElementById('eb-body').value.trim();
   if (!subject) { showEBMsg('warn', '⚠️ Please enter a subject.'); return; }
+  const from = ebSenderEmail();
   // Gmail web compose handles long BCC lists (unlike mailto:'s ~2000-char cap)
   const url = 'https://mail.google.com/mail/?view=cm&fs=1&tf=1'
     + '&bcc=' + encodeURIComponent(emails.join(','))
     + '&su='  + encodeURIComponent(subject)
     + '&body='+ encodeURIComponent(body);
   window.open(url, '_blank');
-  showEBMsg('success', `✅ Opening Gmail with all ${emails.length} recipients in BCC — review and click Send. (If a different Google account opens, switch to chayes@tjcoregon.org.)`);
+  showEBMsg('success', `✅ Opening Gmail with all ${emails.length} recipients in BCC — review and click Send. Make sure the account shown is <b>${fEsc(from)}</b>.`);
 }
 
 function openEBMailto() {
+  if (!ebCanSend()) { showEBMsg('warn', '⚠️ You can only send a blast from a @tjcoregon.org address. Add yours in My Profile → Email.'); return; }
   const emails = getEBRecipients();
   if (!emails.length) { showEBMsg('warn', '⚠️ No email addresses found.'); return; }
   const subject = document.getElementById('eb-subject').value.trim();
@@ -3214,7 +3317,7 @@ function openEBMailto() {
   if (!subject) { showEBMsg('warn', '⚠️ Please enter a subject.'); return; }
   // mailto: has browser URL limits ~2000 chars — warn if large
   const bcc = emails.join(',');
-  const url = `mailto:?from=chayes%40tjcoregon.org&bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const url = `mailto:?from=${encodeURIComponent(ebSenderEmail())}&bcc=${encodeURIComponent(bcc)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   if (url.length > 2000) {
     showEBMsg('warn', `⚠️ Too many recipients (${emails.length}) for the default mail app. Use <b>Open in Gmail</b> instead — it has no size limit.`);
     return;
@@ -5755,6 +5858,7 @@ Object.assign(window, {
   renderMeetingsList,
   saveAnthropicKey,
   renderFundraising, openContactModal, closeContactModal, saveFundContact,
+  checkAllFund, clearFundChecks, emailCheckedFund, updateFundCheckedCount,
   openContactDetail, closeContactDetail, editContactDetails, deleteFundContact,
   addInteraction, deleteInteraction, addGift, deleteGift,
   openDashboardConfig, closeDashboardConfig, saveDashboardConfig,
