@@ -256,6 +256,7 @@ table tr:hover td{background:#fafbff;}
     <div class="nav-section">Analytics</div>
     <a onclick="navigate('dashboard')" data-view="dashboard"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg></span> Dashboard</a>
     <a onclick="navigate('profile')" data-view="profile"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span> My Profile</a>
+    <a onclick="navigate('my-tasks')" data-view="my-tasks" id="nav-mentor-inbox"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Mentor Inbox <span id="nav-inbox-dot" style="display:none;margin-left:auto;width:8px;height:8px;border-radius:50%;background:#22c55e;"></span></a>
 
     <div class="nav-section">Log Entry</div>
     <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span> Progress Note</a>
@@ -268,7 +269,7 @@ table tr:hover td{background:#fafbff;}
     <a onclick="navigate('form-reports')" data-view="form-reports"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg></span> Reports</a>
 
     <div class="nav-section">Directory</div>
-    <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Client Directory</a>
+    <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Directory</a>
     <a onclick="navigate('email-blast')" data-view="email-blast"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span> Email Blast</a>
     <a onclick="navigate('fundraising')" data-view="fundraising"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> Fundraising</a>
 
@@ -276,16 +277,12 @@ table tr:hover td{background:#fafbff;}
     <a onclick="navigate('needs-assessment')" data-view="needs-assessment"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Needs Assessment</a>
     <a onclick="navigate('expense-report')" data-view="expense-report"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Expense Report</a>
 
-    <div class="nav-section">Alerts & Tasks</div>
-    <a onclick="navigate('admin-inbox')" data-view="admin-inbox"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> Admin Inbox</a>
-    <a onclick="navigate('my-tasks')" data-view="my-tasks"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Mentor Inbox</a>
-
     <div class="nav-section">Work</div>
     <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Projects</a>
     <a onclick="navigate('events')" data-view="events"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> Events & Social</a>
 
     <div class="nav-section">Admin</div>
-    <a onclick="navigate('settings')" data-view="settings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Staff & Settings</a>
+    <a onclick="navigate('settings')" data-view="settings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</a>
   </nav>
 </div>
 
@@ -323,7 +320,7 @@ table tr:hover td{background:#fafbff;}
         <h3 style="margin-bottom:14px;">Inboxes</h3>
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
           <button class="btn btn-accent" onclick="navigate('my-tasks')">✉ Mentor Inbox — Messages &amp; Tasks</button>
-          <button class="btn btn-outline" onclick="navigate('admin-inbox')">📨 Admin Inbox <span id="dash-admin-unread"></span></button>
+          <button class="btn btn-outline" onclick="navigate('settings')">📨 Admin Inbox <span id="dash-admin-unread"></span></button>
         </div>
       </div>
       <div class="card no-print" style="margin-bottom:20px;">
@@ -950,6 +947,38 @@ table tr:hover td{background:#fafbff;}
 
     <!-- ===== SETTINGS ===== -->
     <div id="view-settings" class="view">
+      <h3 style="color:var(--primary);margin-bottom:10px;">📥 Admin Inbox</h3>
+      <div class="tabs no-print">
+        <button class="tab-btn active" onclick="switchTab('ai-tab-alerts',this)">🔔 Client Alerts</button>
+        <button class="tab-btn" onclick="switchTab('ai-tab-tasks',this);renderAdminTasks()">📋 All Tasks</button>
+        <button class="tab-btn" onclick="switchTab('ai-tab-mentors',this);renderMentorPanel()">👥 Mentors</button>
+        <button class="tab-btn" onclick="switchTab('ai-tab-amsgs',this);renderAdminMessages()">📨 Messages</button>
+        <button class="tab-btn" onclick="switchTab('ai-tab-config',this)">⚙ Staff &amp; Config</button>
+      </div>
+      <div id="ai-tab-alerts" class="tab-content active">
+        <div class="card" style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <div><h3 style="margin-bottom:4px;">Client Alert Radar</h3>
+              <p style="color:#666;font-size:0.85em;">Auto-detected from session history. Click any alert to assign it as a task to a mentor.</p></div>
+            <button class="btn btn-accent" onclick="refreshAlerts()">🔄 Refresh</button>
+          </div>
+        </div>
+        <div id="alert-list"><p style="color:#bbb;font-size:0.875em;padding:20px 0;">Loading alerts…</p></div>
+      </div>
+      <div id="ai-tab-tasks" class="tab-content">
+        <div class="card"><h3>All Assigned Tasks</h3><div id="admin-tasks-list"></div></div>
+      </div>
+      <div id="ai-tab-mentors" class="tab-content">
+        <div class="card" style="margin-bottom:16px;"><h3 style="margin-bottom:4px;">Mentor Overview</h3>
+          <p style="color:#666;font-size:0.85em;">Each mentor's unread messages, uncompleted tasks, and tasks in progress. Send a direct message from here.</p></div>
+        <div id="mentor-panel"></div>
+      </div>
+      <div id="ai-tab-amsgs" class="tab-content">
+        <div class="card" style="margin-bottom:16px;"><h3 style="margin-bottom:4px;">Messages to Admin</h3>
+          <p style="color:#666;font-size:0.85em;">Messages mentors have sent to you. Click Reply to open the conversation.</p></div>
+        <div id="admin-msgs-list"></div>
+      </div>
+      <div id="ai-tab-config" class="tab-content">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div class="card">
           <h3>Staff Members</h3>
@@ -1047,6 +1076,7 @@ table tr:hover td{background:#fafbff;}
         </div>
         </div><!-- /right column flex -->
       </div>
+      </div><!-- /ai-tab-config -->
     </div>
 
     <!-- ===== CLIENT DIRECTORY ===== -->
@@ -1310,47 +1340,6 @@ table tr:hover td{background:#fafbff;}
       </div>
     </div>
 
-    <!-- ===== ADMIN INBOX ===== -->
-    <div id="view-admin-inbox" class="view">
-      <div class="tabs no-print">
-        <button class="tab-btn active" onclick="switchTab('ai-tab-alerts',this)">🔔 Client Alerts</button>
-        <button class="tab-btn" onclick="switchTab('ai-tab-tasks',this);renderAdminTasks()">📋 All Tasks</button>
-        <button class="tab-btn" onclick="switchTab('ai-tab-mentors',this);renderMentorPanel()">👥 Mentors</button>
-        <button class="tab-btn" onclick="switchTab('ai-tab-amsgs',this);renderAdminMessages()">📨 Messages</button>
-      </div>
-      <div id="ai-tab-alerts" class="tab-content active">
-        <div class="card" style="margin-bottom:16px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-            <div>
-              <h3 style="margin-bottom:4px;">Client Alert Radar</h3>
-              <p style="color:#666;font-size:0.85em;">Auto-detected from session history. Click any alert to assign it as a task to a mentor.</p>
-            </div>
-            <button class="btn btn-accent" onclick="refreshAlerts()">🔄 Refresh</button>
-          </div>
-        </div>
-        <div id="alert-list"><p style="color:#bbb;font-size:0.875em;padding:20px 0;">Loading alerts…</p></div>
-      </div>
-      <div id="ai-tab-tasks" class="tab-content">
-        <div class="card">
-          <h3>All Assigned Tasks</h3>
-          <div id="admin-tasks-list"></div>
-        </div>
-      </div>
-      <div id="ai-tab-mentors" class="tab-content">
-        <div class="card" style="margin-bottom:16px;">
-          <h3 style="margin-bottom:4px;">Mentor Overview</h3>
-          <p style="color:#666;font-size:0.85em;">Each mentor's unread messages, uncompleted tasks, and tasks in progress. Send a direct message from here.</p>
-        </div>
-        <div id="mentor-panel"></div>
-      </div>
-      <div id="ai-tab-amsgs" class="tab-content">
-        <div class="card" style="margin-bottom:16px;">
-          <h3 style="margin-bottom:4px;">Messages to Admin</h3>
-          <p style="color:#666;font-size:0.85em;">Messages mentors have sent to you. Click Reply to open the conversation.</p>
-        </div>
-        <div id="admin-msgs-list"></div>
-      </div>
-    </div>
 
     <!-- Assign Task Modal -->
     <div id="assign-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
@@ -2144,6 +2133,7 @@ onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap =
   if (document.getElementById('ai-tab-amsgs')?.classList.contains('active')) renderAdminMessages();
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
+  updateMentorInboxNav();
   if (_msgMentor && document.getElementById('msg-modal')?.style.display === 'flex') renderMessageThread();
 });
 
@@ -2297,12 +2287,11 @@ const VIEW_TITLES = {
   'form-reports':'Reports — All Submitted Forms',
   'profile':'My Profile',
   'calendar':'Shared Calendar',
-  'settings':'Staff & Settings',
+  'settings':'Settings',
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
-  'clients':'Client Directory',
+  'clients':'Directory',
   'email-blast':'Email Blast',
-  'admin-inbox':'Admin Inbox — Client Alerts & Tasks',
   'my-tasks':'Mentor Inbox — Messages & Tasks',
   'projects':'Projects',
   'events':'Events & Social Media',
@@ -2376,6 +2365,18 @@ function logout(){
 function updateUserChrome(){
   const el = document.getElementById('current-user-label');
   if (el) el.textContent = _currentUser ? ((_currentUser.isAdmin?'👑 ':'👤 ')+_currentUser.name) : '';
+  updateMentorInboxNav();
+}
+// Turn the Mentor Inbox nav green + show a dot when the current user has unread messages
+function updateMentorInboxNav(){
+  const link = document.getElementById('nav-mentor-inbox');
+  const dot = document.getElementById('nav-inbox-dot');
+  if (!link) return;
+  const me = currentUserName();
+  const unread = me ? DB.messages().filter(m=>m.mentorName===me && !m.read).length : 0;
+  if (dot) dot.style.display = unread ? 'inline-block' : 'none';
+  link.style.color = unread ? '#22c55e' : '';
+  link.style.fontWeight = unread ? '700' : '';
 }
 function restoreSession(){
   try {
@@ -2420,7 +2421,7 @@ function changeAdminPIN() {
 
 let _navHistory = [];
 function navigate(v, isBack) {
-  if ((v === 'settings' || v === 'admin-inbox') && !isAdmin()) {
+  if (v === 'settings' && !isAdmin()) {
     alert('That section is admin-only. Log in as an administrator to access it.');
     return;
   }
@@ -2439,10 +2440,9 @@ function navigate(v, isBack) {
   if (v==='dashboard') renderDashboard();
   if (v==='data-view') renderDataView();
   if (v==='timesheets') populateTsMentors();
-  if (v==='settings') renderSettings();
+  if (v==='settings') { renderSettings(); refreshAlerts(); }
   if (v==='clients') renderClientDirectory();
   if (v==='email-blast') updateEBPreview();
-  if (v==='admin-inbox') refreshAlerts();
   if (v==='my-tasks') renderMyTasks();
   if (v==='projects') renderProjects();
   if (v==='events') renderEvents();
@@ -4131,9 +4131,12 @@ function renderDashboardStaff(){
     const activeTasks = tasks.filter(t=>t.mentorName===name && t.status!=='Done').length;
     const activeMsgs  = msgs.filter(m=>m.mentorName===name && !m.read).length;
     const nm = name.replace(/'/g,"\\'");
+    const avatar = s.photo
+      ? `<div style="width:48px;height:48px;border-radius:50%;background-image:url('${s.photo}');background-size:cover;background-position:center;border:1px solid #e5e9f0;"></div>`
+      : `<div style="width:48px;height:48px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1em;">${initials}</div>`;
     return `<div onclick="openMentorTasks('${nm}','breakdown')" title="View ${fEsc(name)}'s tasks &amp; breakdown"
         style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;width:112px;padding:13px 8px;border:1px solid #e5e9f0;border-radius:14px;background:#fff;">
-      <div style="width:48px;height:48px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1em;">${initials}</div>
+      ${avatar}
       <div style="font-size:0.78em;font-weight:600;text-align:center;line-height:1.2;color:#333;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${fEsc(name)}</div>
       <div style="display:flex;gap:6px;">
         <span title="Active tasks" style="font-size:0.7em;background:#fff4e5;color:#b25e00;border-radius:20px;padding:2px 7px;font-weight:700;">🗒 ${activeTasks}</span>
