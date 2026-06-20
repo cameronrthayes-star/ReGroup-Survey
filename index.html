@@ -309,10 +309,15 @@ table tr:hover td{background:#fafbff;}
     <!-- ===== DASHBOARD ===== -->
     <div id="view-dashboard" class="view active">
       <div class="card no-print" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-        <div style="font-size:0.92em;color:#555;font-weight:600;">📊 Key Metrics <span id="dash-metric-count" style="color:#aaa;font-size:0.82em;font-weight:400;"></span></div>
-        <button class="btn btn-outline" style="font-size:0.82em;" onclick="openDashboardConfig()">⚙ Customize Metrics</button>
+        <div style="font-size:0.92em;color:#555;font-weight:600;">📊 Key Metrics <span style="color:#aaa;font-size:0.8em;font-weight:400;">(top 6 — set by admin)</span> <span id="dash-metric-count" style="color:#aaa;font-size:0.82em;font-weight:400;"></span></div>
+        <button id="dash-admin-cust-btn" class="btn btn-outline" style="font-size:0.82em;" onclick="openDashboardConfig()">⚙ Customize Metrics</button>
       </div>
       <div class="stats-grid" id="stats-grid"></div>
+      <div class="card no-print" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 14px;">
+        <div style="font-size:0.92em;color:#555;font-weight:600;">⭐ My Metrics <span style="color:#aaa;font-size:0.8em;font-weight:400;">(your own — pick up to 6)</span></div>
+        <button class="btn btn-outline" style="font-size:0.82em;" onclick="openMyMetricsConfig()">⚙ Customize My Metrics</button>
+      </div>
+      <div class="stats-grid" id="my-stats-grid"></div>
       <div class="card no-print" style="margin-bottom:20px;">
         <h3 style="margin-bottom:14px;">Inboxes</h3>
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
@@ -356,6 +361,20 @@ table tr:hover td{background:#fafbff;}
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
           <button class="btn btn-outline" onclick="closeDashboardConfig()">Cancel</button>
           <button class="btn btn-primary" onclick="saveDashboardConfig()">Save Dashboard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- My Metrics Customize Modal (per mentor) -->
+    <div id="mymetrics-modal" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:30px 28px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 style="color:var(--primary);margin-bottom:6px;">⭐ Customize My Metrics</h3>
+        <p style="font-size:0.85em;color:#666;margin-bottom:16px;">Pick up to <strong>6</strong> metrics about your own work. These show only to you.</p>
+        <div id="mymetrics-list" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;"></div>
+        <div id="mymetrics-err" style="color:#e53935;font-size:0.82em;margin-top:10px;"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="closeMyMetricsConfig()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveMyMetricsConfig()">Save My Metrics</button>
         </div>
       </div>
     </div>
@@ -892,10 +911,11 @@ table tr:hover td{background:#fafbff;}
               </div>
               <div class="form-group">
                 <label>Role *</label>
-                <select id="staff-role">
+                <input id="staff-role" list="role-list" placeholder="Type any role (e.g. REP)" autocomplete="off">
+                <datalist id="role-list">
                   <option>REP</option><option>Senior REP</option><option>ReGroup Director</option>
                   <option>RJ Director</option><option>Program Manager</option><option>Facilitator</option>
-                </select>
+                </datalist>
               </div>
               <div class="form-group">
                 <label>Start Date</label>
@@ -1316,10 +1336,7 @@ table tr:hover td{background:#fafbff;}
           </div>
           <div class="form-group">
             <label>Role *</label>
-            <select id="sm-role">
-              <option>REP</option><option>Senior REP</option><option>ReGroup Director</option>
-              <option>RJ Director</option><option>Program Manager</option><option>Facilitator</option>
-            </select>
+            <input id="sm-role" list="role-list" placeholder="Type any role" autocomplete="off">
           </div>
           <div class="form-group">
             <label>Start Date</label>
@@ -3346,6 +3363,9 @@ document.getElementById('fund-detail').addEventListener('click', function(e) {
 document.getElementById('dash-modal').addEventListener('click', function(e) {
   if (e.target === this) closeDashboardConfig();
 });
+document.getElementById('mymetrics-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeMyMetricsConfig();
+});
 document.getElementById('msg-modal').addEventListener('click', function(e) {
   if (e.target === this) closeMentorMessages();
 });
@@ -3833,11 +3853,51 @@ const DASH_METRICS = [
   {id:'totalGiving',      group:'Fundraising', label:'Total Giving',        color:'#2e7d32', calc:()=>fmtMoney(DB.fundContacts().reduce((s,c)=>s+fundGiftTotal(c),0))},
   {id:'followupsDue',     group:'Fundraising', label:'Follow-ups Due (3+ mo)',color:'#9a3412', calc:()=>DB.fundContacts().filter(fundNeedsFollowup).length},
 ];
-const DASH_DEFAULT = ['sessions','activities','totalHours','uniqueClients','fundContacts','totalGiving','followupsDue'];
+const DASH_DEFAULT = ['sessions','activities','totalHours','uniqueClients','fundContacts','totalGiving'];
 function getDashboardMetrics(){
   const ids = (_dashboardConfig && Array.isArray(_dashboardConfig.metrics)) ? _dashboardConfig.metrics : null;
   const valid = (ids || DASH_DEFAULT).filter(id => DASH_METRICS.some(m=>m.id===id));
-  return valid.length ? valid : DASH_DEFAULT;
+  return (valid.length ? valid : DASH_DEFAULT).slice(0,6);   // top 6, admin-set
+}
+
+// ---- Personal "My Metrics" (bottom 6, chosen by each mentor) ----
+const MY_METRICS = [
+  {id:'mySessions',   label:'My Client Services', color:'#1e3a8a', calc:n=>DB.sessions().filter(s=>s.mentorName===n).length},
+  {id:'myActivities', label:'My Activities',      color:'#7c4dff', calc:n=>DB.activities().filter(a=>a.mentorName===n).length},
+  {id:'myHours',      label:'My Total Hours',     color:'#43a047', calc:n=>DB.allEntries().filter(e=>e.mentorName===n).reduce((s,e)=>s+Math.max(0,calcHours(e.startTime,e.endTime)),0).toFixed(1)},
+  {id:'myWeekHours',  label:'My Hours This Week', color:'#2f9bb5', calc:n=>{const w=dashWeekStats;const now=new Date();const mon=new Date(now);mon.setDate(now.getDate()-((now.getDay()+6)%7));const sun=new Date(mon);sun.setDate(mon.getDate()+6);const ws=mon.toISOString().slice(0,10),we=sun.toISOString().slice(0,10);return DB.allEntries().filter(e=>e.mentorName===n&&getDate(e)>=ws&&getDate(e)<=we).reduce((s,e)=>s+Math.max(0,calcHours(e.startTime,e.endTime)),0).toFixed(1);}},
+  {id:'myOpenTasks',  label:'My Open Tasks',      color:'#fb8c00', calc:n=>DB.tasks().filter(t=>t.mentorName===n&&t.status!=='Done').length},
+  {id:'myInProgress', label:'My Tasks In Progress',color:'#2f9bb5', calc:n=>DB.tasks().filter(t=>t.mentorName===n&&t.status==='In Progress').length},
+  {id:'myDoneTasks',  label:'My Completed Tasks', color:'#43a047', calc:n=>DB.tasks().filter(t=>t.mentorName===n&&t.status==='Done').length},
+  {id:'myUnread',     label:'My Unread Messages', color:'#e53935', calc:n=>DB.messages().filter(m=>m.mentorName===n&&!m.read).length},
+  {id:'myClients',    label:'My Clients Served',  color:'#00897b', calc:n=>new Set(DB.sessions().filter(s=>s.mentorName===n).map(s=>s.clientId).filter(Boolean)).size},
+  {id:'mySafety',     label:'My Safety Flags',    color:'#c62828', calc:n=>DB.allEntries().filter(e=>e.mentorName===n&&e.safetyConcerns&&e.safetyConcerns!=='No concerns'&&e.safetyConcerns!=='no').length},
+  {id:'myEvents',     label:'My Events Posted',   color:'#d81b60', calc:n=>DB.events().filter(e=>e.postedBy===n).length},
+  {id:'myMeetings',   label:'My Meetings Logged', color:'#3949ab', calc:n=>DB.meetings().filter(m=>m.loggedBy===n).length},
+];
+const MY_DEFAULT = ['mySessions','myHours','myWeekHours','myOpenTasks','myInProgress','myUnread'];
+function getMyMetricIds(){
+  const s = myStaffRecord();
+  let ids = s && Array.isArray(s.myMetrics) ? s.myMetrics
+          : (()=>{ try{ return JSON.parse(localStorage.getItem('rg_my_metrics')||'null'); }catch(e){ return null; } })();
+  const valid = (ids || MY_DEFAULT).filter(id => MY_METRICS.some(m=>m.id===id));
+  return (valid.length ? valid : MY_DEFAULT).slice(0,6);   // bottom 6, mentor-set
+}
+async function setMyMetricIds(ids){
+  const s = myStaffRecord();
+  if (s) await DB.updateRecord('staff', s._id, {myMetrics:ids});
+  else { try{ localStorage.setItem('rg_my_metrics', JSON.stringify(ids)); }catch(e){} }
+}
+function renderMyMetrics(){
+  const grid = document.getElementById('my-stats-grid');
+  if (!grid) return;
+  const name = currentUserName();
+  const ids = getMyMetricIds();
+  grid.innerHTML = ids.map(id=>{
+    const m = MY_METRICS.find(x=>x.id===id); if(!m) return '';
+    let val; try{ val = m.calc(name); }catch(e){ val='—'; }
+    return `<div class="stat-card" style="border-top-color:${m.color}"><div class="num">${val}</div><div class="lbl">${m.label}</div></div>`;
+  }).join('');
 }
 
 function renderDashboard() {
@@ -3861,6 +3921,9 @@ function renderDashboard() {
       <div class="lbl">${m.label}</div>
     </div>`;
   }).join('');
+  renderMyMetrics();
+  const acb = document.getElementById('dash-admin-cust-btn');
+  if (acb) acb.style.display = isAdmin() ? 'inline-flex' : 'none';   // only admin sets the top 6
 
   // Hours by mentor bar chart
   const mhrs = {};
@@ -3997,11 +4060,33 @@ function closeDashboardConfig(){ document.getElementById('dash-modal').style.dis
 async function saveDashboardConfig(){
   const checked = [...document.querySelectorAll('#dash-modal-list input:checked')].map(c=>c.value);
   if (!checked.length) { document.getElementById('dash-modal-err').textContent = 'Pick at least one metric.'; return; }
+  if (checked.length > 6) { document.getElementById('dash-modal-err').textContent = 'Pick at most 6 metrics for the top row.'; return; }
   // Preserve catalog order for a tidy layout
   const ordered = DASH_METRICS.filter(m=>checked.includes(m.id)).map(m=>m.id);
   await DB.setDashboardConfig(ordered);
   closeDashboardConfig();
   renderDashboard();
+}
+
+// Per-mentor: customize their own bottom-row metrics
+function openMyMetricsConfig(){
+  const selected = getMyMetricIds();
+  document.getElementById('mymetrics-list').innerHTML = MY_METRICS.map(m=>
+    `<label style="display:flex;align-items:center;gap:8px;font-size:0.88em;padding:3px 0;cursor:pointer;">
+      <input type="checkbox" value="${m.id}" ${selected.includes(m.id)?'checked':''}> ${m.label}
+    </label>`).join('');
+  document.getElementById('mymetrics-err').textContent = '';
+  document.getElementById('mymetrics-modal').style.display = 'flex';
+}
+function closeMyMetricsConfig(){ document.getElementById('mymetrics-modal').style.display = 'none'; }
+async function saveMyMetricsConfig(){
+  const checked = [...document.querySelectorAll('#mymetrics-list input:checked')].map(c=>c.value);
+  if (!checked.length) { document.getElementById('mymetrics-err').textContent = 'Pick at least one metric.'; return; }
+  if (checked.length > 6) { document.getElementById('mymetrics-err').textContent = 'Pick at most 6 metrics.'; return; }
+  const ordered = MY_METRICS.filter(m=>checked.includes(m.id)).map(m=>m.id);
+  await setMyMetricIds(ordered);
+  closeMyMetricsConfig();
+  renderMyMetrics();
 }
 
 // ===================================================================
@@ -5862,6 +5947,7 @@ Object.assign(window, {
   openContactDetail, closeContactDetail, editContactDetails, deleteFundContact,
   addInteraction, deleteInteraction, addGift, deleteGift,
   openDashboardConfig, closeDashboardConfig, saveDashboardConfig,
+  openMyMetricsConfig, closeMyMetricsConfig, saveMyMetricsConfig,
   toggleNav, closeNav,
   renderMentorPanel, openMentorMessages, closeMentorMessages, sendMentorMessage, deleteMessage,
   openMentorTasks, closeMentorTasks, sendMyMessage, renderAdminMessages,
