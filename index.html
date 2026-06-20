@@ -280,6 +280,7 @@ table tr:hover td{background:#fafbff;}
     <div class="nav-section">Work</div>
     <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Projects</a>
     <a onclick="navigate('events')" data-view="events"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> Events & Social</a>
+    <a onclick="navigate('rj')" data-view="rj"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg></span> Restorative Justice</a>
 
     <div class="nav-section">Admin</div>
     <a onclick="navigate('settings')" data-view="settings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</a>
@@ -429,6 +430,41 @@ table tr:hover td{background:#fafbff;}
         <div style="display:flex;gap:10px;margin-top:20px;justify-content:flex-end;">
           <button id="cal-detail-edit" class="btn btn-outline" onclick="editCalFromDetail()">Edit</button>
           <button class="btn btn-primary" onclick="closeCalDetail()">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RESTORATIVE JUSTICE ===== -->
+    <div id="view-rj" class="view">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <h2 style="color:var(--primary);font-size:1.1em;font-weight:700;">Restorative Justice Cases</h2>
+        <button class="btn btn-accent" onclick="openRJCase(null)">＋ New Case</button>
+      </div>
+      <div class="card no-print" style="margin-bottom:14px;background:#f4f6fb;font-size:0.82em;color:#555;">
+        ⚖️ Governing ethic: <b>Do No Harm</b>. Cases use <b>numbers</b> (not names) and must not record incriminating information (per ORS 147.610). The wizard walks each case through the program's 6 stages.
+      </div>
+      <div id="rj-list"></div>
+    </div>
+
+    <!-- RJ Case Wizard Modal -->
+    <div id="rj-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:26px 26px;width:680px;max-width:96vw;max-height:94vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+          <h3 id="rj-modal-title" style="color:var(--primary);">New RJ Case</h3>
+          <span id="rj-status-pill"></span>
+        </div>
+        <div id="rj-stepbar" style="display:flex;gap:4px;margin:10px 0 6px;"></div>
+        <div id="rj-step-label" style="font-size:0.78em;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-bottom:10px;"></div>
+        <div id="rj-step-body"></div>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:space-between;flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;">
+            <button id="rj-delete-btn" class="btn btn-danger" onclick="deleteRJCase()" style="display:none;">Delete Case</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <button class="btn btn-outline" onclick="closeRJCase()">Close</button>
+            <button id="rj-back-btn" class="btn btn-outline" onclick="rjBack()">‹ Back</button>
+            <button id="rj-next-btn" class="btn btn-primary" onclick="rjSaveAndNext()">Save &amp; Continue ›</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2062,7 +2098,7 @@ let _listenersReady   = 0;
 
 function _onReady() {
   _listenersReady++;
-  if (_listenersReady === 14) {
+  if (_listenersReady === 15) {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
@@ -2114,11 +2150,17 @@ let _fundContacts = [];
 let _dashboardConfig = null;
 let _messages = [];
 let _calendar = [];
+let _rjCases = [];
 
 onSnapshot(collection(db,'calendar'), snap => {
   _calendar = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-calendar')?.classList.contains('active')) renderCalendar();
+});
+onSnapshot(collection(db,'rjCases'), snap => {
+  _rjCases = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('view-rj')?.classList.contains('active')) renderRJ();
 });
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -2207,6 +2249,11 @@ const DB = {
 
   dashboardConfig: () => _dashboardConfig,
   async setDashboardConfig(metrics){ await setDoc(doc(db,'config','dashboard'), {metrics, _updatedAt: serverTimestamp()}); },
+
+  rjCases: () => _rjCases,
+  async addRJCase(c)         { const r = await addDoc(collection(db,'rjCases'), {...c, _createdAt: serverTimestamp()}); return r.id; },
+  async updateRJCase(id,c)   { await setDoc(doc(db,'rjCases',id), {...c, _updatedAt: serverTimestamp()}, {merge:true}); },
+  async removeRJCase(id)     { await deleteDoc(doc(db,'rjCases',id)); },
 
   calendar: () => _calendar,
   async addCalEvent(e)       { await addDoc(collection(db,'calendar'), {...e, _createdAt: serverTimestamp()}); },
@@ -2322,6 +2369,7 @@ const VIEW_TITLES = {
   'form-reports':'Reports — All Submitted Forms',
   'profile':'My Profile',
   'calendar':'Shared Calendar',
+  'rj':'Restorative Justice',
   'settings':'Settings',
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
@@ -2486,6 +2534,7 @@ function navigate(v, isBack) {
   if (v==='form-reports') renderFormReports();
   if (v==='profile') renderProfile();
   if (v==='calendar') renderCalendar();
+  if (v==='rj') renderRJ();
   if (v==='progress-note' || v==='activity-log') populateClientNameList();
   closeNav();
 }
@@ -3556,6 +3605,9 @@ document.getElementById('cal-modal').addEventListener('click', function(e) {
 });
 document.getElementById('cal-detail').addEventListener('click', function(e) {
   if (e.target === this) closeCalDetail();
+});
+document.getElementById('rj-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeRJCase();
 });
 document.getElementById('msg-modal').addEventListener('click', function(e) {
   if (e.target === this) closeMentorMessages();
@@ -6342,6 +6394,162 @@ function deleteCalEvent(){
 }
 
 // ===================================================================
+// RESTORATIVE JUSTICE (case wizard — follows the RJ Integrated Manual)
+// ===================================================================
+const RJ_STEPS = [
+  { key:'assessment', title:'Assessment', focus:'Initial case review, suitability analysis, and harm-risk screening. Identify participants and assign a tentative mentor + two facilitators.', fields:[
+    {id:'referralSource', label:'Referral source', type:'select', options:['Self-referral','Community referral','System referral']},
+    {id:'suitability', label:'Suitability — can this be addressed restoratively? (capacity, safety, ethics)', type:'textarea'},
+    {id:'harmRisk', label:'Harm-risk screening & power-imbalance notes', type:'textarea'},
+    {id:'participants', label:'Participants (use numbers/roles — no incriminating detail)', type:'textarea'},
+    {id:'tentMentor', label:'Tentative mentor', type:'text'},
+    {id:'tentFac1', label:'Facilitator 1 (dual-facilitator model)', type:'text'},
+    {id:'tentFac2', label:'Facilitator 2', type:'text'},
+    {id:'directorAccepted', label:'Regroup Director accepted the case (with RJ Team input)', type:'check'},
+  ]},
+  { key:'intake', title:'Intake', focus:'Voluntariness, informed participation, rights, and confidentiality. Assign one mentor and two facilitators.', fields:[
+    {id:'voluntary', label:'Participation confirmed voluntary — not coerced (F06)', type:'check'},
+    {id:'rights', label:'Participant rights reviewed — may withdraw anytime (F07)', type:'check'},
+    {id:'confidentiality', label:'Confidentiality & info-sharing reviewed — ORS 147.610 (F08)', type:'check'},
+    {id:'mandatoryReporter', label:'Mandatory-reporter disclosure, if any RJ Team member is one (F11)', type:'text'},
+    {id:'mentor', label:'Assigned mentor', type:'text'},
+    {id:'facilitator1', label:'Facilitator 1', type:'text'},
+    {id:'facilitator2', label:'Facilitator 2', type:'text'},
+    {id:'hopes', label:"Participant's understanding of the harm, needs, and hopes", type:'textarea'},
+    {id:'demographics', label:'Demographics / contact, de-identified (F01)', type:'textarea'},
+  ]},
+  { key:'restorative', title:'Restorative Work', focus:'Education, positive modeling, and circles (minimum 3 before any conference). Build a participant plan and readiness.', fields:[
+    {id:'education', label:'Some aspect of education provided', type:'check'},
+    {id:'modeling', label:'Positive modeling of interpersonal relationships', type:'check'},
+    {id:'circlesCount', label:'Circles completed (minimum 3)', type:'number'},
+    {id:'participantPlan', label:'Participant plan — wants, supports/barriers, next steps (F03)', type:'textarea'},
+    {id:'activities', label:'Activities (psychoeducation, mentor contact, prep for dialogue/surrogate/healing circle/conference)', type:'textarea'},
+    {id:'processType', label:'Selected restorative process', type:'select', options:['Undecided','Continue separate work','Parallel separate work','Healing circle','Surrogate process','Victim-offender dialogue / conference']},
+    {id:'goals', label:'Participant goals — participant-owned (F04)', type:'textarea'},
+  ]},
+  { key:'debrief', title:'Debrief', focus:'Stabilize participants after major process points; reflect and note support needs. Do not record incriminating information.', fields:[
+    {id:'emotionalState', label:'Emotional state & immediate support needs', type:'textarea'},
+    {id:'whatOccurred', label:'What each participant believes occurred', type:'textarea'},
+    {id:'followUp', label:'Goals / follow-up tasks / clarifications', type:'textarea'},
+  ]},
+  { key:'closure', title:'Closure', focus:'Formal RJ Team closing decision. A case counts as complete only after formal closure.', fields:[
+    {id:'twoFacilitators', label:'Two facilitators present for final case work', type:'check'},
+    {id:'summary', label:'Facilitators’ summary of process & immediate outcomes', type:'textarea'},
+    {id:'nextSteps', label:'Next-step goals / support contacts', type:'textarea'},
+    {id:'rjTeamApproved', label:'RJ Team agrees no further active casework is needed (marks case Closed)', type:'check'},
+  ]},
+  { key:'checkins', title:'Check-Ins', focus:'Follow-through, not punishment monitoring. Revisit goals, encourage revision, and document progress. Add a check-in each time you follow up.', fields:[] },
+];
+let _rjId = null, _rjStep = 0;
+function rjCaseById(id){ return DB.rjCases().find(c=>c._id===id); }
+function rjStatusBadge(c){ const s=c.status||'Open'; const cls=s==='Closed'?'badge-success':s==='Withdrawn'?'badge-warn':'badge-info'; return `<span class="badge ${cls}">${s}</span>`; }
+
+function renderRJ(){
+  const el=document.getElementById('rj-list'); if(!el) return;
+  const cases=DB.rjCases().slice().sort((a,b)=>(b.caseNumber||0)-(a.caseNumber||0));
+  if(!cases.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:40px;">No cases yet. Click “＋ New Case” to begin a guided restorative-justice case.</div>'; return; }
+  el.innerHTML=cases.map(c=>{
+    const done=c.currentStep||0;
+    return `<div class="card" style="margin-bottom:12px;cursor:pointer;" onclick="openRJCase('${c._id}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div><span style="font-weight:700;color:var(--primary);">Case #${c.caseNumber||'?'}</span>
+          <span style="color:#777;font-size:0.85em;margin-left:8px;">${fEsc(c.referralSource||'')}</span></div>
+        ${rjStatusBadge(c)}
+      </div>
+      <div style="display:flex;gap:3px;margin-top:10px;">${RJ_STEPS.map((s,i)=>`<div title="${s.title}" style="flex:1;height:6px;border-radius:3px;background:${i<done?'var(--success)':i===done?'var(--accent)':'#e0e0e0'};"></div>`).join('')}</div>
+      <div style="font-size:0.78em;color:#888;margin-top:6px;">Stage ${Math.min(done+1,6)}/6 — ${RJ_STEPS[Math.min(done,5)].title}</div>
+    </div>`;
+  }).join('');
+}
+async function openRJCase(id){
+  if(!id){
+    const nums=DB.rjCases().map(c=>c.caseNumber||0);
+    const caseNumber=(nums.length?Math.max(...nums):1000)+1;
+    id=await DB.addRJCase({caseNumber, status:'Open', currentStep:0, referralSource:'Self-referral', createdBy:currentUserName()});
+    await new Promise(r=>setTimeout(r,350));
+  }
+  _rjId=id;
+  const c=rjCaseById(id);
+  _rjStep=c?Math.min(c.currentStep||0,RJ_STEPS.length-1):0;
+  document.getElementById('rj-delete-btn').style.display=isAdmin()?'inline-flex':'none';
+  rjRenderStep();
+  document.getElementById('rj-modal').style.display='flex';
+}
+function closeRJCase(){ document.getElementById('rj-modal').style.display='none'; _rjId=null; if(document.getElementById('view-rj')?.classList.contains('active')) renderRJ(); }
+function rjField(f,val){
+  const v=val==null?'':val;
+  if(f.type==='textarea') return `<textarea id="rjf-${f.id}" rows="2" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;min-height:54px;">${fEsc(v)}</textarea>`;
+  if(f.type==='select') return `<select id="rjf-${f.id}" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;">${f.options.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
+  if(f.type==='check') return `<label style="display:flex;align-items:center;gap:8px;font-size:0.9em;cursor:pointer;"><input type="checkbox" id="rjf-${f.id}" ${v?'checked':''}> ${fEsc(f.label)}</label>`;
+  if(f.type==='number') return `<input type="number" id="rjf-${f.id}" min="0" value="${fEsc(v)}" style="width:120px;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;">`;
+  return `<input type="text" id="rjf-${f.id}" value="${fEsc(v)}" style="width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:0.9em;">`;
+}
+function rjRenderStep(){
+  const c=rjCaseById(_rjId); if(!c){ closeRJCase(); return; }
+  const step=RJ_STEPS[_rjStep], done=c.currentStep||0;
+  document.getElementById('rj-modal-title').textContent='Case #'+(c.caseNumber||'?')+' — '+step.title;
+  document.getElementById('rj-status-pill').innerHTML=rjStatusBadge(c);
+  document.getElementById('rj-step-label').textContent='Stage '+(_rjStep+1)+' of 6 · '+step.title;
+  document.getElementById('rj-stepbar').innerHTML=RJ_STEPS.map((s,i)=>`<div title="${s.title}" onclick="rjGoStep(${i})" style="flex:1;height:8px;border-radius:4px;cursor:pointer;background:${i<done?'var(--success)':i===_rjStep?'var(--accent)':'#e0e0e0'};"></div>`).join('');
+  const data=c[step.key]||{};
+  let body=`<p style="font-size:0.85em;color:#666;margin-bottom:14px;">${step.focus}</p>`;
+  if(step.key==='checkins'){
+    const cis=c.checkins||[];
+    body+=(cis.length?cis.slice().reverse().map(ci=>`<div style="background:#f8f9fa;border-radius:8px;padding:10px;margin-bottom:8px;font-size:0.86em;"><b>${ci.date?fmtDate(ci.date):''}</b> — ${fEsc(ci.progress||'')}${ci.notes?`<div style="color:#666;margin-top:3px;">${fEsc(ci.notes)}</div>`:''}${ci.by?`<div style="color:#bbb;font-size:0.85em;margin-top:2px;">${fEsc(ci.by)}</div>`:''}</div>`).join(''):'<p style="color:#bbb;font-size:0.85em;">No check-ins logged yet.</p>')
+      +`<div style="background:#eef3fb;border-radius:10px;padding:12px;margin-top:10px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="display:flex;flex-direction:column;"><label style="font-size:0.72em;color:#777;">Date</label><input type="date" id="rjci-date" value="${new Date().toISOString().slice(0,10)}" style="padding:7px;border:1.5px solid #ddd;border-radius:7px;"></div>
+            <div style="display:flex;flex-direction:column;flex:1;min-width:160px;"><label style="font-size:0.72em;color:#777;">Goal progress / revision</label><input type="text" id="rjci-progress" style="padding:7px;border:1.5px solid #ddd;border-radius:7px;"></div>
+            <button class="btn btn-accent" style="font-size:0.8em;" onclick="rjAddCheckin()">+ Add Check-In</button>
+          </div>
+          <textarea id="rjci-notes" rows="2" placeholder="Notes (support offered, barriers)…" style="width:100%;margin-top:8px;padding:7px;border:1.5px solid #ddd;border-radius:7px;font-size:0.88em;"></textarea>
+        </div>`;
+  } else {
+    body+=step.fields.map(f=> f.type==='check'
+      ? `<div class="form-group">${rjField(f,data[f.id])}</div>`
+      : `<div class="form-group"><label>${fEsc(f.label)}</label>${rjField(f,data[f.id])}</div>`).join('');
+  }
+  document.getElementById('rj-step-body').innerHTML=body;
+  document.getElementById('rj-back-btn').style.display=_rjStep>0?'inline-flex':'none';
+  document.getElementById('rj-next-btn').textContent=_rjStep>=RJ_STEPS.length-1?'Done':'Save & Continue ›';
+}
+function rjCollectStep(){
+  const step=RJ_STEPS[_rjStep]; const out={};
+  if(step.key==='checkins') return out;
+  step.fields.forEach(f=>{ const el=document.getElementById('rjf-'+f.id); if(!el) return;
+    out[f.id]=f.type==='check'?el.checked:(f.type==='number'?(parseFloat(el.value)||0):el.value.trim()); });
+  return out;
+}
+async function rjSaveAndNext(){
+  const c=rjCaseById(_rjId); if(!c) return;
+  const step=RJ_STEPS[_rjStep];
+  if(_rjStep>=RJ_STEPS.length-1){ closeRJCase(); return; }   // check-ins step: Done
+  const patch={};
+  patch[step.key]=rjCollectStep();
+  patch.currentStep=Math.max(c.currentStep||0,_rjStep+1);
+  if(step.key==='assessment') patch.referralSource=patch.assessment.referralSource;
+  if(step.key==='closure' && patch.closure.rjTeamApproved) patch.status='Closed';
+  await DB.updateRJCase(_rjId, patch);
+  _rjStep++;
+  await new Promise(r=>setTimeout(r,150));
+  rjRenderStep();
+}
+function rjBack(){ if(_rjStep>0){ _rjStep--; rjRenderStep(); } }
+function rjGoStep(i){ _rjStep=Math.max(0,Math.min(i,RJ_STEPS.length-1)); rjRenderStep(); }
+async function rjAddCheckin(){
+  const c=rjCaseById(_rjId); if(!c) return;
+  const date=document.getElementById('rjci-date').value;
+  const progress=document.getElementById('rjci-progress').value.trim();
+  const notes=document.getElementById('rjci-notes').value.trim();
+  if(!progress && !notes){ alert('Add some check-in detail first.'); return; }
+  const checkins=[...(c.checkins||[]), {date, progress, notes, by:currentUserName()}];
+  await DB.updateRJCase(_rjId, {checkins, currentStep:Math.max(c.currentStep||0,5)});
+  await new Promise(r=>setTimeout(r,200));
+  rjRenderStep();
+}
+function deleteRJCase(){ if(!_rjId) return; requireAdmin(async()=>{ if(!confirm('Delete this RJ case permanently? This cannot be undone.')) return; await DB.removeRJCase(_rjId); closeRJCase(); }); }
+
+// ===================================================================
 // INIT
 // ===================================================================
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -6363,6 +6571,7 @@ Object.assign(window, {
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent,
+  renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient, fillClientId,
