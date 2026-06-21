@@ -1,0 +1,23 @@
+# One-click Render Blueprint for the ReGroup Meeting Bot.
+# In Render: New → Blueprint → pick this repo. It creates the web service with
+# the right build/start commands; you only paste the 3 secret values.
+services:
+  - type: web
+    name: regroup-meeting-bot
+    runtime: node
+    rootDir: meeting-bot-server
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: RECALL_API_KEY
+        sync: false        # paste your Recall.ai API key
+      - key: RECALL_REGION
+        value: us-west-2    # change to your Recall region if different
+      - key: ANTHROPIC_API_KEY
+        sync: false        # paste your sk-ant-... key
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false        # paste the full Firebase service-account JSON
+      - key: ALLOW_ORIGIN
+        value: https://cameronrthayes-star.github.io
