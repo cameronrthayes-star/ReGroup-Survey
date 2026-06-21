@@ -6220,7 +6220,7 @@ function renderSettings() {
   const keyInput = document.getElementById('anthropic-key-input');
   if (keyInput) keyInput.value = localStorage.getItem('rg_anthropic_key') || '';
   const mbInput = document.getElementById('meetingbot-url-input');
-  if (mbInput) mbInput.value = localStorage.getItem('rg_meetingbot_url') || '';
+  if (mbInput) mbInput.value = localStorage.getItem('rg_meetingbot_url') || DEFAULT_MEETING_BACKEND;
   const staff = DB.staff();
   document.getElementById('staff-list').innerHTML = staff.length ? staff.map(s=>`
     <div class="staff-card">
@@ -6526,8 +6526,9 @@ async function testMeetingBot(){
   m.style.color='#666'; m.textContent='Testing…';
   try{
     const r=await fetch(url+'/health'); const d=await r.json();
+    const ai = d.anthropic_configured!=null ? ('Anthropic:'+(d.anthropic_configured?'on':'off')) : ('OpenAI:'+(d.openai_configured?'on':'off'));
     m.style.color=d.ok?'#43a047':'#e53935';
-    m.textContent=d.ok?`✓ Connected. Recall:${d.recall_configured?'on':'off'} · Anthropic:${d.anthropic_configured?'on':'off'} · Firestore:${d.firestore_configured?'on':'off'}`:'Unexpected response.';
+    m.textContent=d.ok?`✓ Connected. Recall:${d.recall_configured?'on':'off'} · ${ai}`:'Unexpected response.';
   }catch(err){ m.style.color='#e53935'; m.textContent='Could not reach backend — '+err.message; }
 }
 
@@ -6565,22 +6566,37 @@ function toggleMeetingRecording(id){
   catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Could not start: '+e.message; } }
 }
 
-// Dispatch a Recall.ai recording bot (via the meeting-bot backend) to this meeting
+const DEFAULT_MEETING_BACKEND='https://regroup-meeting-agent-backend.onrender.com';
+// Dispatch a Recall.ai recording bot via the TJC meeting-agent backend
 async function sendMeetingBot(id){
   const e=DB.calendar().find(x=>x._id===id); if(!e) return;
   const status=document.getElementById('mtg-bot-status');
-  const url=(localStorage.getItem('rg_meetingbot_url')||'').trim().replace(/\/+$/,'');
-  if(!url){ status.style.color='#e53935'; status.innerHTML='No Meeting Bot backend configured — add its URL in Settings → Meeting Bot.'; return; }
+  let url=(localStorage.getItem('rg_meetingbot_url')||'').trim().replace(/\/+$/,'') || DEFAULT_MEETING_BACKEND;
   if(!e.video){ status.style.color='#e53935'; status.textContent='This event has no video link.'; return; }
-  const staffNames=DB.staff().map(s=>s.name);
-  const attendees=(e.invited||'').split(',').map(s=>s.trim()).filter(Boolean).filter(n=>staffNames.some(sn=>sn.toLowerCase()===n.toLowerCase()));
-  status.style.color='#666'; status.textContent='Dispatching bot…';
+  // Build attendee emails: invited staff -> their profile email, plus any emails in the external field
+  const staff=DB.staff();
+  const emails=[];
+  (e.invited||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(n=>{
+    const s=staff.find(x=>(x.name||'').toLowerCase()===n.toLowerCase());
+    if(s&&s.email) s.email.split(/[;, ]+/).forEach(em=>{ if(/@/.test(em)) emails.push(em.trim()); });
+  });
+  (e.external||'').split(/[;,]+/).map(s=>s.trim()).forEach(x=>{ if(/@/.test(x)) emails.push(x); });
+  const attendees=[...new Set(emails)].map(em=>({email:em}));
+  status.style.color='#666'; status.textContent='Dispatching bot to the meeting (backend may take ~15s to wake)…';
   try{
-    const r=await fetch(url+'/api/bot',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({meeting_url:e.video, title:e.title||'Meeting', attendees, eventId:id})});
+    const r=await fetch(url+'/api/meeting-agent/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+      title:e.title||'Meeting', meeting_url:e.video, platform:'auto', starts_at:null, ends_at:null,
+      attendees,
+      notice_text:'ReGroup Summary Agent may join this meeting to record/transcribe it and create a written summary for authorized attendees.',
+      consent_confirmed:true, send_to_attendees:true, review_required:false, create_bot_now:true,
+      source:'regroup_app_calendar', eventId:id
+    })});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error((d.error&&(d.error.message||JSON.stringify(d.error)))||('HTTP '+r.status));
-    status.style.color='#43a047'; status.textContent='✓ Bot dispatched (id '+(d.bot_id||'?')+'). The summary will be messaged to attendees when the meeting ends.';
-  }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message+' (check the backend URL & that it is running).'; }
+    const ev=d.event||d; const botId=ev.provider_bot_id||ev.bot_id||'';
+    status.style.color='#43a047';
+    status.textContent='✓ Bot requested'+(attendees.length?(' for '+attendees.length+' attendee'+(attendees.length!==1?'s':'')):'')+'. Admit “ReGroup Summary Agent” if it waits in the lobby; the summary is emailed to attendees when the meeting ends.'+(botId?'':' (If it doesn’t join, the meeting link or Recall config may need a look.)');
+  }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message+'. The backend may be waking up — wait ~20s and try again.'; }
 }
 
 // Meeting Summary Agent: summarize a transcript and message it to all invited TJC staff
