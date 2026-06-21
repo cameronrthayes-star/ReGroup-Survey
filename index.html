@@ -1183,6 +1183,11 @@ table tr:hover td{background:#fafbff;}
             <button class="btn btn-outline" onclick="testMeetingBot()">Test connection</button>
           </div>
           <div id="meetingbot-msg" style="font-size:0.8em;margin-top:8px;"></div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:0.85em;margin-top:12px;cursor:pointer;">
+            <input type="checkbox" id="meetingbot-auto" onchange="saveMeetingBotAuto()">
+            <span>🤖 Auto-send a recording bot to every meeting that has a video link (as it starts)</span>
+          </label>
+          <p style="font-size:0.74em;color:#aaa;margin-top:6px;">When on, the app dispatches a bot automatically for each calendar meeting with a video link — no manual click. Each dispatch uses Recall credits.</p>
         </div>
         <div class="card">
           <h3>📅 Google Calendar Sync</h3>
@@ -6247,6 +6252,8 @@ function renderSettings() {
   if (mbInput) mbInput.value = localStorage.getItem('rg_meetingbot_url') || DEFAULT_MEETING_BACKEND;
   const gcInput = document.getElementById('gcal-clientid-input');
   if (gcInput) gcInput.value = localStorage.getItem('rg_gcal_client_id') || '';
+  const mbAuto = document.getElementById('meetingbot-auto');
+  if (mbAuto) mbAuto.checked = localStorage.getItem('rg_meetingbot_auto')==='1';
   const staff = DB.staff();
   document.getElementById('staff-list').innerHTML = staff.length ? staff.map(s=>`
     <div class="staff-card">
@@ -6476,6 +6483,7 @@ function renderCalendar(){
   populateStaffNameList();
   gcalAutoSync();
   checkMeetingSummaries();
+  autoDispatchBots();
   const label=document.getElementById('cal-month-label');
   if(label) label.textContent=_calMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const grid=document.getElementById('cal-grid'); if(!grid) return;
@@ -6601,6 +6609,12 @@ function saveMeetingBotUrl(){
   localStorage.setItem('rg_meetingbot_url', v);
   const m=document.getElementById('meetingbot-msg'); if(m){ m.style.color='#43a047'; m.textContent=v?'✓ Saved.':'Cleared.'; }
 }
+function saveMeetingBotAuto(){
+  const on=document.getElementById('meetingbot-auto').checked;
+  localStorage.setItem('rg_meetingbot_auto', on?'1':'0');
+  const m=document.getElementById('meetingbot-msg'); if(m){ m.style.color='#43a047'; m.textContent=on?'✓ Auto-bot ON — bots dispatch automatically as meetings start.':'Auto-bot off.'; }
+  if(on) autoDispatchBots();
+}
 async function testMeetingBot(){
   const m=document.getElementById('meetingbot-msg');
   const url=(document.getElementById('meetingbot-url-input').value||'').trim().replace(/\/+$/,'');
@@ -6650,12 +6664,10 @@ function toggleMeetingRecording(id){
 
 const DEFAULT_MEETING_BACKEND='https://regroup-meeting-agent-backend.onrender.com';
 // Dispatch a Recall.ai recording bot via the TJC meeting-agent backend
-async function sendMeetingBot(id){
-  const e=DB.calendar().find(x=>x._id===id); if(!e) return;
-  const status=document.getElementById('mtg-bot-status');
-  let url=(localStorage.getItem('rg_meetingbot_url')||'').trim().replace(/\/+$/,'') || DEFAULT_MEETING_BACKEND;
-  if(!e.video){ status.style.color='#e53935'; status.textContent='This event has no video link.'; return; }
-  // Build attendee emails: invited staff -> their profile email, plus any emails in the external field
+// Core dispatch (no DOM) — returns {ok, botEventId, attendees, error}
+async function dispatchMeetingBot(e){
+  if(!e || !e.video) return {ok:false, error:'no video link'};
+  const url=(localStorage.getItem('rg_meetingbot_url')||'').trim().replace(/\/+$/,'') || DEFAULT_MEETING_BACKEND;
   const staff=DB.staff();
   const emails=[];
   (e.invited||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(n=>{
@@ -6664,22 +6676,42 @@ async function sendMeetingBot(id){
   });
   (e.external||'').split(/[;,]+/).map(s=>s.trim()).forEach(x=>{ if(/@/.test(x)) emails.push(x); });
   const attendees=[...new Set(emails)].map(em=>({email:em}));
-  status.style.color='#666'; status.textContent='Dispatching bot to the meeting (backend may take ~15s to wake)…';
   try{
     const r=await fetch(url+'/api/meeting-agent/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
-      title:e.title||'Meeting', meeting_url:e.video, platform:'auto', starts_at:null, ends_at:null,
-      attendees,
+      title:e.title||'Meeting', meeting_url:e.video, platform:'auto', starts_at:null, ends_at:null, attendees,
       notice_text:'ReGroup Summary Agent may join this meeting to record/transcribe it and create a written summary for authorized attendees.',
       consent_confirmed:true, send_to_attendees:false, review_required:false, create_bot_now:true,
-      source:'regroup_app_calendar', eventId:id
+      source:'regroup_app_calendar', eventId:e._id
     })});
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error((d.error&&(d.error.message||JSON.stringify(d.error)))||('HTTP '+r.status));
-    const ev=d.event||d; const botId=ev.provider_bot_id||ev.bot_id||'';
-    if(ev.id) await DB.updateCalEvent(id, {botEventId:ev.id, botStatus:ev.bot_status||'requested'});
-    status.style.color='#43a047';
-    status.textContent='✓ Bot requested'+(attendees.length?(' for '+attendees.length+' attendee'+(attendees.length!==1?'s':'')):'')+'. Admit “ReGroup Summary Agent” if it waits in the lobby; when the meeting ends the summary is delivered to attendees’ in-app inboxes automatically.'+(botId?'':' (If it doesn’t join, check the meeting link / Recall.)');
-  }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message+'. The backend may be waking up — wait ~20s and try again.'; }
+    const ev=d.event||d;
+    if(ev.id) await DB.updateCalEvent(e._id, {botEventId:ev.id, botStatus:ev.bot_status||'requested'});
+    return {ok:true, botEventId:ev.id||'', attendees};
+  }catch(err){ return {ok:false, error:err.message}; }
+}
+// Manual dispatch from a calendar event (with on-screen status)
+async function sendMeetingBot(id){
+  const e=DB.calendar().find(x=>x._id===id); if(!e) return;
+  const status=document.getElementById('mtg-bot-status');
+  if(!e.video){ status.style.color='#e53935'; status.textContent='This event has no video link.'; return; }
+  status.style.color='#666'; status.textContent='Dispatching bot to the meeting (backend may take ~15s to wake)…';
+  const res=await dispatchMeetingBot(e);
+  if(res.ok){ status.style.color='#43a047'; status.textContent='✓ Bot requested'+(res.attendees.length?(' for '+res.attendees.length+' attendee'+(res.attendees.length!==1?'s':'')):'')+'. Admit “ReGroup Summary Agent” if it waits in the lobby; when the meeting ends the summary is delivered to attendees’ in-app inboxes automatically.'; }
+  else { status.style.color='#e53935'; status.textContent='Bot error — '+res.error+'. The backend may be waking up — wait ~20s and try again.'; }
+}
+// Autonomous: when enabled by admin, send a bot to every calendar meeting that has a
+// video link as its start time approaches (once per meeting).
+let _autoBotBusy=false;
+async function autoDispatchBots(){
+  if(localStorage.getItem('rg_meetingbot_auto')!=='1' || _autoBotBusy) return;
+  const now=new Date(), todayStr=now.toISOString().slice(0,10), nowMin=now.getHours()*60+now.getMinutes();
+  const due=DB.calendar().filter(e=>e.video && !e.botEventId && e.date===todayStr && (()=>{
+    if(!e.time) return true; const [h,m]=e.time.split(':').map(Number); const st=h*60+m; return nowMin>=st-3 && nowMin<=st+15;
+  })());
+  if(!due.length) return;
+  _autoBotBusy=true;
+  try{ for(const e of due){ await dispatchMeetingBot(e); } } finally { _autoBotBusy=false; }
 }
 
 // Poll the meeting backend for finished summaries and drop them into attendee app inboxes
@@ -7065,7 +7097,7 @@ document.getElementById('topbar-date').textContent = new Date().toLocaleDateStri
 initForms();
 restoreSession();
 // Poll the meeting backend so finished summaries reach attendee inboxes even when off the Calendar tab
-setInterval(()=>{ if(_currentUser){ try{ checkMeetingSummaries(); }catch(e){} } }, 120000);
+setInterval(()=>{ if(_currentUser){ try{ checkMeetingSummaries(); autoDispatchBots(); }catch(e){} } }, 120000);
 
 // Expose all functions used by inline onclick/onchange handlers to global scope
 // (required because <script type="module"> does not share scope with HTML attributes)
@@ -7081,7 +7113,7 @@ Object.assign(window, {
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
-  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, saveMeetingBotUrl, testMeetingBot, toggleMeetingRecording,
+  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
