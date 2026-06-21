@@ -6490,8 +6490,16 @@ function openCalDetail(id){
       <button class="btn btn-accent" style="font-size:0.82em;" onclick="sendMeetingBot('${id}')">🤖 Send recording bot to this meeting</button>
       <span id="mtg-bot-status" style="font-size:0.82em;color:#666;margin-left:8px;"></span>
     </div>`:''}
-    <p style="font-size:0.8em;color:#888;margin-bottom:6px;">Or paste the meeting transcript/notes (from the platform's recording / auto-caption) — the agent summarizes it and messages every invited TJC staff member's inbox + Admin.</p>
-    <textarea id="mtg-transcript" rows="3" placeholder="Paste transcript or notes here…" style="width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88em;min-height:60px;"></textarea>
+    <div style="background:#f8f9fa;border:1px solid #e5e9f0;border-radius:10px;padding:12px;margin-bottom:10px;">
+      <div style="font-size:0.85em;font-weight:600;color:var(--primary);margin-bottom:4px;">🔴 Record &amp; transcribe (in this browser — no server needed)</div>
+      <p style="font-size:0.78em;color:#777;margin-bottom:8px;">On the device in the meeting (or with the call on speaker), start recording — speech is transcribed live below. Stop, then summarize to message every attendee. Works in Chrome/Edge.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-danger" id="mtg-rec-btn" onclick="toggleMeetingRecording('${id}')">🔴 Start recording</button>
+        <span id="mtg-rec-status" style="font-size:0.82em;color:#666;"></span>
+      </div>
+    </div>
+    <p style="font-size:0.8em;color:#888;margin-bottom:6px;">Live transcript (editable) — or paste a transcript/auto-caption here. Then summarize to message every invited TJC staff member's inbox + Admin.</p>
+    <textarea id="mtg-transcript" rows="3" placeholder="Transcript appears here as you record, or paste it…" style="width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88em;min-height:60px;"></textarea>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;">
       <button class="btn btn-accent" style="font-size:0.82em;" onclick="summarizeMeeting('${id}')">✨ Summarize &amp; message attendees</button>
       <span id="mtg-sum-status" style="font-size:0.82em;color:#666;"></span>
@@ -6521,6 +6529,40 @@ async function testMeetingBot(){
     m.style.color=d.ok?'#43a047':'#e53935';
     m.textContent=d.ok?`✓ Connected. Recall:${d.recall_configured?'on':'off'} · Anthropic:${d.anthropic_configured?'on':'off'} · Firestore:${d.firestore_configured?'on':'off'}`:'Unexpected response.';
   }catch(err){ m.style.color='#e53935'; m.textContent='Could not reach backend — '+err.message; }
+}
+
+// In-browser meeting recorder: live speech-to-text via the Web Speech API.
+// No server, no paid bot — transcribes on the device that's in the meeting.
+let _mtgRec = null, _mtgRecOn = false, _mtgRecBase = '';
+function toggleMeetingRecording(id){
+  const status=document.getElementById('mtg-rec-status');
+  const btn=document.getElementById('mtg-rec-btn');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ if(status){status.style.color='#e53935'; status.textContent='Live transcription needs Chrome or Edge. Use “paste transcript” instead.';} return; }
+  if(_mtgRecOn){ // stop
+    _mtgRecOn=false; try{ _mtgRec && _mtgRec.stop(); }catch(e){}
+    btn.textContent='🔴 Start recording'; btn.classList.remove('btn-outline'); btn.classList.add('btn-danger');
+    if(status){ status.style.color='#43a047'; status.textContent='Stopped. Review the transcript, then “Summarize & message attendees”.'; }
+    return;
+  }
+  // start
+  const ta=document.getElementById('mtg-transcript');
+  _mtgRecBase = ta.value ? ta.value.replace(/\s+$/,'')+'\n' : '';
+  _mtgRec = new SR(); _mtgRec.continuous=true; _mtgRec.interimResults=true; _mtgRec.lang='en-US';
+  let finalText='';
+  _mtgRec.onresult=(ev)=>{
+    let interim='';
+    for(let i=ev.resultIndex;i<ev.results.length;i++){
+      const t=ev.results[i][0].transcript;
+      if(ev.results[i].isFinal) finalText+=t+' '; else interim+=t;
+    }
+    ta.value=_mtgRecBase+finalText+interim;
+    ta.scrollTop=ta.scrollHeight;
+  };
+  _mtgRec.onerror=(e)=>{ if(status){ status.style.color='#e53935'; status.textContent='Mic/recognition error: '+(e.error||'unknown')+'. Allow microphone access.'; } };
+  _mtgRec.onend=()=>{ if(_mtgRecOn){ try{ _mtgRec.start(); }catch(e){} } };  // auto-restart while recording
+  try{ _mtgRec.start(); _mtgRecOn=true; btn.textContent='⏹ Stop recording'; btn.classList.remove('btn-danger'); btn.classList.add('btn-outline'); if(status){ status.style.color='#c0392b'; status.textContent='● Recording… speak; transcript fills in below.'; } }
+  catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Could not start: '+e.message; } }
 }
 
 // Dispatch a Recall.ai recording bot (via the meeting-bot backend) to this meeting
@@ -6914,7 +6956,7 @@ Object.assign(window, {
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
-  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, saveMeetingBotUrl, testMeetingBot,
+  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, saveMeetingBotUrl, testMeetingBot, toggleMeetingRecording,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
