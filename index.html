@@ -6409,7 +6409,15 @@ function openCalDetail(id){
       <div style="margin-top:8px;font-size:0.78em;color:#aaa;">Created by ${fEsc(e.createdBy)||'—'}</div>
     </div>
     <h4 style="color:var(--primary);margin:18px 0 8px;border-bottom:1.5px solid #eef;padding-bottom:6px;">📚 History with the same external people</h4>
-    ${history.length?history.map(o=>`<div style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.86em;cursor:pointer;" onclick="openCalDetail('${o._id}')"><b>${fmtDate(o.date)}</b> — ${fEsc(o.title)} <span style="color:#aaa;">(${fEsc(o.external)})</span></div>`).join(''):'<p style="color:#bbb;font-size:0.85em;">No other meetings with these external people yet.</p>'}`;
+    ${history.length?history.map(o=>`<div style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.86em;cursor:pointer;" onclick="openCalDetail('${o._id}')"><b>${fmtDate(o.date)}</b> — ${fEsc(o.title)} <span style="color:#aaa;">(${fEsc(o.external)})</span></div>`).join(''):'<p style="color:#bbb;font-size:0.85em;">No other meetings with these external people yet.</p>'}
+    <h4 style="color:var(--primary);margin:18px 0 8px;border-bottom:1.5px solid #eef;padding-bottom:6px;">🎙 Meeting Summary</h4>
+    ${e.summary?`<div style="background:#f0f9f4;border:1px solid #cdeed6;border-radius:10px;padding:12px;font-size:0.88em;white-space:pre-wrap;line-height:1.6;margin-bottom:10px;">${fEsc(e.summary)}</div><div style="font-size:0.75em;color:#aaa;margin-bottom:8px;">Summarized by ${fEsc(e.summarizedBy)||'—'}</div>`:''}
+    <p style="font-size:0.8em;color:#888;margin-bottom:6px;">Paste the meeting transcript or notes (from the platform's recording / auto-caption). The agent writes a summary and messages it to every invited TJC staff member's inbox + Admin.</p>
+    <textarea id="mtg-transcript" rows="3" placeholder="Paste transcript or notes here…" style="width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88em;min-height:60px;"></textarea>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+      <button class="btn btn-accent" style="font-size:0.82em;" onclick="summarizeMeeting('${id}')">✨ Summarize &amp; message attendees</button>
+      <span id="mtg-sum-status" style="font-size:0.82em;color:#666;"></span>
+    </div>`;
   document.getElementById('cal-detail-edit').style.display=isOwnerOrAdmin(e.createdBy)?'inline-flex':'none';
   document.getElementById('cal-detail').style.display='flex';
 }
@@ -6418,6 +6426,37 @@ function editCalFromDetail(){ const id=_calDetailId; closeCalDetail(); openCalEv
 function deleteCalEvent(){
   const id=document.getElementById('ce-id').value; if(!id) return;
   requireAdmin(async ()=>{ if(!confirm('Delete this event?')) return; await DB.removeCalEvent(id); closeCalEvent(); renderCalendar(); });
+}
+
+// Meeting Summary Agent: summarize a transcript and message it to all invited TJC staff
+async function summarizeMeeting(id){
+  const e=DB.calendar().find(x=>x._id===id); if(!e) return;
+  const status=document.getElementById('mtg-sum-status');
+  const key=(localStorage.getItem('rg_anthropic_key')||'').trim();
+  if(!key){ status.style.color='#e53935'; status.textContent='No AI key set — add one in Settings → AI.'; return; }
+  const transcript=(document.getElementById('mtg-transcript').value||'').trim();
+  if(!transcript){ status.style.color='#e53935'; status.textContent='Paste the meeting transcript or notes first.'; return; }
+  status.style.color='#666'; status.textContent='Summarizing…';
+  const prompt='You are a meeting-notes assistant for ReGroup / TJC Oregon. Summarize the meeting transcript/notes below in Markdown with sections: **Summary** (2-4 sentences), **Key Points** (bullets), **Decisions** (bullets), **Action Items** (each as "owner — task — due if stated"). Be faithful; do not invent. Meeting: "'+(e.title||'')+'" on '+fmtDate(e.date)+'.\n\nTRANSCRIPT/NOTES:\n'+transcript;
+  let text='';
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:1500,messages:[{role:'user',content:prompt}]})});
+    if(!resp.ok){ let d=''; try{const j=await resp.json(); d=(j.error&&j.error.message)||'';}catch(_){} throw new Error('Anthropic API '+resp.status+(d?': '+d:'')); }
+    const j=await resp.json();
+    text=(j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+  }catch(err){ status.style.color='#e53935'; status.textContent='AI error — '+err.message; return; }
+  if(!text){ status.style.color='#e53935'; status.textContent='No summary returned — try again.'; return; }
+  await DB.updateCalEvent(id, {summary:text, summarizedBy:currentUserName(), summarizedAt:new Date().toISOString()});
+  // Message the summary to every invited internal/TJC staff member + Admin
+  const staffNames=DB.staff().map(s=>s.name);
+  const invited=(e.invited||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const recipients=new Set(invited.filter(n=>staffNames.some(sn=>sn.toLowerCase()===n.toLowerCase())));
+  const msg='🎙 Meeting summary — "'+(e.title||'')+'" ('+fmtDate(e.date)+'):\n\n'+text;
+  let sent=0;
+  for(const n of recipients){ try{ await DB.addMessage({mentorName:n, from:'Meeting Notes', text:msg, read:false}); sent++; }catch(_){} }
+  try{ await DB.addMessage({mentorName:'Admin', from:'Meeting Notes', text:msg, read:false}); }catch(_){}
+  status.style.color='#43a047'; status.textContent='✓ Summarized and messaged to '+sent+' attendee'+(sent!==1?'s':'')+' + Admin.';
+  openCalDetail(id);
 }
 
 // ===================================================================
@@ -6675,7 +6714,7 @@ Object.assign(window, {
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
-  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent,
+  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   submitPIN, cancelPIN, changeAdminPIN,
