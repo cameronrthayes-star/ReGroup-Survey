@@ -270,6 +270,7 @@ table tr:hover td{background:#fafbff;}
 
     <div class="nav-section">Directory</div>
     <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Directory</a>
+    <a onclick="navigate('service-plans')" data-view="service-plans"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Service Plans</a>
     <a onclick="navigate('email-blast')" data-view="email-blast"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span> Email Blast</a>
     <a onclick="navigate('fundraising')" data-view="fundraising"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> Fundraising</a>
 
@@ -465,6 +466,48 @@ table tr:hover td{background:#fafbff;}
             <button class="btn btn-outline" onclick="closeRJCase()">Close</button>
             <button id="rj-back-btn" class="btn btn-outline" onclick="rjBack()">‹ Back</button>
             <button id="rj-next-btn" class="btn btn-primary" onclick="rjSaveAndNext()">Save &amp; Continue ›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SERVICE PLANS ===== -->
+    <div id="view-service-plans" class="view">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <h2 style="color:var(--primary);font-size:1.1em;font-weight:700;">Client Goals &amp; Service Plans</h2>
+        <button class="btn btn-accent" onclick="openServicePlan(null)">＋ New Service Plan</button>
+      </div>
+      <div class="card no-print" style="margin-bottom:14px;">
+        <input id="sp-search" type="text" placeholder="Search by client, ID, mentor, need, or goal…" oninput="renderServicePlans()" style="width:100%;padding:9px 14px;border:1.5px solid #ddd;border-radius:8px;font-size:0.925em;">
+      </div>
+      <div id="sp-list"></div>
+    </div>
+
+    <!-- Service Plan Modal -->
+    <div id="sp-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:26px 26px;width:760px;max-width:96vw;max-height:94vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 id="sp-modal-title" style="color:var(--primary);margin-bottom:16px;">New Service Plan</h3>
+        <input type="hidden" id="sp-id">
+        <div class="form-grid">
+          <div class="form-group"><label>Client Name</label><input type="text" id="sp-clientName" list="client-name-list" oninput="spFillClientId()"></div>
+          <div class="form-group"><label>Client ID</label><input type="text" id="sp-clientId"></div>
+          <div class="form-group"><label>Primary Mentor</label><input type="text" id="sp-mentor" list="staff-name-list"></div>
+          <div class="form-group"><label>Service Stage</label><select id="sp-stage"><option>Intake</option><option>Active</option><option>Stabilizing</option><option>Maintenance</option><option>Closed</option></select></div>
+          <div class="form-group"><label>Plan Start</label><input type="date" id="sp-start"></div>
+          <div class="form-group"><label>Next Review</label><input type="date" id="sp-review"></div>
+          <div class="form-group full"><label>Need Areas <span style="color:#aaa;font-weight:400;">(comma-separated)</span></label><input type="text" id="sp-domains" placeholder="Housing, Employment, Healthcare, Treatment…"></div>
+          <div class="form-group full"><label>Current Needs</label><textarea id="sp-needs" rows="2"></textarea></div>
+          <div class="form-group full"><label>Strengths &amp; Protective Factors</label><textarea id="sp-strengths" rows="2"></textarea></div>
+          <div class="form-group full"><label>Barriers</label><textarea id="sp-barriers" rows="2"></textarea></div>
+        </div>
+        <h4 style="color:var(--primary);margin:16px 0 8px;border-bottom:1.5px solid #eef;padding-bottom:6px;">Goals &amp; Action Steps</h4>
+        <div id="sp-goals"></div>
+        <button class="btn btn-outline" style="font-size:0.82em;margin-top:6px;" onclick="spAddGoal()">+ Add Goal</button>
+        <div style="display:flex;gap:10px;margin-top:20px;justify-content:space-between;flex-wrap:wrap;">
+          <button id="sp-delete-btn" class="btn btn-danger" onclick="deleteServicePlan()" style="display:none;">Delete</button>
+          <div style="display:flex;gap:10px;margin-left:auto;">
+            <button class="btn btn-outline" onclick="closeServicePlan()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveServicePlan()">Save Plan</button>
           </div>
         </div>
       </div>
@@ -2123,7 +2166,7 @@ let _listenersReady   = 0;
 
 function _onReady() {
   _listenersReady++;
-  if (_listenersReady === 15) {
+  if (_listenersReady === 16) {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
@@ -2176,6 +2219,7 @@ let _dashboardConfig = null;
 let _messages = [];
 let _calendar = [];
 let _rjCases = [];
+let _servicePlans = [];
 
 onSnapshot(collection(db,'calendar'), snap => {
   _calendar = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -2186,6 +2230,11 @@ onSnapshot(collection(db,'rjCases'), snap => {
   _rjCases = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-rj')?.classList.contains('active')) renderRJ();
+});
+onSnapshot(collection(db,'servicePlans'), snap => {
+  _servicePlans = snap.docs.map(d => ({...d.data(), _id:d.id}));
+  _onReady();
+  if (document.getElementById('view-service-plans')?.classList.contains('active')) renderServicePlans();
 });
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
@@ -2274,6 +2323,11 @@ const DB = {
 
   dashboardConfig: () => _dashboardConfig,
   async setDashboardConfig(metrics){ await setDoc(doc(db,'config','dashboard'), {metrics, _updatedAt: serverTimestamp()}); },
+
+  servicePlans: () => _servicePlans,
+  async addServicePlan(p)      { const r=await addDoc(collection(db,'servicePlans'), {...p, _createdAt: serverTimestamp()}); return r.id; },
+  async updateServicePlan(id,p){ await setDoc(doc(db,'servicePlans',id), {...p, _updatedAt: serverTimestamp()}, {merge:true}); },
+  async removeServicePlan(id)  { await deleteDoc(doc(db,'servicePlans',id)); },
 
   rjCases: () => _rjCases,
   async addRJCase(c)         { const r = await addDoc(collection(db,'rjCases'), {...c, _createdAt: serverTimestamp()}); return r.id; },
@@ -2400,6 +2454,7 @@ const VIEW_TITLES = {
   'needs-assessment':'Reentry Needs Assessment',
   'expense-report':'Expense Reimbursement',
   'clients':'Directory',
+  'service-plans':'Client Goals & Service Plans',
   'email-blast':'Email Blast',
   'my-tasks':'Mentor Inbox — Messages & Tasks',
   'projects':'Projects',
@@ -2561,6 +2616,7 @@ function navigate(v, isBack) {
   if (v==='profile') renderProfile();
   if (v==='calendar') renderCalendar();
   if (v==='rj') renderRJ();
+  if (v==='service-plans') renderServicePlans();
   if (v==='grants') renderGrantsKey();
   if (v==='progress-note' || v==='activity-log') populateClientNameList();
   closeNav();
@@ -3635,6 +3691,9 @@ document.getElementById('cal-detail').addEventListener('click', function(e) {
 });
 document.getElementById('rj-modal').addEventListener('click', function(e) {
   if (e.target === this) closeRJCase();
+});
+document.getElementById('sp-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeServicePlan();
 });
 document.getElementById('msg-modal').addEventListener('click', function(e) {
   if (e.target === this) closeMentorMessages();
@@ -6460,6 +6519,93 @@ async function summarizeMeeting(id){
 }
 
 // ===================================================================
+// SERVICE PLANS (Client Goals + Service Plan — Firestore-backed, integrated)
+// ===================================================================
+let _spId=null;
+const SP_GOAL_STATUS=['Not started','In progress','On track','Behind','Completed','Paused'];
+function spClientLabel(p){ return p.clientName||p.clientId||'Unnamed client'; }
+function spGoalRow(g){
+  g=g||{};
+  return `<div class="card" style="padding:12px;margin-bottom:10px;" data-goal>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-group" style="flex:1;min-width:150px;margin:0;"><label>Goal area</label><input class="sp-g-cat" value="${fEsc(g.category||'')}" placeholder="Housing, Employment…"></div>
+      <div class="form-group" style="margin:0;"><label>Status</label><select class="sp-g-status">${SP_GOAL_STATUS.map(s=>`<option ${g.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="form-group" style="margin:0;"><label>Target</label><input type="date" class="sp-g-target" value="${fEsc(g.targetDate||'')}"></div>
+      <button class="btn btn-outline" style="font-size:0.8em;" onclick="this.closest('[data-goal]').remove()">×</button>
+    </div>
+    <div class="form-group" style="margin:8px 0 0;"><label>Goal statement</label><textarea class="sp-g-statement" rows="2">${fEsc(g.statement||'')}</textarea></div>
+    <div class="form-group" style="margin:8px 0 0;"><label>Next step</label><input class="sp-g-next" value="${fEsc(g.nextStep||'')}"></div>
+  </div>`;
+}
+function spAddGoal(g){ document.getElementById('sp-goals').insertAdjacentHTML('beforeend', spGoalRow(g)); }
+function spFillClientId(){ const v=document.getElementById('sp-clientName').value.trim().toLowerCase(); const c=DB.clients().find(x=>clientFullName(x).toLowerCase()===v); if(c) document.getElementById('sp-clientId').value=c.clientId||''; }
+function renderServicePlans(){
+  const el=document.getElementById('sp-list'); if(!el) return;
+  const all=DB.servicePlans();
+  const q=(document.getElementById('sp-search')?.value||'').toLowerCase();
+  let list=all.slice().reverse();
+  if(q) list=list.filter(p=>JSON.stringify(p).toLowerCase().includes(q));
+  if(!all.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:40px;">No service plans yet. Click “＋ New Service Plan” to build one (linked to clients, mentors, and progress notes).</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:30px;">No plans match your search.</div>'; return; }
+  el.innerHTML=list.map(p=>{
+    const goals=p.goals||[]; const open=goals.filter(g=>g.status!=='Completed').length;
+    return `<div class="card" style="margin-bottom:12px;cursor:pointer;" onclick="openServicePlan('${p._id}')">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div><span style="font-weight:700;color:var(--primary);">${fEsc(spClientLabel(p))}</span> <span style="color:#999;font-size:0.85em;">${p.clientId?'#'+fEsc(p.clientId):''}</span></div>
+        <span class="badge ${p.stage==='Closed'?'badge-success':'badge-info'}">${fEsc(p.stage||'Active')}</span>
+      </div>
+      <div style="font-size:0.82em;color:#777;margin-top:4px;">${p.mentor?'👤 '+fEsc(p.mentor)+' · ':''}${goals.length} goal${goals.length!==1?'s':''} (${open} open)${(p.domains&&p.domains.length)?' · '+fEsc((Array.isArray(p.domains)?p.domains:[p.domains]).join(', ')):''}</div>
+    </div>`;
+  }).join('');
+}
+function openServicePlan(id){
+  const set=(i,val)=>{const e=document.getElementById(i); if(e) e.value=val==null?'':val;};
+  document.getElementById('sp-goals').innerHTML='';
+  if(id){
+    const p=DB.servicePlans().find(x=>x._id===id); if(!p) return;
+    if(!isOwnerOrAdmin(p.mentor)){ alert('Only the plan’s mentor or an admin can edit this plan.'); return; }
+    _spId=id;
+    document.getElementById('sp-modal-title').textContent='Edit Service Plan';
+    set('sp-id',id); set('sp-clientName',p.clientName); set('sp-clientId',p.clientId); set('sp-mentor',p.mentor);
+    set('sp-stage',p.stage||'Intake'); set('sp-start',p.startDate); set('sp-review',p.reviewDate);
+    set('sp-domains',Array.isArray(p.domains)?p.domains.join(', '):(p.domains||''));
+    set('sp-needs',p.needsSummary); set('sp-strengths',p.strengths); set('sp-barriers',p.barriers);
+    (p.goals&&p.goals.length?p.goals:[{}]).forEach(spAddGoal);
+    document.getElementById('sp-stage').value=p.stage||'Intake';
+    document.getElementById('sp-delete-btn').style.display=isAdmin()?'inline-flex':'none';
+  } else {
+    _spId=null;
+    document.getElementById('sp-modal-title').textContent='New Service Plan';
+    ['sp-id','sp-clientName','sp-clientId','sp-domains','sp-needs','sp-strengths','sp-barriers','sp-start','sp-review'].forEach(i=>set(i,''));
+    set('sp-mentor', currentUserName()); document.getElementById('sp-stage').value='Intake';
+    spAddGoal({});
+    document.getElementById('sp-delete-btn').style.display='none';
+  }
+  document.getElementById('sp-modal').style.display='flex';
+}
+function closeServicePlan(){ document.getElementById('sp-modal').style.display='none'; _spId=null; }
+async function saveServicePlan(){
+  const v=i=>document.getElementById(i).value.trim();
+  const goals=[...document.querySelectorAll('#sp-goals [data-goal]')].map(c=>({
+    category:c.querySelector('.sp-g-cat').value.trim(),
+    status:c.querySelector('.sp-g-status').value,
+    targetDate:c.querySelector('.sp-g-target').value,
+    statement:c.querySelector('.sp-g-statement').value.trim(),
+    nextStep:c.querySelector('.sp-g-next').value.trim()
+  })).filter(g=>g.category||g.statement);
+  const data={
+    clientName:v('sp-clientName'), clientId:v('sp-clientId'), mentor:v('sp-mentor'),
+    stage:document.getElementById('sp-stage').value, startDate:v('sp-start'), reviewDate:v('sp-review'),
+    domains:v('sp-domains').split(',').map(s=>s.trim()).filter(Boolean),
+    needsSummary:v('sp-needs'), strengths:v('sp-strengths'), barriers:v('sp-barriers'), goals
+  };
+  if(!data.clientName && !data.clientId){ alert('Enter a client name or ID first.'); return; }
+  if(_spId) await DB.updateServicePlan(_spId, data); else await DB.addServicePlan(data);
+  closeServicePlan();
+}
+function deleteServicePlan(){ if(!_spId) return; requireAdmin(async()=>{ if(!confirm('Delete this service plan? This cannot be undone.')) return; await DB.removeServicePlan(_spId); closeServicePlan(); }); }
+
+// ===================================================================
 // GRANTS & FUNDING AGENT (AI web-search agent)
 // ===================================================================
 function renderGrantsKey(){
@@ -6717,6 +6863,7 @@ Object.assign(window, {
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
+  renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient, fillClientId,
@@ -6743,1462 +6890,6 @@ Object.assign(window, {
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
-</script>
-  <script>
-(function () {
-  'use strict';
-
-  const STORAGE_KEY = 'regroup.servicePlans.v1';
-  const VERSION = '2026.06.20';
-  const DOMAIN_OPTIONS = [
-    'Housing',
-    'Employment',
-    'ID and documents',
-    'Healthcare',
-    'Treatment',
-    'Education',
-    'Financial stability',
-    'Family and community',
-    'Legal or court',
-    'Restorative justice accountability',
-    'Safety planning',
-    'Transportation',
-    'Basic needs'
-  ];
-  const STAGE_OPTIONS = ['Intake', 'Active', 'Stabilizing', 'Maintenance', 'Closed'];
-  const STATUS_OPTIONS = ['Not started', 'In progress', 'On track', 'Behind', 'Completed', 'Paused'];
-  const GOAL_STATUS_OPTIONS = ['Not started', 'In progress', 'On track', 'Behind', 'Completed', 'Paused'];
-
-  const state = {
-    selectedId: null,
-    query: ''
-  };
-
-  function byId(id) {
-    return document.getElementById(id);
-  }
-
-  function all(selector, root) {
-    return Array.from((root || document).querySelectorAll(selector));
-  }
-
-  function uid(prefix) {
-    return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-  }
-
-  function today() {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  function escapeHtml(value) {
-    return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  function csvEscape(value) {
-    const text = String(value == null ? '' : value);
-    return '"' + text.replace(/"/g, '""') + '"';
-  }
-
-  function readPlans() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
-      console.warn('Could not read service plans', error);
-      return [];
-    }
-  }
-
-  function writePlans(plans) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
-    window.dispatchEvent(new CustomEvent('regroup:servicePlansUpdated', { detail: { plans: plans } }));
-    hydrateExistingGoalFields();
-  }
-
-  function defaultGoal() {
-    return {
-      id: uid('goal'),
-      category: 'Housing',
-      statement: '',
-      targetDate: '',
-      status: 'Not started',
-      progress: 0,
-      supportActions: '',
-      barriers: '',
-      nextStep: ''
-    };
-  }
-
-  function defaultPlan() {
-    return {
-      id: uid('plan'),
-      clientName: '',
-      clientId: '',
-      mentorName: '',
-      stage: 'Intake',
-      startDate: today(),
-      reviewDate: '',
-      planStatus: 'Active',
-      domains: [],
-      needsSummary: '',
-      strengths: '',
-      barriers: '',
-      safetyNotes: '',
-      goals: [defaultGoal()],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-  }
-
-  function calcStats(plans) {
-    const activePlans = plans.filter(function (plan) { return plan.planStatus !== 'Closed'; }).length;
-    const goals = plans.flatMap(function (plan) { return plan.goals || []; });
-    return {
-      plans: plans.length,
-      activePlans: activePlans,
-      goals: goals.length,
-      onTrack: goals.filter(function (goal) { return goal.status === 'On track' || goal.status === 'In progress'; }).length,
-      behind: goals.filter(function (goal) { return goal.status === 'Behind'; }).length,
-      completed: goals.filter(function (goal) { return goal.status === 'Completed'; }).length
-    };
-  }
-
-  function mount() {
-    if (byId('rgsp-root')) return;
-    mountStyles();
-    mountLauncher();
-    mountOverlay();
-    bindOverlayEvents();
-    hydrateExistingGoalFields();
-    setInterval(hydrateExistingGoalFields, 4000);
-  }
-
-  function mountStyles() {
-    const style = document.createElement('style');
-    style.id = 'rgsp-styles';
-    style.textContent = `
-      .rgsp-launcher {
-        position: fixed;
-        right: 18px;
-        bottom: 18px;
-        z-index: 99990;
-        border: 0;
-        border-radius: 999px;
-        padding: 12px 18px;
-        background: #111827;
-        color: #ffffff;
-        font-weight: 700;
-        box-shadow: 0 10px 24px rgba(0,0,0,.18);
-        cursor: pointer;
-      }
-      .rgsp-launcher:hover { filter: brightness(1.08); }
-      .rgsp-root {
-        position: fixed;
-        inset: 0;
-        background: rgba(17,24,39,.62);
-        z-index: 99999;
-        display: flex;
-        align-items: stretch;
-        justify-content: center;
-        padding: 22px;
-        box-sizing: border-box;
-      }
-      .rgsp-hidden { display: none !important; }
-      .rgsp-panel {
-        width: min(1280px, 100%);
-        max-height: calc(100vh - 44px);
-        background: #f9fafb;
-        border-radius: 18px;
-        overflow: hidden;
-        box-shadow: 0 24px 72px rgba(0,0,0,.28);
-        color: #111827;
-        display: flex;
-        flex-direction: column;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-      .rgsp-header {
-        display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        align-items: flex-start;
-        padding: 20px 22px;
-        background: #ffffff;
-        border-bottom: 1px solid #e5e7eb;
-      }
-      .rgsp-header h2 { margin: 0 0 4px; font-size: 24px; }
-      .rgsp-header p { margin: 0; color: #4b5563; font-size: 14px; }
-      .rgsp-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
-      .rgsp-btn {
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        padding: 9px 12px;
-        background: #ffffff;
-        color: #111827;
-        font-weight: 650;
-        cursor: pointer;
-      }
-      .rgsp-btn:hover { background: #f3f4f6; }
-      .rgsp-btn-primary { background: #111827; color: #ffffff; border-color: #111827; }
-      .rgsp-btn-danger { color: #991b1b; border-color: #fecaca; }
-      .rgsp-layout {
-        min-height: 0;
-        flex: 1;
-        display: grid;
-        grid-template-columns: 330px minmax(0, 1fr);
-      }
-      .rgsp-sidebar {
-        border-right: 1px solid #e5e7eb;
-        background: #ffffff;
-        padding: 16px;
-        overflow: auto;
-      }
-      .rgsp-main { overflow: auto; padding: 20px; }
-      .rgsp-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-      .rgsp-stat { background: #f3f4f6; border-radius: 12px; padding: 12px; }
-      .rgsp-stat strong { display: block; font-size: 22px; line-height: 1; }
-      .rgsp-stat span { display: block; color: #4b5563; font-size: 12px; margin-top: 5px; }
-      .rgsp-search { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
-      .rgsp-plan-list { display: grid; gap: 8px; }
-      .rgsp-plan-card {
-        text-align: left;
-        border: 1px solid #e5e7eb;
-        border-radius: 12px;
-        background: #ffffff;
-        padding: 12px;
-        cursor: pointer;
-      }
-      .rgsp-plan-card:hover { border-color: #9ca3af; }
-      .rgsp-plan-card.rgsp-selected { border-color: #111827; box-shadow: inset 0 0 0 1px #111827; }
-      .rgsp-plan-card strong { display: block; margin-bottom: 3px; }
-      .rgsp-plan-card span { display: block; color: #4b5563; font-size: 12px; }
-      .rgsp-empty { color: #4b5563; font-size: 14px; padding: 16px; background: #f3f4f6; border-radius: 12px; }
-      .rgsp-form-section { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
-      .rgsp-form-section h3 { margin: 0 0 12px; font-size: 18px; }
-      .rgsp-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-      .rgsp-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-      .rgsp-field label { display: block; font-weight: 650; margin-bottom: 5px; font-size: 13px; }
-      .rgsp-field input,
-      .rgsp-field select,
-      .rgsp-field textarea {
-        width: 100%;
-        box-sizing: border-box;
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        padding: 10px 11px;
-        font: inherit;
-        background: #ffffff;
-      }
-      .rgsp-field textarea { min-height: 84px; resize: vertical; }
-      .rgsp-domain-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-      .rgsp-check {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 9px;
-        background: #f9fafb;
-        font-size: 13px;
-      }
-      .rgsp-check input { width: auto; }
-      .rgsp-goal-card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; margin-bottom: 12px; background: #f9fafb; }
-      .rgsp-goal-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-      .rgsp-goal-top strong { font-size: 15px; }
-      .rgsp-footer-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-      .rgsp-small-note { color: #6b7280; font-size: 12px; margin-top: 8px; }
-      .rgsp-file { display: none; }
-      @media (max-width: 860px) {
-        .rgsp-root { padding: 0; }
-        .rgsp-panel { max-height: 100vh; border-radius: 0; }
-        .rgsp-layout { grid-template-columns: 1fr; }
-        .rgsp-sidebar { max-height: 260px; border-right: 0; border-bottom: 1px solid #e5e7eb; }
-        .rgsp-grid, .rgsp-grid-3, .rgsp-domain-grid { grid-template-columns: 1fr; }
-      }
-      @media print {
-        body * { visibility: hidden; }
-        #rgsp-root, #rgsp-root * { visibility: visible; }
-        #rgsp-root { position: absolute; inset: 0; background: white; padding: 0; }
-        .rgsp-panel { box-shadow: none; max-height: none; border-radius: 0; }
-        .rgsp-sidebar, .rgsp-actions, .rgsp-launcher, .rgsp-footer-actions, .rgsp-btn { display: none !important; }
-        .rgsp-layout { display: block; }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
-  function mountLauncher() {
-    const button = document.createElement('button');
-    button.id = 'rgsp-launcher';
-    button.type = 'button';
-    button.className = 'rgsp-launcher';
-    button.textContent = 'Service Plans';
-    button.addEventListener('click', openModule);
-    document.body.appendChild(button);
-  }
-
-  function mountOverlay() {
-    const root = document.createElement('div');
-    root.id = 'rgsp-root';
-    root.className = 'rgsp-root rgsp-hidden';
-    root.innerHTML = `
-      <div class="rgsp-panel" role="dialog" aria-modal="true" aria-labelledby="rgsp-title">
-        <div class="rgsp-header">
-          <div>
-            <h2 id="rgsp-title">Client Goals + Service Plan</h2>
-            <p>Build a plan from needs, strengths, goals, barriers, and next steps. Active goals can be linked from Progress Notes.</p>
-          </div>
-          <div class="rgsp-actions">
-            <button type="button" class="rgsp-btn" id="rgsp-export-json">Export JSON</button>
-            <button type="button" class="rgsp-btn" id="rgsp-import-json">Import JSON</button>
-            <button type="button" class="rgsp-btn" id="rgsp-export-csv">Export CSV</button>
-            <button type="button" class="rgsp-btn" id="rgsp-print">Print</button>
-            <button type="button" class="rgsp-btn" id="rgsp-close">Close</button>
-            <input type="file" id="rgsp-import-file" class="rgsp-file" accept="application/json,.json">
-          </div>
-        </div>
-        <div class="rgsp-layout">
-          <aside class="rgsp-sidebar">
-            <div id="rgsp-stats" class="rgsp-stat-grid"></div>
-            <input id="rgsp-search" class="rgsp-search" type="search" placeholder="Search by client, ID, mentor, or need">
-            <button type="button" class="rgsp-btn rgsp-btn-primary" id="rgsp-new-plan" style="width:100%; margin-bottom:12px;">New Service Plan</button>
-            <div id="rgsp-plan-list" class="rgsp-plan-list"></div>
-          </aside>
-          <main class="rgsp-main">
-            <form id="rgsp-form"></form>
-          </main>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(root);
-  }
-
-  function bindOverlayEvents() {
-    byId('rgsp-close').addEventListener('click', closeModule);
-    byId('rgsp-new-plan').addEventListener('click', function () {
-      const plan = defaultPlan();
-      state.selectedId = plan.id;
-      renderEditor(plan, true);
-      renderList();
-    });
-    byId('rgsp-search').addEventListener('input', function (event) {
-      state.query = event.target.value.trim().toLowerCase();
-      renderList();
-    });
-    byId('rgsp-export-json').addEventListener('click', exportJson);
-    byId('rgsp-import-json').addEventListener('click', function () { byId('rgsp-import-file').click(); });
-    byId('rgsp-import-file').addEventListener('change', importJson);
-    byId('rgsp-export-csv').addEventListener('click', exportCsv);
-    byId('rgsp-print').addEventListener('click', function () { window.print(); });
-    byId('rgsp-form').addEventListener('click', handleFormClick);
-    byId('rgsp-form').addEventListener('submit', handleSave);
-  }
-
-  function openModule() {
-    byId('rgsp-root').classList.remove('rgsp-hidden');
-    const plans = readPlans();
-    if (!state.selectedId && plans.length) state.selectedId = plans[0].id;
-    if (!state.selectedId) state.selectedId = defaultPlan().id;
-    render();
-  }
-
-  function closeModule() {
-    byId('rgsp-root').classList.add('rgsp-hidden');
-  }
-
-  function render() {
-    renderStats();
-    renderList();
-    const plans = readPlans();
-    const plan = plans.find(function (item) { return item.id === state.selectedId; }) || defaultPlan();
-    if (!plans.length && !state.selectedId) state.selectedId = plan.id;
-    renderEditor(plan, !plans.some(function (item) { return item.id === plan.id; }));
-  }
-
-  function renderStats() {
-    const stats = calcStats(readPlans());
-    byId('rgsp-stats').innerHTML = `
-      <div class="rgsp-stat"><strong>${stats.activePlans}</strong><span>active plans</span></div>
-      <div class="rgsp-stat"><strong>${stats.goals}</strong><span>total goals</span></div>
-      <div class="rgsp-stat"><strong>${stats.onTrack}</strong><span>on track</span></div>
-      <div class="rgsp-stat"><strong>${stats.behind}</strong><span>behind</span></div>
-    `;
-  }
-
-  function filteredPlans() {
-    const query = state.query;
-    return readPlans()
-      .filter(function (plan) {
-        if (!query) return true;
-        const haystack = [
-          plan.clientName,
-          plan.clientId,
-          plan.mentorName,
-          plan.stage,
-          plan.needsSummary,
-          plan.strengths,
-          plan.barriers,
-          (plan.domains || []).join(' '),
-          (plan.goals || []).map(function (goal) { return [goal.category, goal.statement, goal.status, goal.nextStep].join(' '); }).join(' ')
-        ].join(' ').toLowerCase();
-        return haystack.includes(query);
-      })
-      .sort(function (a, b) { return String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')); });
-  }
-
-  function renderList() {
-    const plans = filteredPlans();
-    const container = byId('rgsp-plan-list');
-    if (!plans.length) {
-      container.innerHTML = '<div class="rgsp-empty">No service plans match this view.</div>';
-      renderStats();
-      return;
-    }
-    container.innerHTML = plans.map(function (plan) {
-      const activeGoals = (plan.goals || []).filter(function (goal) { return goal.status !== 'Completed'; }).length;
-      return `
-        <button type="button" class="rgsp-plan-card ${plan.id === state.selectedId ? 'rgsp-selected' : ''}" data-plan-id="${escapeHtml(plan.id)}">
-          <strong>${escapeHtml(plan.clientName || 'Unnamed client')}</strong>
-          <span>ID: ${escapeHtml(plan.clientId || 'Not entered')}</span>
-          <span>${escapeHtml(plan.stage || 'Active')} | ${activeGoals} active goal${activeGoals === 1 ? '' : 's'}</span>
-          <span>Updated ${escapeHtml((plan.updatedAt || '').slice(0, 10) || 'Not saved')}</span>
-        </button>
-      `;
-    }).join('');
-    all('.rgsp-plan-card', container).forEach(function (button) {
-      button.addEventListener('click', function () {
-        state.selectedId = button.dataset.planId;
-        const plan = readPlans().find(function (item) { return item.id === state.selectedId; });
-        renderList();
-        renderEditor(plan || defaultPlan(), false);
-      });
-    });
-    renderStats();
-  }
-
-  function optionTags(options, selected) {
-    return options.map(function (option) {
-      return '<option value="' + escapeHtml(option) + '"' + (option === selected ? ' selected' : '') + '>' + escapeHtml(option) + '</option>';
-    }).join('');
-  }
-
-  function domainCheckboxes(plan) {
-    const selected = new Set(plan.domains || []);
-    return DOMAIN_OPTIONS.map(function (domain) {
-      const id = 'rgsp-domain-' + domain.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      return `
-        <label class="rgsp-check" for="${id}">
-          <input type="checkbox" id="${id}" name="domains" value="${escapeHtml(domain)}" ${selected.has(domain) ? 'checked' : ''}>
-          <span>${escapeHtml(domain)}</span>
-        </label>
-      `;
-    }).join('');
-  }
-
-  function renderEditor(plan, isNew) {
-    if (!plan) plan = defaultPlan();
-    state.selectedId = plan.id;
-    const goals = (plan.goals && plan.goals.length ? plan.goals : [defaultGoal()]);
-    byId('rgsp-form').dataset.isNew = isNew ? 'true' : 'false';
-    byId('rgsp-form').dataset.planId = plan.id;
-    byId('rgsp-form').innerHTML = `
-      <div class="rgsp-form-section">
-        <h3>Client and Plan Information</h3>
-        <div class="rgsp-grid-3">
-          <div class="rgsp-field"><label for="rgsp-client-name">Client name</label><input id="rgsp-client-name" name="clientName" value="${escapeHtml(plan.clientName)}"></div>
-          <div class="rgsp-field"><label for="rgsp-client-id">Client ID</label><input id="rgsp-client-id" name="clientId" value="${escapeHtml(plan.clientId)}"></div>
-          <div class="rgsp-field"><label for="rgsp-mentor-name">Primary mentor</label><input id="rgsp-mentor-name" name="mentorName" value="${escapeHtml(plan.mentorName)}"></div>
-          <div class="rgsp-field"><label for="rgsp-stage">Service stage</label><select id="rgsp-stage" name="stage">${optionTags(STAGE_OPTIONS, plan.stage)}</select></div>
-          <div class="rgsp-field"><label for="rgsp-start-date">Plan start date</label><input id="rgsp-start-date" type="date" name="startDate" value="${escapeHtml(plan.startDate)}"></div>
-          <div class="rgsp-field"><label for="rgsp-review-date">Next review date</label><input id="rgsp-review-date" type="date" name="reviewDate" value="${escapeHtml(plan.reviewDate)}"></div>
-        </div>
-        <p class="rgsp-small-note">Use client IDs when possible. Do not record unnecessary sensitive details in this browser based prototype.</p>
-      </div>
-
-      <div class="rgsp-form-section">
-        <h3>Need Areas</h3>
-        <div class="rgsp-domain-grid">${domainCheckboxes(plan)}</div>
-      </div>
-
-      <div class="rgsp-form-section">
-        <h3>Assessment Summary</h3>
-        <div class="rgsp-grid">
-          <div class="rgsp-field"><label for="rgsp-needs-summary">Current needs</label><textarea id="rgsp-needs-summary" name="needsSummary">${escapeHtml(plan.needsSummary)}</textarea></div>
-          <div class="rgsp-field"><label for="rgsp-strengths">Strengths and protective factors</label><textarea id="rgsp-strengths" name="strengths">${escapeHtml(plan.strengths)}</textarea></div>
-          <div class="rgsp-field"><label for="rgsp-barriers">Barriers</label><textarea id="rgsp-barriers" name="barriers">${escapeHtml(plan.barriers)}</textarea></div>
-          <div class="rgsp-field"><label for="rgsp-safety-notes">Safety notes</label><textarea id="rgsp-safety-notes" name="safetyNotes">${escapeHtml(plan.safetyNotes)}</textarea></div>
-        </div>
-      </div>
-
-      <div class="rgsp-form-section">
-        <div class="rgsp-goal-top">
-          <h3 style="margin:0;">Goals and Action Steps</h3>
-          <button type="button" class="rgsp-btn" id="rgsp-add-goal">Add Goal</button>
-        </div>
-        <div id="rgsp-goals">${goals.map(renderGoal).join('')}</div>
-      </div>
-
-      <div class="rgsp-form-section">
-        <h3>Plan Status</h3>
-        <div class="rgsp-grid">
-          <div class="rgsp-field"><label for="rgsp-plan-status">Status</label><select id="rgsp-plan-status" name="planStatus">${optionTags(['Active', 'Paused', 'Closed'], plan.planStatus || 'Active')}</select></div>
-          <div class="rgsp-field"><label for="rgsp-updated-at">Last updated</label><input id="rgsp-updated-at" value="${escapeHtml((plan.updatedAt || '').slice(0, 10))}" readonly></div>
-        </div>
-      </div>
-
-      <div class="rgsp-footer-actions">
-        <button type="button" class="rgsp-btn rgsp-btn-danger" id="rgsp-delete-plan">Delete Plan</button>
-        <button type="submit" class="rgsp-btn rgsp-btn-primary">Save Service Plan</button>
-      </div>
-    `;
-  }
-
-  function renderGoal(goal, index) {
-    goal = Object.assign(defaultGoal(), goal || {});
-    return `
-      <div class="rgsp-goal-card" data-goal-id="${escapeHtml(goal.id)}">
-        <div class="rgsp-goal-top">
-          <strong>Goal ${index + 1}</strong>
-          <button type="button" class="rgsp-btn rgsp-btn-danger rgsp-remove-goal">Remove</button>
-        </div>
-        <div class="rgsp-grid-3">
-          <div class="rgsp-field"><label>Goal area</label><select name="goalCategory">${optionTags(DOMAIN_OPTIONS, goal.category)}</select></div>
-          <div class="rgsp-field"><label>Target date</label><input type="date" name="goalTargetDate" value="${escapeHtml(goal.targetDate)}"></div>
-          <div class="rgsp-field"><label>Status</label><select name="goalStatus">${optionTags(GOAL_STATUS_OPTIONS, goal.status)}</select></div>
-        </div>
-        <div class="rgsp-field" style="margin-top:12px;"><label>Goal statement</label><textarea name="goalStatement">${escapeHtml(goal.statement)}</textarea></div>
-        <div class="rgsp-grid" style="margin-top:12px;">
-          <div class="rgsp-field"><label>Support actions</label><textarea name="goalSupportActions">${escapeHtml(goal.supportActions)}</textarea></div>
-          <div class="rgsp-field"><label>Barriers</label><textarea name="goalBarriers">${escapeHtml(goal.barriers)}</textarea></div>
-          <div class="rgsp-field"><label>Next step</label><textarea name="goalNextStep">${escapeHtml(goal.nextStep)}</textarea></div>
-          <div class="rgsp-field"><label>Progress percent</label><input type="number" min="0" max="100" name="goalProgress" value="${escapeHtml(goal.progress)}"></div>
-        </div>
-      </div>
-    `;
-  }
-
-  function handleFormClick(event) {
-    if (event.target.id === 'rgsp-add-goal') {
-      const container = byId('rgsp-goals');
-      const index = all('.rgsp-goal-card', container).length;
-      container.insertAdjacentHTML('beforeend', renderGoal(defaultGoal(), index));
-    }
-    if (event.target.classList.contains('rgsp-remove-goal')) {
-      const cards = all('.rgsp-goal-card');
-      if (cards.length <= 1) {
-        alert('A service plan needs at least one goal.');
-        return;
-      }
-      event.target.closest('.rgsp-goal-card').remove();
-      renumberGoalCards();
-    }
-    if (event.target.id === 'rgsp-delete-plan') {
-      deleteSelectedPlan();
-    }
-  }
-
-  function renumberGoalCards() {
-    all('.rgsp-goal-card').forEach(function (card, index) {
-      const label = card.querySelector('.rgsp-goal-top strong');
-      if (label) label.textContent = 'Goal ' + (index + 1);
-    });
-  }
-
-  function collectPlanFromForm() {
-    const form = byId('rgsp-form');
-    const existing = readPlans().find(function (plan) { return plan.id === form.dataset.planId; });
-    const plan = existing || defaultPlan();
-    plan.id = form.dataset.planId || plan.id;
-    plan.clientName = byId('rgsp-client-name').value.trim();
-    plan.clientId = byId('rgsp-client-id').value.trim();
-    plan.mentorName = byId('rgsp-mentor-name').value.trim();
-    plan.stage = byId('rgsp-stage').value;
-    plan.startDate = byId('rgsp-start-date').value;
-    plan.reviewDate = byId('rgsp-review-date').value;
-    plan.planStatus = byId('rgsp-plan-status').value;
-    plan.domains = all('input[name="domains"]', form).filter(function (input) { return input.checked; }).map(function (input) { return input.value; });
-    plan.needsSummary = byId('rgsp-needs-summary').value.trim();
-    plan.strengths = byId('rgsp-strengths').value.trim();
-    plan.barriers = byId('rgsp-barriers').value.trim();
-    plan.safetyNotes = byId('rgsp-safety-notes').value.trim();
-    plan.goals = all('.rgsp-goal-card', form).map(function (card) {
-      return {
-        id: card.dataset.goalId || uid('goal'),
-        category: card.querySelector('[name="goalCategory"]').value,
-        statement: card.querySelector('[name="goalStatement"]').value.trim(),
-        targetDate: card.querySelector('[name="goalTargetDate"]').value,
-        status: card.querySelector('[name="goalStatus"]').value,
-        progress: Number(card.querySelector('[name="goalProgress"]').value || 0),
-        supportActions: card.querySelector('[name="goalSupportActions"]').value.trim(),
-        barriers: card.querySelector('[name="goalBarriers"]').value.trim(),
-        nextStep: card.querySelector('[name="goalNextStep"]').value.trim()
-      };
-    });
-    if (!plan.createdAt) plan.createdAt = new Date().toISOString();
-    plan.updatedAt = new Date().toISOString();
-    return plan;
-  }
-
-  function handleSave(event) {
-    event.preventDefault();
-    const plan = collectPlanFromForm();
-    if (!plan.clientName && !plan.clientId) {
-      alert('Enter a client name or client ID before saving.');
-      return;
-    }
-    const plans = readPlans();
-    const index = plans.findIndex(function (item) { return item.id === plan.id; });
-    if (index >= 0) plans[index] = plan;
-    else plans.unshift(plan);
-    writePlans(plans);
-    state.selectedId = plan.id;
-    render();
-    alert('Service plan saved. Active goals are now available for Progress Notes.');
-  }
-
-  function deleteSelectedPlan() {
-    const form = byId('rgsp-form');
-    const planId = form.dataset.planId;
-    if (!planId) return;
-    if (!confirm('Delete this service plan from this browser?')) return;
-    const plans = readPlans().filter(function (plan) { return plan.id !== planId; });
-    writePlans(plans);
-    state.selectedId = plans[0] ? plans[0].id : null;
-    render();
-  }
-
-  function downloadText(filename, text, type) {
-    const blob = new Blob([text], { type: type || 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-
-  function exportJson() {
-    const payload = {
-      app: 'ReGroup Client Goals + Service Plans',
-      version: VERSION,
-      exportedAt: new Date().toISOString(),
-      servicePlans: readPlans()
-    };
-    downloadText('regroup-service-plans.json', JSON.stringify(payload, null, 2), 'application/json');
-  }
-
-  function importJson(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function () {
-      try {
-        const parsed = JSON.parse(String(reader.result || '{}'));
-        const incoming = Array.isArray(parsed) ? parsed : parsed.servicePlans;
-        if (!Array.isArray(incoming)) throw new Error('No servicePlans array found.');
-        const existing = readPlans();
-        const byPlanId = new Map(existing.map(function (plan) { return [plan.id, plan]; }));
-        incoming.forEach(function (plan) {
-          if (plan && plan.id) byPlanId.set(plan.id, plan);
-        });
-        const merged = Array.from(byPlanId.values());
-        writePlans(merged);
-        state.selectedId = merged[0] ? merged[0].id : null;
-        render();
-        alert('Service plans imported.');
-      } catch (error) {
-        alert('Could not import that JSON file. ' + error.message);
-      } finally {
-        event.target.value = '';
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  function exportCsv() {
-    const rows = [[
-      'Client Name',
-      'Client ID',
-      'Mentor',
-      'Plan Stage',
-      'Plan Status',
-      'Start Date',
-      'Review Date',
-      'Need Areas',
-      'Goal Area',
-      'Goal Statement',
-      'Goal Status',
-      'Goal Progress Percent',
-      'Goal Target Date',
-      'Support Actions',
-      'Barriers',
-      'Next Step',
-      'Updated At'
-    ]];
-    readPlans().forEach(function (plan) {
-      const goals = plan.goals && plan.goals.length ? plan.goals : [{}];
-      goals.forEach(function (goal) {
-        rows.push([
-          plan.clientName,
-          plan.clientId,
-          plan.mentorName,
-          plan.stage,
-          plan.planStatus,
-          plan.startDate,
-          plan.reviewDate,
-          (plan.domains || []).join('; '),
-          goal.category,
-          goal.statement,
-          goal.status,
-          goal.progress,
-          goal.targetDate,
-          goal.supportActions,
-          goal.barriers,
-          goal.nextStep,
-          plan.updatedAt
-        ]);
-      });
-    });
-    const csv = rows.map(function (row) { return row.map(csvEscape).join(','); }).join('\n');
-    downloadText('regroup-service-plans.csv', csv, 'text/csv');
-  }
-
-  function activeGoalRecords() {
-    return readPlans().flatMap(function (plan) {
-      return (plan.goals || [])
-        .filter(function (goal) { return goal.status !== 'Completed' && goal.status !== 'Paused'; })
-        .map(function (goal) {
-          return {
-            planId: plan.id,
-            goalId: goal.id,
-            clientName: plan.clientName || '',
-            clientId: plan.clientId || '',
-            label: [
-              plan.clientId || plan.clientName || 'Client',
-              goal.category || 'Goal',
-              goal.statement || 'Untitled goal'
-            ].join(' | ')
-          };
-        });
-    });
-  }
-
-  function getFieldContext(field) {
-    const parts = [];
-    if (field.id) {
-      const label = document.querySelector('label[for="' + CSS.escape(field.id) + '"]');
-      if (label) parts.push(label.textContent || '');
-    }
-    if (field.name) parts.push(field.name);
-    if (field.getAttribute('aria-label')) parts.push(field.getAttribute('aria-label'));
-    const parent = field.closest('label, .field, .form-group, div, section');
-    if (parent) parts.push((parent.textContent || '').slice(0, 220));
-    return parts.join(' ');
-  }
-
-  function hydrateExistingGoalFields() {
-    const goals = activeGoalRecords();
-    let datalist = byId('rgsp-active-goals-list');
-    if (!datalist) {
-      datalist = document.createElement('datalist');
-      datalist.id = 'rgsp-active-goals-list';
-      document.body.appendChild(datalist);
-    }
-    datalist.innerHTML = goals.map(function (goal) {
-      return '<option value="' + escapeHtml(goal.label) + '"></option>';
-    }).join('');
-
-    all('input, select').forEach(function (field) {
-      if (field.closest('#rgsp-root')) return;
-      const context = getFieldContext(field);
-      const isGoalField = /which\s+goal\s+was\s+addressed|connected\s+to\s+a\s+client\s+goal|client\s+status\s+.*goals/i.test(context);
-      if (!isGoalField) return;
-      if (field.tagName.toLowerCase() === 'select') {
-        all('option[data-rgsp-goal="true"]', field).forEach(function (option) { option.remove(); });
-        goals.forEach(function (goal) {
-          const option = document.createElement('option');
-          option.dataset.rgspGoal = 'true';
-          option.value = goal.label;
-          option.textContent = goal.label;
-          field.appendChild(option);
-        });
-      } else {
-        field.setAttribute('list', 'rgsp-active-goals-list');
-        field.placeholder = field.placeholder || 'Start typing to link an active service plan goal';
-      }
-    });
-  }
-
-  window.regroupServicePlans = {
-    read: readPlans,
-    write: writePlans,
-    open: openModule,
-    exportJson: exportJson,
-    exportCsv: exportCsv,
-    hydrateGoalFields: hydrateExistingGoalFields
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mount);
-  } else {
-    mount();
-  }
-})();
-
-</script>
-<!-- ReGroup Meeting Agent module. Paste directly above </body> in index.html. -->
-<script>
-(function () {
-  'use strict';
-
-  const MODULE_VERSION = '0.1.0';
-  const STORE_KEYS = {
-    backendUrl: 'regroupMeetingAgent.backendUrl',
-    localEvents: 'regroupMeetingAgent.localEvents',
-    inbox: 'regroupMeetingAgent.inboxMessages',
-    userEmail: 'regroupMeetingAgent.userEmail'
-  };
-
-  const DEFAULT_NOTICE = 'ReGroup Summary Agent may join this meeting as a visible participant to record/transcribe the conversation and create a written summary for authorized attendees. Please do not continue if anyone objects.';
-
-  function el(tag, attrs = {}, children = []) {
-    const node = document.createElement(tag);
-    Object.entries(attrs || {}).forEach(([key, value]) => {
-      if (key === 'class') node.className = value;
-      else if (key === 'text') node.textContent = value;
-      else if (key === 'html') node.innerHTML = value;
-      else if (key.startsWith('on') && typeof value === 'function') node.addEventListener(key.substring(2), value);
-      else if (value !== undefined && value !== null) node.setAttribute(key, value);
-    });
-    children.forEach((child) => node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child));
-    return node;
-  }
-
-  function getBackendUrl() {
-    return (localStorage.getItem(STORE_KEYS.backendUrl) || '').replace(/\/$/, '');
-  }
-
-  function setBackendUrl(value) {
-    localStorage.setItem(STORE_KEYS.backendUrl, (value || '').trim().replace(/\/$/, ''));
-  }
-
-  function loadJson(key, fallback) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : fallback;
-    } catch (_) {
-      return fallback;
-    }
-  }
-
-  function saveJson(key, value) {
-    localStorage.setItem(key, JSON.stringify(value, null, 2));
-  }
-
-  function parseAttendees(input) {
-    return (input || '')
-      .split(/[\n,;]/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .map((email) => ({ email, name: email.split('@')[0] || email }));
-  }
-
-  function detectPlatform(url) {
-    const value = (url || '').toLowerCase();
-    if (value.includes('zoom.us') || value.includes('zoomgov.com')) return 'Zoom';
-    if (value.includes('meet.google.com')) return 'Google Meet';
-    if (value.includes('teams.microsoft.com')) return 'Microsoft Teams';
-    if (value.includes('webex.com')) return 'Webex';
-    return 'Unknown';
-  }
-
-  function formatDate(value) {
-    if (!value) return 'Not scheduled';
-    try {
-      return new Date(value).toLocaleString();
-    } catch (_) {
-      return value;
-    }
-  }
-
-  function addInboxMessages(eventRecord, summary) {
-    const inbox = loadJson(STORE_KEYS.inbox, []);
-    const attendees = Array.isArray(eventRecord.attendees) ? eventRecord.attendees : [];
-    attendees.forEach((attendee) => {
-      inbox.unshift({
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-        recipient_email: attendee.email,
-        subject: 'Meeting Summary: ' + (eventRecord.title || 'Untitled meeting'),
-        body: summary || 'Summary pending.',
-        message_type: 'meeting_summary',
-        related_meeting_id: eventRecord.id,
-        read_status: 'unread',
-        created_at: new Date().toISOString()
-      });
-    });
-    saveJson(STORE_KEYS.inbox, inbox);
-  }
-
-  function createStyles() {
-    if (document.getElementById('regroup-meeting-agent-styles')) return;
-    const styles = el('style', { id: 'regroup-meeting-agent-styles' });
-    styles.textContent = `
-      #regroupMeetingAgentButton {
-        position: fixed;
-        right: 22px;
-        bottom: 90px;
-        z-index: 999999;
-        border: 0;
-        border-radius: 999px;
-        padding: 12px 16px;
-        font-weight: 700;
-        box-shadow: 0 10px 30px rgba(0,0,0,.22);
-        cursor: pointer;
-        background: #1f2937;
-        color: #fff;
-      }
-      #regroupMeetingAgentPanel {
-        position: fixed;
-        inset: 0;
-        z-index: 1000000;
-        display: none;
-        background: rgba(15, 23, 42, .72);
-        overflow: auto;
-      }
-      #regroupMeetingAgentPanel.rma-open { display: block; }
-      .rma-shell {
-        width: min(1120px, calc(100% - 28px));
-        margin: 24px auto;
-        background: #fff;
-        color: #111827;
-        border-radius: 18px;
-        box-shadow: 0 20px 60px rgba(0,0,0,.35);
-        overflow: hidden;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      }
-      .rma-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 20px 24px;
-        background: #111827;
-        color: #fff;
-      }
-      .rma-header h2 { margin: 0; font-size: 22px; }
-      .rma-header p { margin: 4px 0 0; color: #d1d5db; font-size: 14px; }
-      .rma-close {
-        border: 1px solid rgba(255,255,255,.3);
-        background: transparent;
-        color: #fff;
-        border-radius: 10px;
-        padding: 8px 10px;
-        cursor: pointer;
-      }
-      .rma-body {
-        display: grid;
-        grid-template-columns: minmax(320px, 420px) 1fr;
-        gap: 0;
-      }
-      .rma-left, .rma-right { padding: 20px; }
-      .rma-left { border-right: 1px solid #e5e7eb; background: #f9fafb; }
-      .rma-card {
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 16px;
-      }
-      .rma-card h3 { margin: 0 0 10px; font-size: 17px; }
-      .rma-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-      .rma-field { margin-bottom: 12px; }
-      .rma-field label { display: block; font-weight: 700; margin-bottom: 5px; font-size: 13px; color: #374151; }
-      .rma-field input, .rma-field textarea, .rma-field select {
-        width: 100%;
-        box-sizing: border-box;
-        border: 1px solid #d1d5db;
-        border-radius: 10px;
-        padding: 10px;
-        font: inherit;
-        background: #fff;
-      }
-      .rma-field textarea { min-height: 90px; resize: vertical; }
-      .rma-check {
-        display: flex;
-        align-items: flex-start;
-        gap: 8px;
-        margin: 10px 0;
-        font-size: 13px;
-      }
-      .rma-check input { margin-top: 3px; }
-      .rma-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-      .rma-btn {
-        border: 0;
-        border-radius: 10px;
-        padding: 10px 13px;
-        cursor: pointer;
-        font-weight: 700;
-        background: #e5e7eb;
-        color: #111827;
-      }
-      .rma-btn-primary { background: #2563eb; color: #fff; }
-      .rma-btn-danger { background: #fee2e2; color: #991b1b; }
-      .rma-btn-muted { background: #f3f4f6; color: #374151; }
-      .rma-status {
-        border-radius: 12px;
-        padding: 10px;
-        background: #f3f4f6;
-        color: #374151;
-        font-size: 13px;
-        white-space: pre-wrap;
-      }
-      .rma-event {
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 14px;
-        margin-bottom: 12px;
-        background: #fff;
-      }
-      .rma-event-title { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
-      .rma-meta { color: #6b7280; font-size: 13px; line-height: 1.45; }
-      .rma-badge {
-        display: inline-block;
-        border-radius: 999px;
-        padding: 3px 8px;
-        background: #eff6ff;
-        color: #1d4ed8;
-        font-size: 12px;
-        font-weight: 700;
-        margin-right: 5px;
-      }
-      .rma-summary {
-        margin-top: 10px;
-        border-top: 1px solid #e5e7eb;
-        padding-top: 10px;
-        white-space: pre-wrap;
-        font-size: 14px;
-      }
-      .rma-warning {
-        background: #fffbeb;
-        border: 1px solid #fde68a;
-        color: #92400e;
-        border-radius: 12px;
-        padding: 12px;
-        font-size: 13px;
-        margin-bottom: 12px;
-      }
-      @media (max-width: 860px) {
-        .rma-body { grid-template-columns: 1fr; }
-        .rma-left { border-right: 0; border-bottom: 1px solid #e5e7eb; }
-        .rma-grid { grid-template-columns: 1fr; }
-      }
-    `;
-    document.head.appendChild(styles);
-  }
-
-  async function api(path, options = {}) {
-    const base = getBackendUrl();
-    if (!base) throw new Error('Backend URL is not set. Save your backend URL first.');
-    const response = await fetch(base + path, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      }
-    });
-    const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
-    if (!response.ok) {
-      throw new Error((data && data.error) || `Request failed with status ${response.status}`);
-    }
-    return data;
-  }
-
-  function buildPanel() {
-    if (document.getElementById('regroupMeetingAgentPanel')) return;
-
-    const panel = el('div', { id: 'regroupMeetingAgentPanel' });
-    const shell = el('div', { class: 'rma-shell' });
-    const header = el('div', { class: 'rma-header' }, [
-      el('div', {}, [
-        el('h2', { text: 'Meeting Agent' }),
-        el('p', { text: 'Approve a visible bot to attend, record/transcribe, summarize, and send summaries to app inboxes.' })
-      ]),
-      el('button', { class: 'rma-close', text: 'Close', onclick: () => closePanel() })
-    ]);
-
-    const body = el('div', { class: 'rma-body' });
-    const left = el('div', { class: 'rma-left' });
-    const right = el('div', { class: 'rma-right' });
-
-    left.innerHTML = `
-      <div class="rma-warning">
-        The bot must be visible to attendees and should announce recording/transcription. Do not use this for silent recording.
-      </div>
-      <div class="rma-card">
-        <h3>Backend connection</h3>
-        <div class="rma-field">
-          <label for="rmaBackendUrl">Backend URL</label>
-          <input id="rmaBackendUrl" placeholder="https://your-meeting-agent-backend.onrender.com" />
-        </div>
-        <div class="rma-field">
-          <label for="rmaUserEmail">View inbox as</label>
-          <input id="rmaUserEmail" placeholder="person@example.org" />
-        </div>
-        <div class="rma-actions">
-          <button class="rma-btn rma-btn-primary" id="rmaSaveBackend">Save</button>
-          <button class="rma-btn" id="rmaTestBackend">Test</button>
-        </div>
-        <div class="rma-status" id="rmaConnectionStatus">Backend not tested.</div>
-      </div>
-      <div class="rma-card">
-        <h3>Approve bot for meeting</h3>
-        <form id="rmaEventForm">
-          <div class="rma-field">
-            <label for="rmaTitle">Meeting title</label>
-            <input id="rmaTitle" required placeholder="RJ Planning Meeting" />
-          </div>
-          <div class="rma-field">
-            <label for="rmaMeetingUrl">Video meeting link</label>
-            <input id="rmaMeetingUrl" required placeholder="https://meet.google.com/... or Zoom/Teams link" />
-          </div>
-          <div class="rma-grid">
-            <div class="rma-field">
-              <label for="rmaStartsAt">Start time</label>
-              <input id="rmaStartsAt" type="datetime-local" />
-            </div>
-            <div class="rma-field">
-              <label for="rmaEndsAt">End time</label>
-              <input id="rmaEndsAt" type="datetime-local" />
-            </div>
-          </div>
-          <div class="rma-field">
-            <label for="rmaAttendees">Attendee emails</label>
-            <textarea id="rmaAttendees" placeholder="one@email.org, two@email.org"></textarea>
-          </div>
-          <div class="rma-field">
-            <label for="rmaNotice">Notice shown in event / chat</label>
-            <textarea id="rmaNotice"></textarea>
-          </div>
-          <label class="rma-check"><input type="checkbox" id="rmaConsent" required /> <span>I confirm attendees have been notified the bot may record/transcribe this meeting.</span></label>
-          <label class="rma-check"><input type="checkbox" id="rmaSendToAttendees" checked /> <span>Send final summary to attendee inboxes.</span></label>
-          <label class="rma-check"><input type="checkbox" id="rmaReviewRequired" checked /> <span>Require staff review before sending.</span></label>
-          <label class="rma-check"><input type="checkbox" id="rmaCreateBotNow" checked /> <span>Create/schedule the meeting bot now.</span></label>
-          <div class="rma-actions">
-            <button class="rma-btn rma-btn-primary" type="submit">Approve Meeting Agent</button>
-            <button class="rma-btn rma-btn-muted" type="button" id="rmaClearForm">Clear</button>
-          </div>
-        </form>
-      </div>
-    `;
-
-    right.innerHTML = `
-      <div class="rma-card">
-        <h3>Meeting Agent status</h3>
-        <div class="rma-actions">
-          <button class="rma-btn rma-btn-primary" id="rmaRefreshEvents">Refresh events</button>
-          <button class="rma-btn" id="rmaRefreshInbox">Refresh inbox</button>
-          <button class="rma-btn rma-btn-muted" id="rmaExportLocal">Export local data</button>
-        </div>
-        <div class="rma-status" id="rmaStatusBox">No events loaded yet.</div>
-      </div>
-      <div class="rma-card">
-        <h3>Approved meetings</h3>
-        <div id="rmaEventsList"></div>
-      </div>
-      <div class="rma-card">
-        <h3>Inbox preview</h3>
-        <div id="rmaInboxList"></div>
-      </div>
-    `;
-
-    body.appendChild(left);
-    body.appendChild(right);
-    shell.appendChild(header);
-    shell.appendChild(body);
-    panel.appendChild(shell);
-    document.body.appendChild(panel);
-
-    bindPanelEvents();
-  }
-
-  function bindPanelEvents() {
-    document.getElementById('rmaBackendUrl').value = getBackendUrl();
-    document.getElementById('rmaUserEmail').value = localStorage.getItem(STORE_KEYS.userEmail) || '';
-    document.getElementById('rmaNotice').value = DEFAULT_NOTICE;
-
-    document.getElementById('rmaSaveBackend').addEventListener('click', () => {
-      setBackendUrl(document.getElementById('rmaBackendUrl').value);
-      localStorage.setItem(STORE_KEYS.userEmail, document.getElementById('rmaUserEmail').value.trim());
-      setStatus('Backend settings saved.');
-    });
-
-    document.getElementById('rmaTestBackend').addEventListener('click', async () => {
-      setBackendUrl(document.getElementById('rmaBackendUrl').value);
-      try {
-        const result = await api('/health');
-        setConnectionStatus('Connected: ' + JSON.stringify(result, null, 2));
-      } catch (error) {
-        setConnectionStatus('Connection failed: ' + error.message);
-      }
-    });
-
-    document.getElementById('rmaRefreshEvents').addEventListener('click', refreshEvents);
-    document.getElementById('rmaRefreshInbox').addEventListener('click', refreshInbox);
-    document.getElementById('rmaExportLocal').addEventListener('click', exportLocalData);
-    document.getElementById('rmaClearForm').addEventListener('click', clearForm);
-
-    document.getElementById('rmaEventForm').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      await submitEvent();
-    });
-  }
-
-  function setStatus(message) {
-    const node = document.getElementById('rmaStatusBox');
-    if (node) node.textContent = message;
-  }
-
-  function setConnectionStatus(message) {
-    const node = document.getElementById('rmaConnectionStatus');
-    if (node) node.textContent = message;
-  }
-
-  function toIsoFromLocal(value) {
-    if (!value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date.toISOString();
-  }
-
-  function clearForm() {
-    ['rmaTitle', 'rmaMeetingUrl', 'rmaStartsAt', 'rmaEndsAt', 'rmaAttendees'].forEach((id) => {
-      document.getElementById(id).value = '';
-    });
-    document.getElementById('rmaNotice').value = DEFAULT_NOTICE;
-    document.getElementById('rmaConsent').checked = false;
-    document.getElementById('rmaSendToAttendees').checked = true;
-    document.getElementById('rmaReviewRequired').checked = true;
-    document.getElementById('rmaCreateBotNow').checked = true;
-  }
-
-  async function submitEvent() {
-    const payload = {
-      title: document.getElementById('rmaTitle').value.trim(),
-      meeting_url: document.getElementById('rmaMeetingUrl').value.trim(),
-      platform: detectPlatform(document.getElementById('rmaMeetingUrl').value),
-      starts_at: toIsoFromLocal(document.getElementById('rmaStartsAt').value),
-      ends_at: toIsoFromLocal(document.getElementById('rmaEndsAt').value),
-      attendees: parseAttendees(document.getElementById('rmaAttendees').value),
-      notice_text: document.getElementById('rmaNotice').value.trim() || DEFAULT_NOTICE,
-      consent_confirmed: document.getElementById('rmaConsent').checked,
-      send_to_attendees: document.getElementById('rmaSendToAttendees').checked,
-      review_required: document.getElementById('rmaReviewRequired').checked,
-      create_bot_now: document.getElementById('rmaCreateBotNow').checked,
-      source: 'regroup_frontend_module',
-      module_version: MODULE_VERSION
-    };
-
-    if (!payload.consent_confirmed) {
-      setStatus('Consent confirmation is required before the bot can be scheduled.');
-      return;
-    }
-
-    try {
-      const created = await api('/api/meeting-agent/events', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      setStatus('Meeting Agent approved. Bot status: ' + (created.event && created.event.bot_status ? created.event.bot_status : 'saved'));
-      clearForm();
-      await refreshEvents();
-    } catch (error) {
-      const localEvents = loadJson(STORE_KEYS.localEvents, []);
-      const localRecord = {
-        ...payload,
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-        bot_status: 'local_only_backend_unavailable',
-        summary_status: 'not_started',
-        created_at: new Date().toISOString()
-      };
-      localEvents.unshift(localRecord);
-      saveJson(STORE_KEYS.localEvents, localEvents);
-      setStatus('Backend request failed, so the approval was saved locally only. Error: ' + error.message);
-      renderEvents(localEvents);
-    }
-  }
-
-  async function refreshEvents() {
-    try {
-      const result = await api('/api/meeting-agent/events');
-      renderEvents(result.events || []);
-      setStatus(`Loaded ${(result.events || []).length} backend events.`);
-    } catch (error) {
-      const localEvents = loadJson(STORE_KEYS.localEvents, []);
-      renderEvents(localEvents);
-      setStatus('Could not load backend events. Showing local approvals. Error: ' + error.message);
-    }
-  }
-
-  function renderEvents(events) {
-    const list = document.getElementById('rmaEventsList');
-    if (!list) return;
-    list.innerHTML = '';
-    if (!events.length) {
-      list.appendChild(el('div', { class: 'rma-meta', text: 'No approved meetings yet.' }));
-      return;
-    }
-    events.forEach((eventRecord) => {
-      const card = el('div', { class: 'rma-event' });
-      card.appendChild(el('div', { class: 'rma-event-title', text: eventRecord.title || 'Untitled meeting' }));
-      const badges = el('div', {}, [
-        el('span', { class: 'rma-badge', text: eventRecord.platform || detectPlatform(eventRecord.meeting_url) }),
-        el('span', { class: 'rma-badge', text: eventRecord.bot_status || 'saved' }),
-        el('span', { class: 'rma-badge', text: eventRecord.summary_status || 'summary pending' })
-      ]);
-      card.appendChild(badges);
-      card.appendChild(el('div', { class: 'rma-meta', html: `Start: ${formatDate(eventRecord.starts_at)}<br>Attendees: ${(eventRecord.attendees || []).map(a => a.email || a).join(', ') || 'None listed'}<br>Bot ID: ${eventRecord.provider_bot_id || 'not assigned yet'}` }));
-      if (eventRecord.summary_text) {
-        card.appendChild(el('div', { class: 'rma-summary', text: eventRecord.summary_text }));
-      }
-      const actions = el('div', { class: 'rma-actions' });
-      const reviewButton = el('button', { class: 'rma-btn rma-btn-primary', text: 'Approve/send summary', onclick: () => approveAndSend(eventRecord.id) });
-      const fetchButton = el('button', { class: 'rma-btn', text: 'Fetch transcript/summary', onclick: () => fetchAndSummarize(eventRecord.id) });
-      actions.appendChild(fetchButton);
-      actions.appendChild(reviewButton);
-      card.appendChild(actions);
-      list.appendChild(card);
-    });
-  }
-
-  async function fetchAndSummarize(eventId) {
-    try {
-      const result = await api(`/api/meeting-agent/events/${encodeURIComponent(eventId)}/process`, { method: 'POST', body: JSON.stringify({}) });
-      setStatus('Processed meeting. Summary status: ' + (result.event.summary_status || 'unknown'));
-      await refreshEvents();
-    } catch (error) {
-      setStatus('Could not process meeting yet: ' + error.message);
-    }
-  }
-
-  async function approveAndSend(eventId) {
-    try {
-      const result = await api(`/api/meeting-agent/events/${encodeURIComponent(eventId)}/approve-send`, { method: 'POST', body: JSON.stringify({}) });
-      setStatus(`Summary sent to ${result.sent_count || 0} inbox recipient(s).`);
-      await refreshEvents();
-      await refreshInbox();
-    } catch (error) {
-      setStatus('Could not send summary: ' + error.message);
-    }
-  }
-
-  async function refreshInbox() {
-    const email = (document.getElementById('rmaUserEmail') || {}).value || localStorage.getItem(STORE_KEYS.userEmail) || '';
-    localStorage.setItem(STORE_KEYS.userEmail, email.trim());
-    try {
-      const result = await api('/api/inbox/messages' + (email.trim() ? `?recipient_email=${encodeURIComponent(email.trim())}` : ''));
-      renderInbox(result.messages || []);
-    } catch (error) {
-      const localInbox = loadJson(STORE_KEYS.inbox, []);
-      const filtered = email.trim() ? localInbox.filter((message) => message.recipient_email === email.trim()) : localInbox;
-      renderInbox(filtered);
-      setStatus('Could not load backend inbox. Showing local inbox preview. Error: ' + error.message);
-    }
-  }
-
-  function renderInbox(messages) {
-    const list = document.getElementById('rmaInboxList');
-    if (!list) return;
-    list.innerHTML = '';
-    if (!messages.length) {
-      list.appendChild(el('div', { class: 'rma-meta', text: 'No inbox messages found.' }));
-      return;
-    }
-    messages.forEach((message) => {
-      const card = el('div', { class: 'rma-event' });
-      card.appendChild(el('div', { class: 'rma-event-title', text: message.subject || 'Inbox message' }));
-      card.appendChild(el('div', { class: 'rma-meta', text: `To: ${message.recipient_email || 'unknown'} | ${formatDate(message.created_at)}` }));
-      card.appendChild(el('div', { class: 'rma-summary', text: message.body || '' }));
-      list.appendChild(card);
-    });
-  }
-
-  function exportLocalData() {
-    const data = {
-      backendUrl: getBackendUrl(),
-      localEvents: loadJson(STORE_KEYS.localEvents, []),
-      inbox: loadJson(STORE_KEYS.inbox, [])
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = el('a', { href: url, download: `regroup-meeting-agent-export-${new Date().toISOString().slice(0, 10)}.json` });
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  function openPanel(prefill) {
-    createStyles();
-    buildPanel();
-    if (prefill) prefillForm(prefill);
-    document.getElementById('regroupMeetingAgentPanel').classList.add('rma-open');
-    refreshEvents();
-    refreshInbox();
-  }
-
-  function closePanel() {
-    const panel = document.getElementById('regroupMeetingAgentPanel');
-    if (panel) panel.classList.remove('rma-open');
-  }
-
-  function prefillForm(eventRecord) {
-    const safe = eventRecord || {};
-    const set = (id, value) => {
-      const node = document.getElementById(id);
-      if (node && value) node.value = value;
-    };
-    set('rmaTitle', safe.title || safe.summary || safe.name);
-    set('rmaMeetingUrl', safe.meeting_url || safe.meetingUrl || safe.location || safe.video_link);
-    set('rmaAttendees', Array.isArray(safe.attendees) ? safe.attendees.map((a) => a.email || a).join(', ') : safe.attendees);
-    if (safe.starts_at || safe.start) {
-      const date = new Date(safe.starts_at || safe.start);
-      if (!Number.isNaN(date.getTime())) set('rmaStartsAt', date.toISOString().slice(0, 16));
-    }
-    if (safe.ends_at || safe.end) {
-      const date = new Date(safe.ends_at || safe.end);
-      if (!Number.isNaN(date.getTime())) set('rmaEndsAt', date.toISOString().slice(0, 16));
-    }
-  }
-
-  function createButton() {
-    if (document.getElementById('regroupMeetingAgentButton')) return;
-    createStyles();
-    const button = el('button', { id: 'regroupMeetingAgentButton', text: 'Meeting Agent', onclick: () => openPanel() });
-    document.body.appendChild(button);
-  }
-
-  window.ReGroupMeetingAgent = {
-    open: openPanel,
-    close: closePanel,
-    openFromCalendar: openPanel,
-    addInboxMessages,
-    version: MODULE_VERSION
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createButton);
-  } else {
-    createButton();
-  }
-})();
 </script>
 
 </body>
