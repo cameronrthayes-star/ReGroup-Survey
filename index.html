@@ -8161,6 +8161,652 @@ Object.assign(window, {
   }
 })();
 </script>
+<!-- ReGroup Meeting Agent module. Paste directly above </body> in index.html. -->
+<script>
+(function () {
+  'use strict';
+
+  const MODULE_VERSION = '0.1.0';
+  const STORE_KEYS = {
+    backendUrl: 'regroupMeetingAgent.backendUrl',
+    localEvents: 'regroupMeetingAgent.localEvents',
+    inbox: 'regroupMeetingAgent.inboxMessages',
+    userEmail: 'regroupMeetingAgent.userEmail'
+  };
+
+  const DEFAULT_NOTICE = 'ReGroup Summary Agent may join this meeting as a visible participant to record/transcribe the conversation and create a written summary for authorized attendees. Please do not continue if anyone objects.';
+
+  function el(tag, attrs = {}, children = []) {
+    const node = document.createElement(tag);
+    Object.entries(attrs || {}).forEach(([key, value]) => {
+      if (key === 'class') node.className = value;
+      else if (key === 'text') node.textContent = value;
+      else if (key === 'html') node.innerHTML = value;
+      else if (key.startsWith('on') && typeof value === 'function') node.addEventListener(key.substring(2), value);
+      else if (value !== undefined && value !== null) node.setAttribute(key, value);
+    });
+    children.forEach((child) => node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child));
+    return node;
+  }
+
+  function getBackendUrl() {
+    return (localStorage.getItem(STORE_KEYS.backendUrl) || '').replace(/\/$/, '');
+  }
+
+  function setBackendUrl(value) {
+    localStorage.setItem(STORE_KEYS.backendUrl, (value || '').trim().replace(/\/$/, ''));
+  }
+
+  function loadJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function saveJson(key, value) {
+    localStorage.setItem(key, JSON.stringify(value, null, 2));
+  }
+
+  function parseAttendees(input) {
+    return (input || '')
+      .split(/[\n,;]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((email) => ({ email, name: email.split('@')[0] || email }));
+  }
+
+  function detectPlatform(url) {
+    const value = (url || '').toLowerCase();
+    if (value.includes('zoom.us') || value.includes('zoomgov.com')) return 'Zoom';
+    if (value.includes('meet.google.com')) return 'Google Meet';
+    if (value.includes('teams.microsoft.com')) return 'Microsoft Teams';
+    if (value.includes('webex.com')) return 'Webex';
+    return 'Unknown';
+  }
+
+  function formatDate(value) {
+    if (!value) return 'Not scheduled';
+    try {
+      return new Date(value).toLocaleString();
+    } catch (_) {
+      return value;
+    }
+  }
+
+  function addInboxMessages(eventRecord, summary) {
+    const inbox = loadJson(STORE_KEYS.inbox, []);
+    const attendees = Array.isArray(eventRecord.attendees) ? eventRecord.attendees : [];
+    attendees.forEach((attendee) => {
+      inbox.unshift({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
+        recipient_email: attendee.email,
+        subject: 'Meeting Summary: ' + (eventRecord.title || 'Untitled meeting'),
+        body: summary || 'Summary pending.',
+        message_type: 'meeting_summary',
+        related_meeting_id: eventRecord.id,
+        read_status: 'unread',
+        created_at: new Date().toISOString()
+      });
+    });
+    saveJson(STORE_KEYS.inbox, inbox);
+  }
+
+  function createStyles() {
+    if (document.getElementById('regroup-meeting-agent-styles')) return;
+    const styles = el('style', { id: 'regroup-meeting-agent-styles' });
+    styles.textContent = `
+      #regroupMeetingAgentButton {
+        position: fixed;
+        right: 22px;
+        bottom: 90px;
+        z-index: 999999;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 16px;
+        font-weight: 700;
+        box-shadow: 0 10px 30px rgba(0,0,0,.22);
+        cursor: pointer;
+        background: #1f2937;
+        color: #fff;
+      }
+      #regroupMeetingAgentPanel {
+        position: fixed;
+        inset: 0;
+        z-index: 1000000;
+        display: none;
+        background: rgba(15, 23, 42, .72);
+        overflow: auto;
+      }
+      #regroupMeetingAgentPanel.rma-open { display: block; }
+      .rma-shell {
+        width: min(1120px, calc(100% - 28px));
+        margin: 24px auto;
+        background: #fff;
+        color: #111827;
+        border-radius: 18px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.35);
+        overflow: hidden;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      .rma-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 24px;
+        background: #111827;
+        color: #fff;
+      }
+      .rma-header h2 { margin: 0; font-size: 22px; }
+      .rma-header p { margin: 4px 0 0; color: #d1d5db; font-size: 14px; }
+      .rma-close {
+        border: 1px solid rgba(255,255,255,.3);
+        background: transparent;
+        color: #fff;
+        border-radius: 10px;
+        padding: 8px 10px;
+        cursor: pointer;
+      }
+      .rma-body {
+        display: grid;
+        grid-template-columns: minmax(320px, 420px) 1fr;
+        gap: 0;
+      }
+      .rma-left, .rma-right { padding: 20px; }
+      .rma-left { border-right: 1px solid #e5e7eb; background: #f9fafb; }
+      .rma-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .rma-card h3 { margin: 0 0 10px; font-size: 17px; }
+      .rma-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .rma-field { margin-bottom: 12px; }
+      .rma-field label { display: block; font-weight: 700; margin-bottom: 5px; font-size: 13px; color: #374151; }
+      .rma-field input, .rma-field textarea, .rma-field select {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 10px;
+        font: inherit;
+        background: #fff;
+      }
+      .rma-field textarea { min-height: 90px; resize: vertical; }
+      .rma-check {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 10px 0;
+        font-size: 13px;
+      }
+      .rma-check input { margin-top: 3px; }
+      .rma-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+      .rma-btn {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 13px;
+        cursor: pointer;
+        font-weight: 700;
+        background: #e5e7eb;
+        color: #111827;
+      }
+      .rma-btn-primary { background: #2563eb; color: #fff; }
+      .rma-btn-danger { background: #fee2e2; color: #991b1b; }
+      .rma-btn-muted { background: #f3f4f6; color: #374151; }
+      .rma-status {
+        border-radius: 12px;
+        padding: 10px;
+        background: #f3f4f6;
+        color: #374151;
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+      .rma-event {
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+        background: #fff;
+      }
+      .rma-event-title { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
+      .rma-meta { color: #6b7280; font-size: 13px; line-height: 1.45; }
+      .rma-badge {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 8px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 12px;
+        font-weight: 700;
+        margin-right: 5px;
+      }
+      .rma-summary {
+        margin-top: 10px;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 10px;
+        white-space: pre-wrap;
+        font-size: 14px;
+      }
+      .rma-warning {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        border-radius: 12px;
+        padding: 12px;
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+      @media (max-width: 860px) {
+        .rma-body { grid-template-columns: 1fr; }
+        .rma-left { border-right: 0; border-bottom: 1px solid #e5e7eb; }
+        .rma-grid { grid-template-columns: 1fr; }
+      }
+    `;
+    document.head.appendChild(styles);
+  }
+
+  async function api(path, options = {}) {
+    const base = getBackendUrl();
+    if (!base) throw new Error('Backend URL is not set. Save your backend URL first.');
+    const response = await fetch(base + path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : null;
+    if (!response.ok) {
+      throw new Error((data && data.error) || `Request failed with status ${response.status}`);
+    }
+    return data;
+  }
+
+  function buildPanel() {
+    if (document.getElementById('regroupMeetingAgentPanel')) return;
+
+    const panel = el('div', { id: 'regroupMeetingAgentPanel' });
+    const shell = el('div', { class: 'rma-shell' });
+    const header = el('div', { class: 'rma-header' }, [
+      el('div', {}, [
+        el('h2', { text: 'Meeting Agent' }),
+        el('p', { text: 'Approve a visible bot to attend, record/transcribe, summarize, and send summaries to app inboxes.' })
+      ]),
+      el('button', { class: 'rma-close', text: 'Close', onclick: () => closePanel() })
+    ]);
+
+    const body = el('div', { class: 'rma-body' });
+    const left = el('div', { class: 'rma-left' });
+    const right = el('div', { class: 'rma-right' });
+
+    left.innerHTML = `
+      <div class="rma-warning">
+        The bot must be visible to attendees and should announce recording/transcription. Do not use this for silent recording.
+      </div>
+      <div class="rma-card">
+        <h3>Backend connection</h3>
+        <div class="rma-field">
+          <label for="rmaBackendUrl">Backend URL</label>
+          <input id="rmaBackendUrl" placeholder="https://your-meeting-agent-backend.onrender.com" />
+        </div>
+        <div class="rma-field">
+          <label for="rmaUserEmail">View inbox as</label>
+          <input id="rmaUserEmail" placeholder="person@example.org" />
+        </div>
+        <div class="rma-actions">
+          <button class="rma-btn rma-btn-primary" id="rmaSaveBackend">Save</button>
+          <button class="rma-btn" id="rmaTestBackend">Test</button>
+        </div>
+        <div class="rma-status" id="rmaConnectionStatus">Backend not tested.</div>
+      </div>
+      <div class="rma-card">
+        <h3>Approve bot for meeting</h3>
+        <form id="rmaEventForm">
+          <div class="rma-field">
+            <label for="rmaTitle">Meeting title</label>
+            <input id="rmaTitle" required placeholder="RJ Planning Meeting" />
+          </div>
+          <div class="rma-field">
+            <label for="rmaMeetingUrl">Video meeting link</label>
+            <input id="rmaMeetingUrl" required placeholder="https://meet.google.com/... or Zoom/Teams link" />
+          </div>
+          <div class="rma-grid">
+            <div class="rma-field">
+              <label for="rmaStartsAt">Start time</label>
+              <input id="rmaStartsAt" type="datetime-local" />
+            </div>
+            <div class="rma-field">
+              <label for="rmaEndsAt">End time</label>
+              <input id="rmaEndsAt" type="datetime-local" />
+            </div>
+          </div>
+          <div class="rma-field">
+            <label for="rmaAttendees">Attendee emails</label>
+            <textarea id="rmaAttendees" placeholder="one@email.org, two@email.org"></textarea>
+          </div>
+          <div class="rma-field">
+            <label for="rmaNotice">Notice shown in event / chat</label>
+            <textarea id="rmaNotice"></textarea>
+          </div>
+          <label class="rma-check"><input type="checkbox" id="rmaConsent" required /> <span>I confirm attendees have been notified the bot may record/transcribe this meeting.</span></label>
+          <label class="rma-check"><input type="checkbox" id="rmaSendToAttendees" checked /> <span>Send final summary to attendee inboxes.</span></label>
+          <label class="rma-check"><input type="checkbox" id="rmaReviewRequired" checked /> <span>Require staff review before sending.</span></label>
+          <label class="rma-check"><input type="checkbox" id="rmaCreateBotNow" checked /> <span>Create/schedule the meeting bot now.</span></label>
+          <div class="rma-actions">
+            <button class="rma-btn rma-btn-primary" type="submit">Approve Meeting Agent</button>
+            <button class="rma-btn rma-btn-muted" type="button" id="rmaClearForm">Clear</button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    right.innerHTML = `
+      <div class="rma-card">
+        <h3>Meeting Agent status</h3>
+        <div class="rma-actions">
+          <button class="rma-btn rma-btn-primary" id="rmaRefreshEvents">Refresh events</button>
+          <button class="rma-btn" id="rmaRefreshInbox">Refresh inbox</button>
+          <button class="rma-btn rma-btn-muted" id="rmaExportLocal">Export local data</button>
+        </div>
+        <div class="rma-status" id="rmaStatusBox">No events loaded yet.</div>
+      </div>
+      <div class="rma-card">
+        <h3>Approved meetings</h3>
+        <div id="rmaEventsList"></div>
+      </div>
+      <div class="rma-card">
+        <h3>Inbox preview</h3>
+        <div id="rmaInboxList"></div>
+      </div>
+    `;
+
+    body.appendChild(left);
+    body.appendChild(right);
+    shell.appendChild(header);
+    shell.appendChild(body);
+    panel.appendChild(shell);
+    document.body.appendChild(panel);
+
+    bindPanelEvents();
+  }
+
+  function bindPanelEvents() {
+    document.getElementById('rmaBackendUrl').value = getBackendUrl();
+    document.getElementById('rmaUserEmail').value = localStorage.getItem(STORE_KEYS.userEmail) || '';
+    document.getElementById('rmaNotice').value = DEFAULT_NOTICE;
+
+    document.getElementById('rmaSaveBackend').addEventListener('click', () => {
+      setBackendUrl(document.getElementById('rmaBackendUrl').value);
+      localStorage.setItem(STORE_KEYS.userEmail, document.getElementById('rmaUserEmail').value.trim());
+      setStatus('Backend settings saved.');
+    });
+
+    document.getElementById('rmaTestBackend').addEventListener('click', async () => {
+      setBackendUrl(document.getElementById('rmaBackendUrl').value);
+      try {
+        const result = await api('/health');
+        setConnectionStatus('Connected: ' + JSON.stringify(result, null, 2));
+      } catch (error) {
+        setConnectionStatus('Connection failed: ' + error.message);
+      }
+    });
+
+    document.getElementById('rmaRefreshEvents').addEventListener('click', refreshEvents);
+    document.getElementById('rmaRefreshInbox').addEventListener('click', refreshInbox);
+    document.getElementById('rmaExportLocal').addEventListener('click', exportLocalData);
+    document.getElementById('rmaClearForm').addEventListener('click', clearForm);
+
+    document.getElementById('rmaEventForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await submitEvent();
+    });
+  }
+
+  function setStatus(message) {
+    const node = document.getElementById('rmaStatusBox');
+    if (node) node.textContent = message;
+  }
+
+  function setConnectionStatus(message) {
+    const node = document.getElementById('rmaConnectionStatus');
+    if (node) node.textContent = message;
+  }
+
+  function toIsoFromLocal(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  function clearForm() {
+    ['rmaTitle', 'rmaMeetingUrl', 'rmaStartsAt', 'rmaEndsAt', 'rmaAttendees'].forEach((id) => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('rmaNotice').value = DEFAULT_NOTICE;
+    document.getElementById('rmaConsent').checked = false;
+    document.getElementById('rmaSendToAttendees').checked = true;
+    document.getElementById('rmaReviewRequired').checked = true;
+    document.getElementById('rmaCreateBotNow').checked = true;
+  }
+
+  async function submitEvent() {
+    const payload = {
+      title: document.getElementById('rmaTitle').value.trim(),
+      meeting_url: document.getElementById('rmaMeetingUrl').value.trim(),
+      platform: detectPlatform(document.getElementById('rmaMeetingUrl').value),
+      starts_at: toIsoFromLocal(document.getElementById('rmaStartsAt').value),
+      ends_at: toIsoFromLocal(document.getElementById('rmaEndsAt').value),
+      attendees: parseAttendees(document.getElementById('rmaAttendees').value),
+      notice_text: document.getElementById('rmaNotice').value.trim() || DEFAULT_NOTICE,
+      consent_confirmed: document.getElementById('rmaConsent').checked,
+      send_to_attendees: document.getElementById('rmaSendToAttendees').checked,
+      review_required: document.getElementById('rmaReviewRequired').checked,
+      create_bot_now: document.getElementById('rmaCreateBotNow').checked,
+      source: 'regroup_frontend_module',
+      module_version: MODULE_VERSION
+    };
+
+    if (!payload.consent_confirmed) {
+      setStatus('Consent confirmation is required before the bot can be scheduled.');
+      return;
+    }
+
+    try {
+      const created = await api('/api/meeting-agent/events', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      setStatus('Meeting Agent approved. Bot status: ' + (created.event && created.event.bot_status ? created.event.bot_status : 'saved'));
+      clearForm();
+      await refreshEvents();
+    } catch (error) {
+      const localEvents = loadJson(STORE_KEYS.localEvents, []);
+      const localRecord = {
+        ...payload,
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        bot_status: 'local_only_backend_unavailable',
+        summary_status: 'not_started',
+        created_at: new Date().toISOString()
+      };
+      localEvents.unshift(localRecord);
+      saveJson(STORE_KEYS.localEvents, localEvents);
+      setStatus('Backend request failed, so the approval was saved locally only. Error: ' + error.message);
+      renderEvents(localEvents);
+    }
+  }
+
+  async function refreshEvents() {
+    try {
+      const result = await api('/api/meeting-agent/events');
+      renderEvents(result.events || []);
+      setStatus(`Loaded ${(result.events || []).length} backend events.`);
+    } catch (error) {
+      const localEvents = loadJson(STORE_KEYS.localEvents, []);
+      renderEvents(localEvents);
+      setStatus('Could not load backend events. Showing local approvals. Error: ' + error.message);
+    }
+  }
+
+  function renderEvents(events) {
+    const list = document.getElementById('rmaEventsList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!events.length) {
+      list.appendChild(el('div', { class: 'rma-meta', text: 'No approved meetings yet.' }));
+      return;
+    }
+    events.forEach((eventRecord) => {
+      const card = el('div', { class: 'rma-event' });
+      card.appendChild(el('div', { class: 'rma-event-title', text: eventRecord.title || 'Untitled meeting' }));
+      const badges = el('div', {}, [
+        el('span', { class: 'rma-badge', text: eventRecord.platform || detectPlatform(eventRecord.meeting_url) }),
+        el('span', { class: 'rma-badge', text: eventRecord.bot_status || 'saved' }),
+        el('span', { class: 'rma-badge', text: eventRecord.summary_status || 'summary pending' })
+      ]);
+      card.appendChild(badges);
+      card.appendChild(el('div', { class: 'rma-meta', html: `Start: ${formatDate(eventRecord.starts_at)}<br>Attendees: ${(eventRecord.attendees || []).map(a => a.email || a).join(', ') || 'None listed'}<br>Bot ID: ${eventRecord.provider_bot_id || 'not assigned yet'}` }));
+      if (eventRecord.summary_text) {
+        card.appendChild(el('div', { class: 'rma-summary', text: eventRecord.summary_text }));
+      }
+      const actions = el('div', { class: 'rma-actions' });
+      const reviewButton = el('button', { class: 'rma-btn rma-btn-primary', text: 'Approve/send summary', onclick: () => approveAndSend(eventRecord.id) });
+      const fetchButton = el('button', { class: 'rma-btn', text: 'Fetch transcript/summary', onclick: () => fetchAndSummarize(eventRecord.id) });
+      actions.appendChild(fetchButton);
+      actions.appendChild(reviewButton);
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+  }
+
+  async function fetchAndSummarize(eventId) {
+    try {
+      const result = await api(`/api/meeting-agent/events/${encodeURIComponent(eventId)}/process`, { method: 'POST', body: JSON.stringify({}) });
+      setStatus('Processed meeting. Summary status: ' + (result.event.summary_status || 'unknown'));
+      await refreshEvents();
+    } catch (error) {
+      setStatus('Could not process meeting yet: ' + error.message);
+    }
+  }
+
+  async function approveAndSend(eventId) {
+    try {
+      const result = await api(`/api/meeting-agent/events/${encodeURIComponent(eventId)}/approve-send`, { method: 'POST', body: JSON.stringify({}) });
+      setStatus(`Summary sent to ${result.sent_count || 0} inbox recipient(s).`);
+      await refreshEvents();
+      await refreshInbox();
+    } catch (error) {
+      setStatus('Could not send summary: ' + error.message);
+    }
+  }
+
+  async function refreshInbox() {
+    const email = (document.getElementById('rmaUserEmail') || {}).value || localStorage.getItem(STORE_KEYS.userEmail) || '';
+    localStorage.setItem(STORE_KEYS.userEmail, email.trim());
+    try {
+      const result = await api('/api/inbox/messages' + (email.trim() ? `?recipient_email=${encodeURIComponent(email.trim())}` : ''));
+      renderInbox(result.messages || []);
+    } catch (error) {
+      const localInbox = loadJson(STORE_KEYS.inbox, []);
+      const filtered = email.trim() ? localInbox.filter((message) => message.recipient_email === email.trim()) : localInbox;
+      renderInbox(filtered);
+      setStatus('Could not load backend inbox. Showing local inbox preview. Error: ' + error.message);
+    }
+  }
+
+  function renderInbox(messages) {
+    const list = document.getElementById('rmaInboxList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!messages.length) {
+      list.appendChild(el('div', { class: 'rma-meta', text: 'No inbox messages found.' }));
+      return;
+    }
+    messages.forEach((message) => {
+      const card = el('div', { class: 'rma-event' });
+      card.appendChild(el('div', { class: 'rma-event-title', text: message.subject || 'Inbox message' }));
+      card.appendChild(el('div', { class: 'rma-meta', text: `To: ${message.recipient_email || 'unknown'} | ${formatDate(message.created_at)}` }));
+      card.appendChild(el('div', { class: 'rma-summary', text: message.body || '' }));
+      list.appendChild(card);
+    });
+  }
+
+  function exportLocalData() {
+    const data = {
+      backendUrl: getBackendUrl(),
+      localEvents: loadJson(STORE_KEYS.localEvents, []),
+      inbox: loadJson(STORE_KEYS.inbox, [])
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = el('a', { href: url, download: `regroup-meeting-agent-export-${new Date().toISOString().slice(0, 10)}.json` });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function openPanel(prefill) {
+    createStyles();
+    buildPanel();
+    if (prefill) prefillForm(prefill);
+    document.getElementById('regroupMeetingAgentPanel').classList.add('rma-open');
+    refreshEvents();
+    refreshInbox();
+  }
+
+  function closePanel() {
+    const panel = document.getElementById('regroupMeetingAgentPanel');
+    if (panel) panel.classList.remove('rma-open');
+  }
+
+  function prefillForm(eventRecord) {
+    const safe = eventRecord || {};
+    const set = (id, value) => {
+      const node = document.getElementById(id);
+      if (node && value) node.value = value;
+    };
+    set('rmaTitle', safe.title || safe.summary || safe.name);
+    set('rmaMeetingUrl', safe.meeting_url || safe.meetingUrl || safe.location || safe.video_link);
+    set('rmaAttendees', Array.isArray(safe.attendees) ? safe.attendees.map((a) => a.email || a).join(', ') : safe.attendees);
+    if (safe.starts_at || safe.start) {
+      const date = new Date(safe.starts_at || safe.start);
+      if (!Number.isNaN(date.getTime())) set('rmaStartsAt', date.toISOString().slice(0, 16));
+    }
+    if (safe.ends_at || safe.end) {
+      const date = new Date(safe.ends_at || safe.end);
+      if (!Number.isNaN(date.getTime())) set('rmaEndsAt', date.toISOString().slice(0, 16));
+    }
+  }
+
+  function createButton() {
+    if (document.getElementById('regroupMeetingAgentButton')) return;
+    createStyles();
+    const button = el('button', { id: 'regroupMeetingAgentButton', text: 'Meeting Agent', onclick: () => openPanel() });
+    document.body.appendChild(button);
+  }
+
+  window.ReGroupMeetingAgent = {
+    open: openPanel,
+    close: closePanel,
+    openFromCalendar: openPanel,
+    addInboxMessages,
+    version: MODULE_VERSION
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createButton);
+  } else {
+    createButton();
+  }
+})();
+</script>
 
 </body>
 </html>
