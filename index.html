@@ -6475,6 +6475,7 @@ function gcalAutoSync(){
 function renderCalendar(){
   populateStaffNameList();
   gcalAutoSync();
+  checkMeetingSummaries();
   const label=document.getElementById('cal-month-label');
   if(label) label.textContent=_calMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const grid=document.getElementById('cal-grid'); if(!grid) return;
@@ -6675,9 +6676,34 @@ async function sendMeetingBot(id){
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error((d.error&&(d.error.message||JSON.stringify(d.error)))||('HTTP '+r.status));
     const ev=d.event||d; const botId=ev.provider_bot_id||ev.bot_id||'';
+    if(ev.id) await DB.updateCalEvent(id, {botEventId:ev.id, botStatus:ev.bot_status||'requested'});
     status.style.color='#43a047';
     status.textContent='✓ Bot requested'+(attendees.length?(' for '+attendees.length+' attendee'+(attendees.length!==1?'s':'')):'')+'. Admit “ReGroup Summary Agent” if it waits in the lobby; the summary is emailed to attendees when the meeting ends.'+(botId?'':' (If it doesn’t join, the meeting link or Recall config may need a look.)');
   }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message+'. The backend may be waking up — wait ~20s and try again.'; }
+}
+
+// Poll the meeting backend for finished summaries and drop them into attendee app inboxes
+async function checkMeetingSummaries(){
+  const pending=DB.calendar().filter(e=>e.botEventId && !e.summary);
+  if(!pending.length) return;
+  const url=(localStorage.getItem('rg_meetingbot_url')||'').trim().replace(/\/+$/,'')||DEFAULT_MEETING_BACKEND;
+  let events=[];
+  try{ const r=await fetch(url+'/api/meeting-agent/events'); const d=await r.json(); events=d.events||[]; }catch(e){ return; }
+  for(const e of pending){
+    const be=events.find(x=>x.id===e.botEventId); if(!be) continue;
+    const summary=be.summary || be.summary_text || (/(done|ready|complete)/i.test(be.summary_status||'')?(be.transcript_summary||''):'');
+    if(summary) await deliverMeetingSummary(e._id, summary);
+  }
+}
+// Write a meeting summary into the inbox of every invited TJC staff member (+ Admin)
+async function deliverMeetingSummary(calId, summary){
+  const e=DB.calendar().find(x=>x._id===calId); if(!e || e.summary) return;
+  const staff=DB.staff().map(s=>s.name);
+  const recips=new Set((e.invited||'').split(',').map(s=>s.trim()).filter(Boolean).filter(n=>staff.some(sn=>sn.toLowerCase()===n.toLowerCase())));
+  const msg='🎙 Meeting summary — "'+(e.title||'')+'" ('+fmtDate(e.date)+'):\n\n'+summary;
+  for(const n of recips){ try{ await DB.addMessage({mentorName:n, from:'Meeting Bot', text:msg, read:false}); }catch(_){} }
+  try{ await DB.addMessage({mentorName:'Admin', from:'Meeting Bot', text:msg, read:false}); }catch(_){}
+  await DB.updateCalEvent(calId, {summary, summarizedBy:'Meeting Bot'});
 }
 
 // Meeting Summary Agent: summarize a transcript and message it to all invited TJC staff
@@ -7054,7 +7080,7 @@ Object.assign(window, {
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, saveMeetingBotUrl, testMeetingBot, toggleMeetingRecording,
-  connectGcal, saveGcalClientId, fetchGcal,
+  connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
