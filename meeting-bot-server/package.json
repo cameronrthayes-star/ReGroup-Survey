@@ -1,0 +1,13 @@
+{
+  "name": "regroup-meeting-bot-server",
+  "version": "1.0.0",
+  "description": "Sends a Recall.ai bot into meetings, records + transcribes, summarizes with Anthropic, and writes the summary into the ReGroup app's Firestore inboxes.",
+  "main": "index.js",
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node index.js" },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.3.1"
+  }
+}

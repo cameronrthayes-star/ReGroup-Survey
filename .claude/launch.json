@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "regroup",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "C:\\Users\\camer\\ReGroupApp"],
+      "port": 8765
+    },
+    {
+      "name": "onepager",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8766", "--directory", "C:\\Users\\camer\\Desktop"],
+      "port": 8766
+    }
+  ]
+}

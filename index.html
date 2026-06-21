@@ -1169,6 +1169,17 @@ table tr:hover td{background:#fafbff;}
           <p style="font-size:0.75em;color:#aaa;margin-top:10px;">The key is stored only in this browser (localStorage) and is sent directly to Anthropic when generating a post. Use a key scoped for this purpose.</p>
         </div>
         <div class="card">
+          <h3>🤖 Meeting Bot</h3>
+          <p style="font-size:0.85em;color:#666;margin-bottom:12px;">Paste the URL of your deployed Meeting Bot backend (see <code>meeting-bot-server/</code>). Once set, calendar events with a video link show a “Send recording bot” button — the bot joins, records, summarizes, and messages attendees.</p>
+          <input id="meetingbot-url-input" type="text" placeholder="https://your-meeting-bot.onrender.com"
+            style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9em;margin-bottom:10px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-accent" onclick="saveMeetingBotUrl()">💾 Save URL</button>
+            <button class="btn btn-outline" onclick="testMeetingBot()">Test connection</button>
+          </div>
+          <div id="meetingbot-msg" style="font-size:0.8em;margin-top:8px;"></div>
+        </div>
+        <div class="card">
           <h3>Data Management</h3>
           <div style="display:flex;flex-direction:column;gap:12px;">
             <button class="btn btn-outline" onclick="exportData()">⬇️ Export All Data (JSON)</button>
@@ -6208,6 +6219,8 @@ function renderSettings() {
   refreshStaffDatalist();
   const keyInput = document.getElementById('anthropic-key-input');
   if (keyInput) keyInput.value = localStorage.getItem('rg_anthropic_key') || '';
+  const mbInput = document.getElementById('meetingbot-url-input');
+  if (mbInput) mbInput.value = localStorage.getItem('rg_meetingbot_url') || '';
   const staff = DB.staff();
   document.getElementById('staff-list').innerHTML = staff.length ? staff.map(s=>`
     <div class="staff-card">
@@ -6471,7 +6484,13 @@ function openCalDetail(id){
     ${history.length?history.map(o=>`<div style="padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:0.86em;cursor:pointer;" onclick="openCalDetail('${o._id}')"><b>${fmtDate(o.date)}</b> — ${fEsc(o.title)} <span style="color:#aaa;">(${fEsc(o.external)})</span></div>`).join(''):'<p style="color:#bbb;font-size:0.85em;">No other meetings with these external people yet.</p>'}
     <h4 style="color:var(--primary);margin:18px 0 8px;border-bottom:1.5px solid #eef;padding-bottom:6px;">🎙 Meeting Summary</h4>
     ${e.summary?`<div style="background:#f0f9f4;border:1px solid #cdeed6;border-radius:10px;padding:12px;font-size:0.88em;white-space:pre-wrap;line-height:1.6;margin-bottom:10px;">${fEsc(e.summary)}</div><div style="font-size:0.75em;color:#aaa;margin-bottom:8px;">Summarized by ${fEsc(e.summarizedBy)||'—'}</div>`:''}
-    <p style="font-size:0.8em;color:#888;margin-bottom:6px;">Paste the meeting transcript or notes (from the platform's recording / auto-caption). The agent writes a summary and messages it to every invited TJC staff member's inbox + Admin.</p>
+    ${e.video?`<div style="background:#eef3fb;border:1px solid #dbe6f7;border-radius:10px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:0.85em;font-weight:600;color:var(--primary);margin-bottom:6px;">🤖 Auto: send a recording bot</div>
+      <p style="font-size:0.78em;color:#777;margin-bottom:8px;">The bot joins this video meeting, records &amp; transcribes it, and automatically messages the summary to every invited staff member's inbox when it ends.</p>
+      <button class="btn btn-accent" style="font-size:0.82em;" onclick="sendMeetingBot('${id}')">🤖 Send recording bot to this meeting</button>
+      <span id="mtg-bot-status" style="font-size:0.82em;color:#666;margin-left:8px;"></span>
+    </div>`:''}
+    <p style="font-size:0.8em;color:#888;margin-bottom:6px;">Or paste the meeting transcript/notes (from the platform's recording / auto-caption) — the agent summarizes it and messages every invited TJC staff member's inbox + Admin.</p>
     <textarea id="mtg-transcript" rows="3" placeholder="Paste transcript or notes here…" style="width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88em;min-height:60px;"></textarea>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;">
       <button class="btn btn-accent" style="font-size:0.82em;" onclick="summarizeMeeting('${id}')">✨ Summarize &amp; message attendees</button>
@@ -6485,6 +6504,41 @@ function editCalFromDetail(){ const id=_calDetailId; closeCalDetail(); openCalEv
 function deleteCalEvent(){
   const id=document.getElementById('ce-id').value; if(!id) return;
   requireAdmin(async ()=>{ if(!confirm('Delete this event?')) return; await DB.removeCalEvent(id); closeCalEvent(); renderCalendar(); });
+}
+
+function saveMeetingBotUrl(){
+  const v=(document.getElementById('meetingbot-url-input').value||'').trim().replace(/\/+$/,'');
+  localStorage.setItem('rg_meetingbot_url', v);
+  const m=document.getElementById('meetingbot-msg'); if(m){ m.style.color='#43a047'; m.textContent=v?'✓ Saved.':'Cleared.'; }
+}
+async function testMeetingBot(){
+  const m=document.getElementById('meetingbot-msg');
+  const url=(document.getElementById('meetingbot-url-input').value||'').trim().replace(/\/+$/,'');
+  if(!url){ m.style.color='#e53935'; m.textContent='Enter the backend URL first.'; return; }
+  m.style.color='#666'; m.textContent='Testing…';
+  try{
+    const r=await fetch(url+'/health'); const d=await r.json();
+    m.style.color=d.ok?'#43a047':'#e53935';
+    m.textContent=d.ok?`✓ Connected. Recall:${d.recall_configured?'on':'off'} · Anthropic:${d.anthropic_configured?'on':'off'} · Firestore:${d.firestore_configured?'on':'off'}`:'Unexpected response.';
+  }catch(err){ m.style.color='#e53935'; m.textContent='Could not reach backend — '+err.message; }
+}
+
+// Dispatch a Recall.ai recording bot (via the meeting-bot backend) to this meeting
+async function sendMeetingBot(id){
+  const e=DB.calendar().find(x=>x._id===id); if(!e) return;
+  const status=document.getElementById('mtg-bot-status');
+  const url=(localStorage.getItem('rg_meetingbot_url')||'').trim().replace(/\/+$/,'');
+  if(!url){ status.style.color='#e53935'; status.innerHTML='No Meeting Bot backend configured — add its URL in Settings → Meeting Bot.'; return; }
+  if(!e.video){ status.style.color='#e53935'; status.textContent='This event has no video link.'; return; }
+  const staffNames=DB.staff().map(s=>s.name);
+  const attendees=(e.invited||'').split(',').map(s=>s.trim()).filter(Boolean).filter(n=>staffNames.some(sn=>sn.toLowerCase()===n.toLowerCase()));
+  status.style.color='#666'; status.textContent='Dispatching bot…';
+  try{
+    const r=await fetch(url+'/api/bot',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({meeting_url:e.video, title:e.title||'Meeting', attendees, eventId:id})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error((d.error&&(d.error.message||JSON.stringify(d.error)))||('HTTP '+r.status));
+    status.style.color='#43a047'; status.textContent='✓ Bot dispatched (id '+(d.bot_id||'?')+'). The summary will be messaged to attendees when the meeting ends.';
+  }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message+' (check the backend URL & that it is running).'; }
 }
 
 // Meeting Summary Agent: summarize a transcript and message it to all invited TJC staff
@@ -6860,7 +6914,7 @@ Object.assign(window, {
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
-  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting,
+  renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, saveMeetingBotUrl, testMeetingBot,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
