@@ -6670,7 +6670,7 @@ async function sendMeetingBot(id){
       title:e.title||'Meeting', meeting_url:e.video, platform:'auto', starts_at:null, ends_at:null,
       attendees,
       notice_text:'ReGroup Summary Agent may join this meeting to record/transcribe it and create a written summary for authorized attendees.',
-      consent_confirmed:true, send_to_attendees:true, review_required:false, create_bot_now:true,
+      consent_confirmed:true, send_to_attendees:false, review_required:false, create_bot_now:true,
       source:'regroup_app_calendar', eventId:id
     })});
     const d=await r.json().catch(()=>({}));
@@ -6678,7 +6678,7 @@ async function sendMeetingBot(id){
     const ev=d.event||d; const botId=ev.provider_bot_id||ev.bot_id||'';
     if(ev.id) await DB.updateCalEvent(id, {botEventId:ev.id, botStatus:ev.bot_status||'requested'});
     status.style.color='#43a047';
-    status.textContent='✓ Bot requested'+(attendees.length?(' for '+attendees.length+' attendee'+(attendees.length!==1?'s':'')):'')+'. Admit “ReGroup Summary Agent” if it waits in the lobby; the summary is emailed to attendees when the meeting ends.'+(botId?'':' (If it doesn’t join, the meeting link or Recall config may need a look.)');
+    status.textContent='✓ Bot requested'+(attendees.length?(' for '+attendees.length+' attendee'+(attendees.length!==1?'s':'')):'')+'. Admit “ReGroup Summary Agent” if it waits in the lobby; when the meeting ends the summary is delivered to attendees’ in-app inboxes automatically.'+(botId?'':' (If it doesn’t join, check the meeting link / Recall.)');
   }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message+'. The backend may be waking up — wait ~20s and try again.'; }
 }
 
@@ -7064,6 +7064,8 @@ function deleteRJCase(){ if(!_rjId) return; requireAdmin(async()=>{ if(!confirm(
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 initForms();
 restoreSession();
+// Poll the meeting backend so finished summaries reach attendee inboxes even when off the Calendar tab
+setInterval(()=>{ if(_currentUser){ try{ checkMeetingSummaries(); }catch(e){} } }, 120000);
 
 // Expose all functions used by inline onclick/onchange handlers to global scope
 // (required because <script type="module"> does not share scope with HTML attributes)
