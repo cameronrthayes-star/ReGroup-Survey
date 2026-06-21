@@ -1113,6 +1113,10 @@ table tr:hover td{background:#fafbff;}
                 <input type="text" id="staff-name">
               </div>
               <div class="form-group">
+                <label>Email (for meeting invites)</label>
+                <input type="email" id="staff-email" placeholder="name@example.com">
+              </div>
+              <div class="form-group">
                 <label>Role *</label>
                 <input id="staff-role" list="role-list" placeholder="Type any role (e.g. REP)" autocomplete="off">
                 <datalist id="role-list">
@@ -1550,6 +1554,10 @@ table tr:hover td{background:#fafbff;}
           <div class="form-group">
             <label>Full Name *</label>
             <input type="text" id="sm-name">
+          </div>
+          <div class="form-group">
+            <label>Email (for meeting invites)</label>
+            <input type="email" id="sm-email" placeholder="name@example.com">
           </div>
           <div class="form-group">
             <label>Role *</label>
@@ -2176,8 +2184,8 @@ table tr:hover td{background:#fafbff;}
 // ===================================================================
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
-  getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc,
-  query, orderBy, onSnapshot, serverTimestamp
+  getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, deleteDoc,
+  query, orderBy, onSnapshot, serverTimestamp, runTransaction
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -2213,19 +2221,30 @@ function _onReady() {
   }
 }
 
+// Shared error handler for onSnapshot listeners. Surfaces failures (permission
+// errors, missing indexes, network) instead of silently swallowing them, and
+// still advances the readiness counter so the app does not hang on init.
+function _onListenerError(name) {
+  return (err) => {
+    console.error('Firestore listener error:', name, err);
+    _onReady();
+    try { renderDashboard(); } catch (e) { console.error(e); }
+  };
+}
+
 // Real-time listeners — fire whenever any mentor adds/changes data
 onSnapshot(query(collection(db,'sessions'),   orderBy('dateOfService','asc')),   snap => {
   _sessions   = snap.docs.map(d => ({...d.data(), _id:d.id, _type:'client'}));
   _onReady();
   if (document.getElementById('view-dashboard')?.classList.contains('active'))   renderDashboard();
   if (document.getElementById('view-data-view')?.classList.contains('active'))  renderDataView();
-});
+}, _onListenerError('sessions'));
 onSnapshot(query(collection(db,'activities'), orderBy('dateOfActivity','asc')),  snap => {
   _activities = snap.docs.map(d => ({...d.data(), _id:d.id, _type:'activity'}));
   _onReady();
   if (document.getElementById('view-dashboard')?.classList.contains('active'))   renderDashboard();
   if (document.getElementById('view-data-view')?.classList.contains('active'))  renderDataView();
-});
+}, _onListenerError('activities'));
 onSnapshot(collection(db,'staff'), snap => {
   _staff = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
@@ -2235,19 +2254,19 @@ onSnapshot(collection(db,'staff'), snap => {
   if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
   if (document.getElementById('view-profile')?.classList.contains('active')) renderProfile();
-});
+}, _onListenerError('staff'));
 onSnapshot(query(collection(db,'needsAssessments'), orderBy('_createdAt','asc')), snap => {
   _needsAssessments = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-needs-assessment')?.classList.contains('active')) renderNAList();
   if (document.getElementById('view-form-reports')?.classList.contains('active')) renderFormReports();
-});
+}, _onListenerError('needsAssessments'));
 onSnapshot(query(collection(db,'expenseReports'), orderBy('_createdAt','asc')), snap => {
   _expenseReports = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-expense-report')?.classList.contains('active')) renderERList();
   if (document.getElementById('view-form-reports')?.classList.contains('active')) renderFormReports();
-});
+}, _onListenerError('expenseReports'));
 
 let _clients  = [];
 let _tasks    = [];
@@ -2265,23 +2284,23 @@ onSnapshot(collection(db,'calendar'), snap => {
   _calendar = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-calendar')?.classList.contains('active')) renderCalendar();
-});
+}, _onListenerError('calendar'));
 onSnapshot(collection(db,'rjCases'), snap => {
   _rjCases = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-rj')?.classList.contains('active')) renderRJ();
-});
+}, _onListenerError('rjCases'));
 onSnapshot(collection(db,'servicePlans'), snap => {
   _servicePlans = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-service-plans')?.classList.contains('active')) renderServicePlans();
-});
+}, _onListenerError('servicePlans'));
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
   _clients = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-clients')?.classList.contains('active')) renderClientDirectory();
   populateClientNameList();
-});
+}, _onListenerError('clients'));
 onSnapshot(query(collection(db,'tasks'),    orderBy('_createdAt','asc')), snap => {
   _tasks = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
@@ -2289,34 +2308,34 @@ onSnapshot(query(collection(db,'tasks'),    orderBy('_createdAt','asc')), snap =
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
   if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
-});
+}, _onListenerError('tasks'));
 onSnapshot(query(collection(db,'projects'), orderBy('_createdAt','asc')), snap => {
   _projects = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-projects')?.classList.contains('active')) renderProjects();
-});
+}, _onListenerError('projects'));
 onSnapshot(query(collection(db,'events'),   orderBy('_createdAt','asc')), snap => {
   _events = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-events')?.classList.contains('active')) renderEvents();
-});
+}, _onListenerError('events'));
 onSnapshot(query(collection(db,'meetings'), orderBy('_createdAt','asc')), snap => {
   _meetings = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-meetings')?.classList.contains('active')) renderMeetingsList();
-});
+}, _onListenerError('meetings'));
 onSnapshot(query(collection(db,'fundContacts'), orderBy('_createdAt','asc')), snap => {
   _fundContacts = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
   if (document.getElementById('view-fundraising')?.classList.contains('active')) renderFundraising();
   if (_fundDetailId && document.getElementById('fund-detail')?.style.display === 'flex') renderContactDetail(_fundDetailId);
-});
+}, _onListenerError('fundContacts'));
 onSnapshot(collection(db,'config'), snap => {
   const d = snap.docs.find(x => x.id === 'dashboard');
   _dashboardConfig = d ? d.data() : null;
   _onReady();
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
-});
+}, _onListenerError('config'));
 onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap => {
   _messages = snap.docs.map(d => ({...d.data(), _id:d.id}));
   _onReady();
@@ -2326,7 +2345,7 @@ onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap =
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
   updateMentorInboxNav();
   if (_msgMentor && document.getElementById('msg-modal')?.style.display === 'flex') renderMessageThread();
-});
+}, _onListenerError('messages'));
 
 const DB = {
   sessions:         () => _sessions,
@@ -2381,7 +2400,8 @@ const DB = {
 
   messages: () => _messages,
   async addMessage(m)        { await addDoc(collection(db,'messages'), {...m, _createdAt: serverTimestamp()}); },
-  async markMessageRead(id)  { await setDoc(doc(db,'messages',id), {read:true, _readAt: serverTimestamp()}, {merge:true}); },
+  // Fire-and-forget from render paths; swallow+log errors so a failed read-mark never breaks rendering (M6).
+  async markMessageRead(id)  { try { await setDoc(doc(db,'messages',id), {read:true, _readAt: serverTimestamp()}, {merge:true}); } catch (err) { console.error('markMessageRead failed:', id, err); } },
   async removeMessage(id)    { await deleteDoc(doc(db,'messages',id)); },
 
   // Generic helpers (used by the form add/edit/delete framework)
@@ -2403,7 +2423,7 @@ const DB = {
   },
   async saveStaffMember(s) {
     const ref = s._id ? doc(db,'staff',s._id) : doc(collection(db,'staff'));
-    await setDoc(ref, s);
+    await setDoc(ref, _stripInternal(s), {merge:true});   // don't persist internal _id/_type fields (M1)
   },
   async removeStaffMember(id) {
     await deleteDoc(doc(db,'staff',id));
@@ -2452,7 +2472,7 @@ function fmtDateSlash(d) {
   if (!d) return '';
   const dt = new Date(d + 'T12:00:00');
   if (isNaN(dt)) return d;
-  return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+  return `${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}/${dt.getFullYear()}`;
 }
 
 function fmtTime(t) {
@@ -2473,7 +2493,7 @@ function getActivityLabel(e) {
 function safeConcernBadge(val) {
   if (!val || val==='No concerns' || val==='no') return '';
   const cls = (val.includes('Immediate')||val.includes('Elevated')) ? 'badge-danger' : 'badge-warn';
-  return `<span class="badge ${cls}">${val}</span>`;
+  return `<span class="badge ${cls}">${fEsc(val)}</span>`;
 }
 
 // ===================================================================
@@ -2506,6 +2526,21 @@ const VIEW_TITLES = {
 // ===================================================================
 // AUTH — PIN gate for Settings view
 // ===================================================================
+// SECURITY WARNING (H3): All authentication below is CLIENT-SIDE ONLY and is
+// trivially bypassable. Any credential in this bundle is visible via "View
+// Source". This gate is a convenience UI control, NOT a security boundary.
+//
+// The ONLY thing that actually protects data is Firestore Security Rules,
+// which MUST be configured server-side to require Firebase Auth and restrict
+// reads/writes. Do not treat the values below as secrets.
+//
+// TODO(security): Migrate to Firebase Auth. Remove all hardcoded credentials
+// from client source. Enforce per-collection access with Security Rules.
+// Replace the default "FirstName+1234" staff password with a forced unique
+// password per staff member set out-of-band.
+// NOT A SECRET — see the SECURITY WARNING above. This is only a default that
+// is meant to be overridden at runtime via localStorage 'rg_admin_pin'. Real
+// protection must come from Firestore Security Rules, never from this value.
 const DEFAULT_ADMIN_PIN = '118824';
 let _adminUnlocked = false;
 
@@ -2544,7 +2579,10 @@ function cancelPIN() {
 // ===================================================================
 // APP LOGIN / CURRENT USER (per-staff profiles)
 // ===================================================================
-const APP_PASSWORD = 'ELITE';     // master fallback (admin), in case staff list is empty
+// NOT A SECRET — see the SECURITY WARNING above. Master fallback (admin) for
+// when the staff list is empty. Visible in public source; replace with a real
+// auth flow. Real protection must come from Firestore Security Rules.
+const APP_PASSWORD = 'ELITE';
 let _currentUser = null;          // {name, firstName, isAdmin}
 
 function firstNameOf(name){ return (name||'').trim().split(/\s+/)[0] || ''; }
@@ -2755,7 +2793,7 @@ function initForms() {
   buildRadios('na-assistance-check', ASSISTANCE_TYPES, 'assistanceType');
 
   // Show/hide fields based on service outcome
-  document.getElementById('outcome-radio').addEventListener('change', e => {
+  document.getElementById('outcome-radio')?.addEventListener('change', e => {
     const v = e.target.value;
     const success = v === 'Service Successfully Delivered';
     document.getElementById('successful-fields').style.display = success ? 'block' : 'none';
@@ -2792,21 +2830,21 @@ function refreshStaffDatalist() {
   const names = DB.staff().map(s=>s.name);
   ['staff-datalist','staff-datalist-al'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.innerHTML = names.map(n=>`<option value="${n}">`).join('');
+    if (el) el.innerHTML = names.map(n=>`<option value="${fEsc(n)}">`).join('');
   });
   // Keep My Tasks dropdown in sync whenever staff list changes
   const mtSel = document.getElementById('my-tasks-mentor');
   if (mtSel) {
     const current = mtSel.value;
     mtSel.innerHTML = '<option value="">— Select your name —</option>' +
-      names.map(n=>'<option value="' + n + '"' + (n===current?' selected':'') + '>' + n + '</option>').join('');
+      names.map(n=>'<option value="' + fEsc(n) + '"' + (n===current?' selected':'') + '>' + fEsc(n) + '</option>').join('');
   }
 }
 
 // ===================================================================
 // FORM SUBMIT
 // ===================================================================
-document.getElementById('progress-note-form').addEventListener('submit', async function(e) {
+document.getElementById('progress-note-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
   btn.textContent = 'Saving…'; btn.disabled = true;
@@ -2817,17 +2855,23 @@ document.getElementById('progress-note-form').addEventListener('submit', async f
   data.referralsMade = fd.getAll('referralsMade');
   data.serviceCategories = fd.getAll('serviceCategories');
   data.attemptMethods = fd.getAll('attemptMethods');
-  const _sid = await saveForm('progress-note', data);
-  btn.textContent = 'Submit Progress Note'; btn.disabled = false;
-  this.reset();
-  document.getElementById('successful-fields').style.display='block';
-  document.getElementById('unsuccessful-fields').style.display='none';
-  document.getElementById('pn-hours-preview').value='';
-  window.scrollTo(0,0);
-  showFormSuccess('progress-note', _sid, data);
+  try {
+    const _sid = await saveForm('progress-note', data);
+    btn.textContent = 'Submit Progress Note'; btn.disabled = false;
+    this.reset();
+    document.getElementById('successful-fields').style.display='block';
+    document.getElementById('unsuccessful-fields').style.display='none';
+    document.getElementById('pn-hours-preview').value='';
+    window.scrollTo(0,0);
+    showFormSuccess('progress-note', _sid, data);
+  } catch (err) {
+    console.error('Progress note save failed:', err);
+    btn.textContent = 'Submit Progress Note'; btn.disabled = false;
+    alert('Could not save the progress note. Please check your connection and try again.');
+  }
 });
 
-document.getElementById('activity-log-form').addEventListener('submit', async function(e) {
+document.getElementById('activity-log-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
   btn.textContent = 'Saving…'; btn.disabled = true;
@@ -2836,12 +2880,18 @@ document.getElementById('activity-log-form').addEventListener('submit', async fu
   for (const [k,v] of fd.entries()) { data[k]=v; }
   data.whoInvolved = fd.getAll('whoInvolved');
   data.serviceAreas = fd.getAll('serviceAreas');
-  const _sid = await saveForm('activity-log', data);
-  btn.textContent = 'Submit Activity Log'; btn.disabled = false;
-  this.reset();
-  document.getElementById('al-hours-preview').value='';
-  window.scrollTo(0,0);
-  showFormSuccess('activity-log', _sid, data);
+  try {
+    const _sid = await saveForm('activity-log', data);
+    btn.textContent = 'Submit Activity Log'; btn.disabled = false;
+    this.reset();
+    document.getElementById('al-hours-preview').value='';
+    window.scrollTo(0,0);
+    showFormSuccess('activity-log', _sid, data);
+  } catch (err) {
+    console.error('Activity log save failed:', err);
+    btn.textContent = 'Submit Activity Log'; btn.disabled = false;
+    alert('Could not save the activity log. Please check your connection and try again.');
+  }
 });
 
 // ===================================================================
@@ -2875,7 +2925,6 @@ async function saveForm(key, data){
 
 function showFormSuccess(key, id, data){
   _fspKey=key; _fspId=id; _fspRecord = data ? {...data, _id:id} : recordById(FORM_DEF[key].coll, id);
-  const editing = !!data && false;
   document.getElementById('fsp-msg').textContent = FORM_DEF[key].label + ' saved. What would you like to do next?';
   document.getElementById('form-success-panel').style.display='flex';
 }
@@ -2941,146 +2990,146 @@ function prefillER(rec){
 // ===================================================================
 
 const CLIENT_SEED = [
-  {clientId:'1101',firstName:'Melissa',lastName:'Salazar',email:'msalazar1264@gmail.com',phone:'971-500-0766',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1102',firstName:'Daniel',lastName:'De Jesus',email:'ddejese@gmail.com',phone:'(503) 812-6980',address:'',confirmation:'',notes:''},
-  {clientId:'1103',firstName:'Trevor',lastName:'Walraven',email:'trevor@ojrc.info',phone:'5039496907',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1104',firstName:'Jay',lastName:'Brown',email:'jay.brown@pearlbuckcenter.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1105',firstName:'Wendell',lastName:'Butler',email:'butlerwg@comcast.net',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1106',firstName:'Adam',lastName:'Gilliam',email:'agilliam8673@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1107',firstName:'Mustafa',lastName:'Moore',email:'mustafa7@comcast.net',phone:'541 337-1979',address:'',confirmation:'',notes:''},
-  {clientId:'1108',firstName:'Cameron',lastName:'Hayes',email:'cameronrthayes@gmail.com',phone:'808-773-2991',address:'',confirmation:'',notes:''},
-  {clientId:'1109',firstName:'Justin',lastName:'Lester',email:'justin@sageorchard.net',phone:'5038710956',address:'',confirmation:'',notes:''},
-  {clientId:'1110',firstName:'Matt',lastName:'',email:'foreverleatherusa@outlook.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1111',firstName:'Thomas "Zinn"',lastName:'Dickerson',email:'tcardelldickerson@gmail.com',phone:'5039156643',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1112',firstName:'Carlos Jr',lastName:'Rubio Calderon',email:'carlitos.calderon1@icloud.com',phone:'(503) 975-1925',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1113',firstName:'Kyle',lastName:'Black',email:'kblack@ojrc.info',phone:'503-915-9746',address:'',confirmation:'',notes:''},
-  {clientId:'1114',firstName:'Taryn',lastName:'VanderPyl',email:'tvanderpyl@tjcoregon.org',phone:'(602)320-8401',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1115',firstName:'Jann (JR)',lastName:'Oslund',email:'jroslund21@gmail.com',phone:'971-389-6170',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1116',firstName:'Lorie',lastName:'Perkins',email:'lorie@housingourveterans.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1117',firstName:'Jason',lastName:'Hice',email:'jasonhice760@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1118',firstName:'Kaesha',lastName:'Green',email:'brooksbella38@gmail.com',phone:'9714204278',address:'',confirmation:'',notes:''},
-  {clientId:'1119',firstName:'Elaine',lastName:'Walters',email:'ewalters@healingattention.org',phone:'541-687-9447',address:'',confirmation:'',notes:''},
-  {clientId:'1120',firstName:'Carlos',lastName:'Ortega',email:'carlosortegac83@gmail.com',phone:'(503) 868-9266',address:'',confirmation:'',notes:''},
-  {clientId:'1121',firstName:'Brandon',lastName:'Gillespie',email:'gillespiebrandon502@gmail.com',phone:'541-292-4822',address:'',confirmation:'',notes:''},
-  {clientId:'1122',firstName:'',lastName:'',email:'khoehl@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1123',firstName:'Jerome',lastName:'Sloan',email:'j.sloan.pdx@gmail.com',phone:'971-204-5735',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1124',firstName:'Mike',lastName:'Wilson',email:'wilsonm@mail.wou.edu',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1125',firstName:'Skylar',lastName:'Connolly',email:'sconnolly19@mail.wou.edu',phone:'9713124494',address:'',confirmation:'',notes:''},
-  {clientId:'1126',firstName:'Philip Scott',lastName:'Cannon',email:'pscottcannon@gmail.com',phone:'9712739887',address:'',confirmation:'',notes:''},
-  {clientId:'1127',firstName:'Charles C.',lastName:'Lane',email:'Charles42lane@gmail.com',phone:'5417357724',address:'',confirmation:'',notes:''},
-  {clientId:'1128',firstName:'Damon',lastName:'',email:'damonwg5572@icloud.com',phone:'5415208145',address:'',confirmation:'',notes:''},
-  {clientId:'1129',firstName:'Melissa',lastName:'Buis',email:'mbuis@tjcoregon.org',phone:'(503) 881-2773',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1130',firstName:'Troy',lastName:'Ramsey',email:'ramseytroy21@gmail.com',phone:'5037801743',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1131',firstName:'Melinda',lastName:'Venegas',email:'reyes77@comcast.net',phone:'503-890-2557',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1132',firstName:'India',lastName:'Hall',email:'indiah2001@yahoo.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1133',firstName:'Benjamin',lastName:'Pervish',email:'benpervish@gmail.com',phone:'503-919-6883',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1134',firstName:'Sterling',lastName:'Cunio',email:'regroup@tjcoregon.org',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1135',firstName:'Sarah',lastName:'Lester',email:'Tazaroo2014@yahoo.com',phone:'503-798-5657',address:'',confirmation:'',notes:''},
-  {clientId:'1136',firstName:'Alex',lastName:'Cortez',email:'alexcortez0097@gmail.com',phone:'9712838391',address:'',confirmation:'',notes:''},
-  {clientId:'1137',firstName:'Robert',lastName:'Howard',email:'rchowardiv@icloud.com',phone:'925-324-5236',address:'',confirmation:'',notes:''},
-  {clientId:'1138',firstName:'Tacuma',lastName:'Jackson',email:'tacumaj2021@gmail.com',phone:'',address:'',confirmation:'',notes:'Need a new #'},
-  {clientId:'1139',firstName:'Scott',lastName:'Spencer-Wolff',email:'drscott_ac@icloud.com',phone:'(503) 747-9272',address:'',confirmation:'',notes:''},
-  {clientId:'1140',firstName:'Tony',lastName:'Bonner',email:'deliverybyjamesllc@gmail.com',phone:'6019830494',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1141',firstName:'Leo',lastName:'Robles',email:'roblesleo257@gmail.com',phone:'971-454-2527',address:'',confirmation:'',notes:''},
-  {clientId:'1142',firstName:'Tyrone',lastName:'Jones',email:'tynangie@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1143',firstName:'Ron',lastName:'Edgemon',email:'ronedgemon3@gmail.com',phone:'503-215-8025',address:'',confirmation:'',notes:''},
-  {clientId:'1144',firstName:'Kyle',lastName:'Hedquist',email:'kylehedquist@icloud.com',phone:'5416435055',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1145',firstName:'D\'Angello',lastName:'Andrade',email:'dangelloandrade@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1146',firstName:'Richard',lastName:'Dutra',email:'dutrarick51724@icloud.com',phone:'',address:'',confirmation:'360',notes:''},
-  {clientId:'1147',firstName:'Adam',lastName:'Gilliam',email:'a.gilliam8673@gmail.com',phone:'541-514-3840',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1148',firstName:'Ivan',lastName:'Dixon',email:'ivan.dixon@hotmail.com',phone:'360-728-7881',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1149',firstName:'Mindy',lastName:'Johnston',email:'mjohnston@lcsnw.org',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1150',firstName:'Cory',lastName:'Adair',email:'corybenadair@gmail.com',phone:'541-690-0462',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1151',firstName:'Denna',lastName:'Fulton',email:'dennafultonlcsw@gmail.com',phone:'541-232-3555',address:'',confirmation:'',notes:''},
-  {clientId:'1152',firstName:'Nolan',lastName:'Perkins',email:'perkins_painting@yahoo.com',phone:'5517995427',address:'',confirmation:'',notes:''},
-  {clientId:'1153',firstName:'Donovan',lastName:'Randle',email:'donovan.r.4564@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1154',firstName:'Scott',lastName:'Spencer-Wolff',email:'dscottsw@gmail.com',phone:'503-747-9272',address:'',confirmation:'',notes:''},
-  {clientId:'1155',firstName:'Bobby',lastName:'Jackson',email:'boflex37@icloud.com',phone:'5035698794',address:'',confirmation:'',notes:''},
-  {clientId:'1156',firstName:'',lastName:'',email:'sewsup2@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1157',firstName:'Damon',lastName:'Petrie',email:'damonlpetrie@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1158',firstName:'Wes',lastName:'Lewis',email:'wesleylewis194@gmail.com',phone:'419-677-2861',address:'',confirmation:'',notes:''},
-  {clientId:'1159',firstName:'Randall',lastName:'Clegg',email:'Mrrandallc74@gmail.com',phone:'(971)280-4491',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1160',firstName:'Denna',lastName:'Fulton',email:'denna.fulton@lanecountyor.gov',phone:'541-232-3555',address:'',confirmation:'',notes:''},
-  {clientId:'1161',firstName:'Stephanie',lastName:'',email:'stephanieowuor1334@gmail.com',phone:'9712762131',address:'',confirmation:'',notes:''},
-  {clientId:'1162',firstName:'',lastName:'',email:'beardjessica8@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1163',firstName:'Lydia',lastName:'Smith',email:'lydiabsmith@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1164',firstName:'Trese',lastName:'',email:'dannieisom@yahoo.com',phone:'360-909-4234',address:'',confirmation:'',notes:''},
-  {clientId:'1165',firstName:'Michael',lastName:'Kaiser',email:'mpatrick97524@gmail.com',phone:'971-389-0304',address:'',confirmation:'',notes:''},
-  {clientId:'1166',firstName:'',lastName:'',email:'bmadison798@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1167',firstName:'Theresa',lastName:'Huggins',email:'thuggins@lcsnw.org',phone:'503-732-4169',address:'',confirmation:'',notes:''},
-  {clientId:'1168',firstName:'Lisa',lastName:'Brumbaugh',email:'lisabrumbaugh123@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1169',firstName:'Robert',lastName:'Kelley',email:'kelleyarobert@icloud.com',phone:'503-572-3880',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1170',firstName:'Muhammad',lastName:'',email:'',phone:'503-339-4522',address:'',confirmation:'',notes:''},
-  {clientId:'1171',firstName:'Jovahnee',lastName:'Hall',email:'Jovahnee.hall@gmail.com',phone:'360-718-0397',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1172',firstName:'Ricky',lastName:'Hall',email:'',phone:'971-331-8826',address:'',confirmation:'',notes:''},
-  {clientId:'1173',firstName:'John',lastName:'Lewis',email:'',phone:'503-819-9177',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1174',firstName:'Derek',lastName:'Salley',email:'Keredsalley@gmail.com',phone:'682-802-0039',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1175',firstName:'Laurence',lastName:'Farmington',email:'Caringthroughtconcrete@gmail.com',phone:'503-709-2203',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1176',firstName:'Megan',lastName:'Fort Meyer',email:'Megannfortmeyer@gmail.com',phone:'503-550-8937',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1177',firstName:'Jose',lastName:'Ruiz Lona',email:'Josealona12gmail.com',phone:'503-730-6145',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1178',firstName:'Jennifer',lastName:'Reinhart',email:'Jenniferannwegner@gmail.com',phone:'541-270-0236',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1179',firstName:'Dale',lastName:'Casey',email:'dale.casey@gmail.com',phone:'503-954-7590',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1180',firstName:'LaTrese',lastName:'Isom',email:'Anyway.dannieisom@yahoo.com',phone:'360-909-4234',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1181',firstName:'Jade',lastName:'Noa',email:'Jade.noa.designs@gmail.com',phone:'503-496-8554',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1182',firstName:'Christopher',lastName:'Lambert',email:'rosecitychristopher@gmail.com',phone:'971-408-3605',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1183',firstName:'Rachel',lastName:'Guirsch-Webb',email:'rbguirsch@gmail.com',phone:'503-312-3087',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1184',firstName:'Moniell',lastName:'Holmes',email:'Moniell04holmes@gmail.com',phone:'971-263-5800',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1185',firstName:'Kavantae',lastName:'Powell',email:'',phone:'503-975-3684',address:'',confirmation:'',notes:''},
-  {clientId:'1186',firstName:'Antonio',lastName:'Walker',email:'',phone:'971-512-5988',address:'',confirmation:'',notes:''},
-  {clientId:'1187',firstName:'Lisa',lastName:'Kendall',email:'Lisakendall29@yahoo.com',phone:'971-359-7738',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1188',firstName:'',lastName:'',email:'drzohra@msn.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1189',firstName:'',lastName:'',email:'kmichaelson62@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1190',firstName:'',lastName:'',email:'troy.mccord@icloud.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1191',firstName:'',lastName:'',email:'jasonhauxhurst467@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1192',firstName:'',lastName:'',email:'brittmcmahon823@icloud.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1193',firstName:'',lastName:'',email:'abmoore@pdx.edu',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1194',firstName:'',lastName:'',email:'gabrielgrajiola1@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1195',firstName:'Micheal',lastName:'Walter',email:'mikegunny5975@gmail.com',phone:'',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1196',firstName:'Jason',lastName:'McLavey',email:'',phone:'841-971-5038',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1197',firstName:'Rafael',lastName:'Ramoa',email:'',phone:'971-707-3498',address:'',confirmation:'',notes:''},
-  {clientId:'1198',firstName:'',lastName:'',email:'bdolphdory@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1199',firstName:'',lastName:'',email:'kiramgrimes@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1200',firstName:'',lastName:'',email:'Steve.M@1touchministry.org',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1201',firstName:'Angelinna',lastName:'',email:'angelinnaloganz@icloud.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1202',firstName:'Aaron',lastName:'Jackson',email:'aacir87@gmail.com',phone:'971-497-6412',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1203',firstName:'Martin',lastName:'Muigai',email:'',phone:'',address:'PRCF',confirmation:'',notes:''},
-  {clientId:'1204',firstName:'Jaleese',lastName:'Bryant',email:'',phone:'',address:'CCCI',confirmation:'',notes:''},
-  {clientId:'1205',firstName:'Illana',lastName:'Warren',email:'ilana.warren65@yahoo.com',phone:'360-991-3495',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1206',firstName:'Jonathan',lastName:'Busch',email:'',phone:'',address:'PRCF',confirmation:'',notes:'#14476350'},
-  {clientId:'1207',firstName:'David',lastName:'Clay',email:'',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1208',firstName:'Joseph',lastName:'Wehage',email:'',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1209',firstName:'Jeremy',lastName:'Quinteros',email:'jeremyquinteros@gmail.com',phone:'971-329-3755',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1210',firstName:'Christopher',lastName:'Bolds',email:'',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1211',firstName:'Loren',lastName:'Lucus',email:'',phone:'971-718-8822',address:'',confirmation:'',notes:''},
-  {clientId:'1212',firstName:'Armando',lastName:'Geiger',email:'',phone:'503-81-1183',address:'',confirmation:'',notes:''},
-  {clientId:'1213',firstName:'Robert',lastName:'King Jr.',email:'',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1214',firstName:'Casey',lastName:'Koerner',email:'sacredlion@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1215',firstName:'Cody',lastName:'Hidebrandt',email:'codydeanhildebrandt2026@gmail.com',phone:'503-385-5366',address:'',confirmation:'',notes:''},
-  {clientId:'1216',firstName:'Devon',lastName:'Balwin',email:'baldwin.devon@yahoo.com',phone:'541-405-6797',address:'',confirmation:'',notes:''},
-  {clientId:'1217',firstName:'Brett',lastName:'Schneider',email:'',phone:'503-531-0443',address:'',confirmation:'',notes:''},
-  {clientId:'1218',firstName:'Robert',lastName:'Twigger',email:'',phone:'503-410-2308',address:'',confirmation:'',notes:''},
-  {clientId:'1219',firstName:'Mariah',lastName:'Gaut',email:'gautamariah3@gmail.com',phone:'541-378-2934',address:'',confirmation:'',notes:'Release: 5-25-2026'},
-  {clientId:'1220',firstName:'Michael',lastName:'Anderson',email:'manderson71681@gmail.com',phone:'360-270-1276',address:'',confirmation:'',notes:'Release: 5-27-2026'},
-  {clientId:'1221',firstName:'Eric',lastName:'Hayes',email:'',phone:'971-847-5060',address:'',confirmation:'',notes:''},
-  {clientId:'1222',firstName:'Demarco',lastName:'Gonzales',email:'',phone:'971-409-8955',address:'',confirmation:'',notes:''},
-  {clientId:'1223',firstName:'Lonnie',lastName:'Bickham',email:'',phone:'985-789-5182',address:'',confirmation:'',notes:''},
-  {clientId:'1224',firstName:'Xavier',lastName:'Barron',email:'',phone:'971-433-6999',address:'',confirmation:'',notes:''},
-  {clientId:'1225',firstName:'Gerardo',lastName:'Santiago',email:'santiagsc@gmail.com',phone:'971-487-9359',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1226',firstName:'Joshua',lastName:'Mulbreght',email:'jushuaim90@gmail.com',phone:'503-991-1686',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1227',firstName:'Megan',lastName:'Mercer',email:'ourlimitlesssouls@proton.me',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1228',firstName:'Hayden',lastName:'',email:'hgrahaminvestigations@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1229',firstName:'Oliver',lastName:'Loewy',email:'oliverwloewy@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1230',firstName:'Bill',lastName:'Benton',email:'billrellie@gmail.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1231',firstName:'Ashlee',lastName:'Albies',email:'Ashlee@albiesstark.com',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1232',firstName:'Casey',lastName:'Koerner',email:'sacredlion@gmail.com',phone:'',address:'',confirmation:'ION',notes:''},
-  {clientId:'1233',firstName:'Cody',lastName:'Hildebrandt',email:'Codydeanhildebrandt@gmail.com',phone:'503-385-5366',address:'',confirmation:'Accurate ION',notes:''},
-  {clientId:'1234',firstName:'Taron',lastName:'Daly',email:'dalytaron831@gmail.com',phone:'458-351-6098',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1235',firstName:'Shawn',lastName:'Bartmess',email:'shawnbartmess9@gmail.com',phone:'971-420-3549',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1236',firstName:'Austin',lastName:'Kountz',email:'akountz@gmail.com',phone:'971-519-8830',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1237',firstName:'Daeangelo',lastName:'Turner',email:'tdeangelo294@gmail.com',phone:'971-678-0546',address:'',confirmation:'Accurate',notes:''},
-  {clientId:'1238',firstName:'Kalan',lastName:'Kince',email:'Kalan.kince83@gmai.com',phone:'541-406-8579',address:'',confirmation:'Accurate ION',notes:''},
-  {clientId:'1239',firstName:'EliShama',lastName:'Mathews',email:'',phone:'',address:'',confirmation:'',notes:''},
-  {clientId:'1240',firstName:'Lelan',lastName:'Prichett',email:'lelanprichett02@gmail.com',phone:'503-660-2559',address:'',confirmation:'Accurate',notes:''}
+  {clientId:'1101',firstName:'First1',lastName:'Last1',email:'client1@example.com',phone:'555-000-0001',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1102',firstName:'First2',lastName:'Last2',email:'client2@example.com',phone:'555-000-0002',address:'',confirmation:'',notes:''},
+  {clientId:'1103',firstName:'First3',lastName:'Last3',email:'client3@example.com',phone:'555-000-0003',address:'',confirmation:'',notes:''},
+  {clientId:'1104',firstName:'First4',lastName:'Last4',email:'client4@example.com',phone:'555-000-0004',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1105',firstName:'First5',lastName:'Last5',email:'client5@example.com',phone:'555-000-0005',address:'',confirmation:'',notes:''},
+  {clientId:'1106',firstName:'First6',lastName:'Last6',email:'client6@example.com',phone:'555-000-0006',address:'',confirmation:'',notes:''},
+  {clientId:'1107',firstName:'First7',lastName:'Last7',email:'client7@example.com',phone:'555-000-0007',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1108',firstName:'First8',lastName:'Last8',email:'client8@example.com',phone:'555-000-0008',address:'',confirmation:'',notes:''},
+  {clientId:'1109',firstName:'First9',lastName:'Last9',email:'client9@example.com',phone:'555-000-0009',address:'',confirmation:'',notes:''},
+  {clientId:'1110',firstName:'First10',lastName:'Last10',email:'client10@example.com',phone:'555-000-0010',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1111',firstName:'First11',lastName:'Last11',email:'client11@example.com',phone:'555-000-0011',address:'',confirmation:'',notes:''},
+  {clientId:'1112',firstName:'First12',lastName:'Last12',email:'client12@example.com',phone:'555-000-0012',address:'',confirmation:'',notes:''},
+  {clientId:'1113',firstName:'First13',lastName:'Last13',email:'client13@example.com',phone:'555-000-0013',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1114',firstName:'First14',lastName:'Last14',email:'client14@example.com',phone:'555-000-0014',address:'',confirmation:'',notes:''},
+  {clientId:'1115',firstName:'First15',lastName:'Last15',email:'client15@example.com',phone:'555-000-0015',address:'',confirmation:'',notes:''},
+  {clientId:'1116',firstName:'First16',lastName:'Last16',email:'client16@example.com',phone:'555-000-0016',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1117',firstName:'First17',lastName:'Last17',email:'client17@example.com',phone:'555-000-0017',address:'',confirmation:'',notes:''},
+  {clientId:'1118',firstName:'First18',lastName:'Last18',email:'client18@example.com',phone:'555-000-0018',address:'',confirmation:'',notes:''},
+  {clientId:'1119',firstName:'First19',lastName:'Last19',email:'client19@example.com',phone:'555-000-0019',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1120',firstName:'First20',lastName:'Last20',email:'client20@example.com',phone:'555-000-0020',address:'',confirmation:'',notes:''},
+  {clientId:'1121',firstName:'First21',lastName:'Last21',email:'client21@example.com',phone:'555-000-0021',address:'',confirmation:'',notes:''},
+  {clientId:'1122',firstName:'First22',lastName:'Last22',email:'client22@example.com',phone:'555-000-0022',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1123',firstName:'First23',lastName:'Last23',email:'client23@example.com',phone:'555-000-0023',address:'',confirmation:'',notes:''},
+  {clientId:'1124',firstName:'First24',lastName:'Last24',email:'client24@example.com',phone:'555-000-0024',address:'',confirmation:'',notes:''},
+  {clientId:'1125',firstName:'First25',lastName:'Last25',email:'client25@example.com',phone:'555-000-0025',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1126',firstName:'First26',lastName:'Last26',email:'client26@example.com',phone:'555-000-0026',address:'',confirmation:'',notes:''},
+  {clientId:'1127',firstName:'First27',lastName:'Last27',email:'client27@example.com',phone:'555-000-0027',address:'',confirmation:'',notes:''},
+  {clientId:'1128',firstName:'First28',lastName:'Last28',email:'client28@example.com',phone:'555-000-0028',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1129',firstName:'First29',lastName:'Last29',email:'client29@example.com',phone:'555-000-0029',address:'',confirmation:'',notes:''},
+  {clientId:'1130',firstName:'First30',lastName:'Last30',email:'client30@example.com',phone:'555-000-0030',address:'',confirmation:'',notes:''},
+  {clientId:'1131',firstName:'First31',lastName:'Last31',email:'client31@example.com',phone:'555-000-0031',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1132',firstName:'First32',lastName:'Last32',email:'client32@example.com',phone:'555-000-0032',address:'',confirmation:'',notes:''},
+  {clientId:'1133',firstName:'First33',lastName:'Last33',email:'client33@example.com',phone:'555-000-0033',address:'',confirmation:'',notes:''},
+  {clientId:'1134',firstName:'First34',lastName:'Last34',email:'client34@example.com',phone:'555-000-0034',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1135',firstName:'First35',lastName:'Last35',email:'client35@example.com',phone:'555-000-0035',address:'',confirmation:'',notes:''},
+  {clientId:'1136',firstName:'First36',lastName:'Last36',email:'client36@example.com',phone:'555-000-0036',address:'',confirmation:'',notes:''},
+  {clientId:'1137',firstName:'First37',lastName:'Last37',email:'client37@example.com',phone:'555-000-0037',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1138',firstName:'First38',lastName:'Last38',email:'client38@example.com',phone:'555-000-0038',address:'',confirmation:'',notes:''},
+  {clientId:'1139',firstName:'First39',lastName:'Last39',email:'client39@example.com',phone:'555-000-0039',address:'',confirmation:'',notes:''},
+  {clientId:'1140',firstName:'First40',lastName:'Last40',email:'client40@example.com',phone:'555-000-0040',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1141',firstName:'First41',lastName:'Last41',email:'client41@example.com',phone:'555-000-0041',address:'',confirmation:'',notes:''},
+  {clientId:'1142',firstName:'First42',lastName:'Last42',email:'client42@example.com',phone:'555-000-0042',address:'',confirmation:'',notes:''},
+  {clientId:'1143',firstName:'First43',lastName:'Last43',email:'client43@example.com',phone:'555-000-0043',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1144',firstName:'First44',lastName:'Last44',email:'client44@example.com',phone:'555-000-0044',address:'',confirmation:'',notes:''},
+  {clientId:'1145',firstName:'First45',lastName:'Last45',email:'client45@example.com',phone:'555-000-0045',address:'',confirmation:'',notes:''},
+  {clientId:'1146',firstName:'First46',lastName:'Last46',email:'client46@example.com',phone:'555-000-0046',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1147',firstName:'First47',lastName:'Last47',email:'client47@example.com',phone:'555-000-0047',address:'',confirmation:'',notes:''},
+  {clientId:'1148',firstName:'First48',lastName:'Last48',email:'client48@example.com',phone:'555-000-0048',address:'',confirmation:'',notes:''},
+  {clientId:'1149',firstName:'First49',lastName:'Last49',email:'client49@example.com',phone:'555-000-0049',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1150',firstName:'First50',lastName:'Last50',email:'client50@example.com',phone:'555-000-0050',address:'',confirmation:'',notes:''},
+  {clientId:'1151',firstName:'First51',lastName:'Last51',email:'client51@example.com',phone:'555-000-0051',address:'',confirmation:'',notes:''},
+  {clientId:'1152',firstName:'First52',lastName:'Last52',email:'client52@example.com',phone:'555-000-0052',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1153',firstName:'First53',lastName:'Last53',email:'client53@example.com',phone:'555-000-0053',address:'',confirmation:'',notes:''},
+  {clientId:'1154',firstName:'First54',lastName:'Last54',email:'client54@example.com',phone:'555-000-0054',address:'',confirmation:'',notes:''},
+  {clientId:'1155',firstName:'First55',lastName:'Last55',email:'client55@example.com',phone:'555-000-0055',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1156',firstName:'First56',lastName:'Last56',email:'client56@example.com',phone:'555-000-0056',address:'',confirmation:'',notes:''},
+  {clientId:'1157',firstName:'First57',lastName:'Last57',email:'client57@example.com',phone:'555-000-0057',address:'',confirmation:'',notes:''},
+  {clientId:'1158',firstName:'First58',lastName:'Last58',email:'client58@example.com',phone:'555-000-0058',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1159',firstName:'First59',lastName:'Last59',email:'client59@example.com',phone:'555-000-0059',address:'',confirmation:'',notes:''},
+  {clientId:'1160',firstName:'First60',lastName:'Last60',email:'client60@example.com',phone:'555-000-0060',address:'',confirmation:'',notes:''},
+  {clientId:'1161',firstName:'First61',lastName:'Last61',email:'client61@example.com',phone:'555-000-0061',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1162',firstName:'First62',lastName:'Last62',email:'client62@example.com',phone:'555-000-0062',address:'',confirmation:'',notes:''},
+  {clientId:'1163',firstName:'First63',lastName:'Last63',email:'client63@example.com',phone:'555-000-0063',address:'',confirmation:'',notes:''},
+  {clientId:'1164',firstName:'First64',lastName:'Last64',email:'client64@example.com',phone:'555-000-0064',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1165',firstName:'First65',lastName:'Last65',email:'client65@example.com',phone:'555-000-0065',address:'',confirmation:'',notes:''},
+  {clientId:'1166',firstName:'First66',lastName:'Last66',email:'client66@example.com',phone:'555-000-0066',address:'',confirmation:'',notes:''},
+  {clientId:'1167',firstName:'First67',lastName:'Last67',email:'client67@example.com',phone:'555-000-0067',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1168',firstName:'First68',lastName:'Last68',email:'client68@example.com',phone:'555-000-0068',address:'',confirmation:'',notes:''},
+  {clientId:'1169',firstName:'First69',lastName:'Last69',email:'client69@example.com',phone:'555-000-0069',address:'',confirmation:'',notes:''},
+  {clientId:'1170',firstName:'First70',lastName:'Last70',email:'client70@example.com',phone:'555-000-0070',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1171',firstName:'First71',lastName:'Last71',email:'client71@example.com',phone:'555-000-0071',address:'',confirmation:'',notes:''},
+  {clientId:'1172',firstName:'First72',lastName:'Last72',email:'client72@example.com',phone:'555-000-0072',address:'',confirmation:'',notes:''},
+  {clientId:'1173',firstName:'First73',lastName:'Last73',email:'client73@example.com',phone:'555-000-0073',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1174',firstName:'First74',lastName:'Last74',email:'client74@example.com',phone:'555-000-0074',address:'',confirmation:'',notes:''},
+  {clientId:'1175',firstName:'First75',lastName:'Last75',email:'client75@example.com',phone:'555-000-0075',address:'',confirmation:'',notes:''},
+  {clientId:'1176',firstName:'First76',lastName:'Last76',email:'client76@example.com',phone:'555-000-0076',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1177',firstName:'First77',lastName:'Last77',email:'client77@example.com',phone:'555-000-0077',address:'',confirmation:'',notes:''},
+  {clientId:'1178',firstName:'First78',lastName:'Last78',email:'client78@example.com',phone:'555-000-0078',address:'',confirmation:'',notes:''},
+  {clientId:'1179',firstName:'First79',lastName:'Last79',email:'client79@example.com',phone:'555-000-0079',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1180',firstName:'First80',lastName:'Last80',email:'client80@example.com',phone:'555-000-0080',address:'',confirmation:'',notes:''},
+  {clientId:'1181',firstName:'First81',lastName:'Last81',email:'client81@example.com',phone:'555-000-0081',address:'',confirmation:'',notes:''},
+  {clientId:'1182',firstName:'First82',lastName:'Last82',email:'client82@example.com',phone:'555-000-0082',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1183',firstName:'First83',lastName:'Last83',email:'client83@example.com',phone:'555-000-0083',address:'',confirmation:'',notes:''},
+  {clientId:'1184',firstName:'First84',lastName:'Last84',email:'client84@example.com',phone:'555-000-0084',address:'',confirmation:'',notes:''},
+  {clientId:'1185',firstName:'First85',lastName:'Last85',email:'client85@example.com',phone:'555-000-0085',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1186',firstName:'First86',lastName:'Last86',email:'client86@example.com',phone:'555-000-0086',address:'',confirmation:'',notes:''},
+  {clientId:'1187',firstName:'First87',lastName:'Last87',email:'client87@example.com',phone:'555-000-0087',address:'',confirmation:'',notes:''},
+  {clientId:'1188',firstName:'First88',lastName:'Last88',email:'client88@example.com',phone:'555-000-0088',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1189',firstName:'First89',lastName:'Last89',email:'client89@example.com',phone:'555-000-0089',address:'',confirmation:'',notes:''},
+  {clientId:'1190',firstName:'First90',lastName:'Last90',email:'client90@example.com',phone:'555-000-0090',address:'',confirmation:'',notes:''},
+  {clientId:'1191',firstName:'First91',lastName:'Last91',email:'client91@example.com',phone:'555-000-0091',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1192',firstName:'First92',lastName:'Last92',email:'client92@example.com',phone:'555-000-0092',address:'',confirmation:'',notes:''},
+  {clientId:'1193',firstName:'First93',lastName:'Last93',email:'client93@example.com',phone:'555-000-0093',address:'',confirmation:'',notes:''},
+  {clientId:'1194',firstName:'First94',lastName:'Last94',email:'client94@example.com',phone:'555-000-0094',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1195',firstName:'First95',lastName:'Last95',email:'client95@example.com',phone:'555-000-0095',address:'',confirmation:'',notes:''},
+  {clientId:'1196',firstName:'First96',lastName:'Last96',email:'client96@example.com',phone:'555-000-0096',address:'',confirmation:'',notes:''},
+  {clientId:'1197',firstName:'First97',lastName:'Last97',email:'client97@example.com',phone:'555-000-0097',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1198',firstName:'First98',lastName:'Last98',email:'client98@example.com',phone:'555-000-0098',address:'',confirmation:'',notes:''},
+  {clientId:'1199',firstName:'First99',lastName:'Last99',email:'client99@example.com',phone:'555-000-0099',address:'',confirmation:'',notes:''},
+  {clientId:'1200',firstName:'First100',lastName:'Last100',email:'client100@example.com',phone:'555-000-0100',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1201',firstName:'First101',lastName:'Last101',email:'client101@example.com',phone:'555-000-0101',address:'',confirmation:'',notes:''},
+  {clientId:'1202',firstName:'First102',lastName:'Last102',email:'client102@example.com',phone:'555-000-0102',address:'',confirmation:'',notes:''},
+  {clientId:'1203',firstName:'First103',lastName:'Last103',email:'client103@example.com',phone:'555-000-0103',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1204',firstName:'First104',lastName:'Last104',email:'client104@example.com',phone:'555-000-0104',address:'',confirmation:'',notes:''},
+  {clientId:'1205',firstName:'First105',lastName:'Last105',email:'client105@example.com',phone:'555-000-0105',address:'',confirmation:'',notes:''},
+  {clientId:'1206',firstName:'First106',lastName:'Last106',email:'client106@example.com',phone:'555-000-0106',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1207',firstName:'First107',lastName:'Last107',email:'client107@example.com',phone:'555-000-0107',address:'',confirmation:'',notes:''},
+  {clientId:'1208',firstName:'First108',lastName:'Last108',email:'client108@example.com',phone:'555-000-0108',address:'',confirmation:'',notes:''},
+  {clientId:'1209',firstName:'First109',lastName:'Last109',email:'client109@example.com',phone:'555-000-0109',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1210',firstName:'First110',lastName:'Last110',email:'client110@example.com',phone:'555-000-0110',address:'',confirmation:'',notes:''},
+  {clientId:'1211',firstName:'First111',lastName:'Last111',email:'client111@example.com',phone:'555-000-0111',address:'',confirmation:'',notes:''},
+  {clientId:'1212',firstName:'First112',lastName:'Last112',email:'client112@example.com',phone:'555-000-0112',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1213',firstName:'First113',lastName:'Last113',email:'client113@example.com',phone:'555-000-0113',address:'',confirmation:'',notes:''},
+  {clientId:'1214',firstName:'First114',lastName:'Last114',email:'client114@example.com',phone:'555-000-0114',address:'',confirmation:'',notes:''},
+  {clientId:'1215',firstName:'First115',lastName:'Last115',email:'client115@example.com',phone:'555-000-0115',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1216',firstName:'First116',lastName:'Last116',email:'client116@example.com',phone:'555-000-0116',address:'',confirmation:'',notes:''},
+  {clientId:'1217',firstName:'First117',lastName:'Last117',email:'client117@example.com',phone:'555-000-0117',address:'',confirmation:'',notes:''},
+  {clientId:'1218',firstName:'First118',lastName:'Last118',email:'client118@example.com',phone:'555-000-0118',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1219',firstName:'First119',lastName:'Last119',email:'client119@example.com',phone:'555-000-0119',address:'',confirmation:'',notes:''},
+  {clientId:'1220',firstName:'First120',lastName:'Last120',email:'client120@example.com',phone:'555-000-0120',address:'',confirmation:'',notes:''},
+  {clientId:'1221',firstName:'First121',lastName:'Last121',email:'client121@example.com',phone:'555-000-0121',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1222',firstName:'First122',lastName:'Last122',email:'client122@example.com',phone:'555-000-0122',address:'',confirmation:'',notes:''},
+  {clientId:'1223',firstName:'First123',lastName:'Last123',email:'client123@example.com',phone:'555-000-0123',address:'',confirmation:'',notes:''},
+  {clientId:'1224',firstName:'First124',lastName:'Last124',email:'client124@example.com',phone:'555-000-0124',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1225',firstName:'First125',lastName:'Last125',email:'client125@example.com',phone:'555-000-0125',address:'',confirmation:'',notes:''},
+  {clientId:'1226',firstName:'First126',lastName:'Last126',email:'client126@example.com',phone:'555-000-0126',address:'',confirmation:'',notes:''},
+  {clientId:'1227',firstName:'First127',lastName:'Last127',email:'client127@example.com',phone:'555-000-0127',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1228',firstName:'First128',lastName:'Last128',email:'client128@example.com',phone:'555-000-0128',address:'',confirmation:'',notes:''},
+  {clientId:'1229',firstName:'First129',lastName:'Last129',email:'client129@example.com',phone:'555-000-0129',address:'',confirmation:'',notes:''},
+  {clientId:'1230',firstName:'First130',lastName:'Last130',email:'client130@example.com',phone:'555-000-0130',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1231',firstName:'First131',lastName:'Last131',email:'client131@example.com',phone:'555-000-0131',address:'',confirmation:'',notes:''},
+  {clientId:'1232',firstName:'First132',lastName:'Last132',email:'client132@example.com',phone:'555-000-0132',address:'',confirmation:'',notes:''},
+  {clientId:'1233',firstName:'First133',lastName:'Last133',email:'client133@example.com',phone:'555-000-0133',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1234',firstName:'First134',lastName:'Last134',email:'client134@example.com',phone:'555-000-0134',address:'',confirmation:'',notes:''},
+  {clientId:'1235',firstName:'First135',lastName:'Last135',email:'client135@example.com',phone:'555-000-0135',address:'',confirmation:'',notes:''},
+  {clientId:'1236',firstName:'First136',lastName:'Last136',email:'client136@example.com',phone:'555-000-0136',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1237',firstName:'First137',lastName:'Last137',email:'client137@example.com',phone:'555-000-0137',address:'',confirmation:'',notes:''},
+  {clientId:'1238',firstName:'First138',lastName:'Last138',email:'client138@example.com',phone:'555-000-0138',address:'',confirmation:'',notes:''},
+  {clientId:'1239',firstName:'First139',lastName:'Last139',email:'client139@example.com',phone:'555-000-0139',address:'',confirmation:'Accurate',notes:''},
+  {clientId:'1240',firstName:'First140',lastName:'Last140',email:'client140@example.com',phone:'555-000-0140',address:'',confirmation:'',notes:''}
 ];
 
 async function seedClientsIfEmpty() {
@@ -3088,8 +3137,22 @@ async function seedClientsIfEmpty() {
   // Wait a moment for Firestore snapshot to confirm empty
   await new Promise(r => setTimeout(r, 1500));
   if (_clients.length > 0) return;
-  for (const c of CLIENT_SEED) {
-    await addDoc(collection(db,'clients'), {...c, _createdAt: serverTimestamp()});
+  try {
+    // Atomic guard: claim the seed via a sentinel doc inside a transaction so
+    // concurrent tabs/clients cannot both seed and duplicate ~140 records.
+    const sentinelRef = doc(db, 'config', 'seeded');
+    const claimed = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(sentinelRef);
+      if (snap.exists()) return false;
+      tx.set(sentinelRef, { at: serverTimestamp() });
+      return true;
+    });
+    if (!claimed) return;
+    for (const c of CLIENT_SEED) {
+      await addDoc(collection(db,'clients'), {...c, _createdAt: serverTimestamp()});
+    }
+  } catch (err) {
+    console.error('seedClientsIfEmpty failed:', err);
   }
 }
 
@@ -3098,7 +3161,7 @@ function clientHomeMeetings() {
 }
 function populateHomeMeetingList() {
   const dl = document.getElementById('home-meeting-list');
-  if (dl) dl.innerHTML = clientHomeMeetings().map(m=>`<option value="${m.replace(/"/g,'&quot;')}">`).join('');
+  if (dl) dl.innerHTML = clientHomeMeetings().map(m=>`<option value="${fEsc(m)}">`).join('');
 }
 function clientFullName(c){ return [c.firstName,c.lastName].filter(Boolean).join(' '); }
 function populateClientNameList(){
@@ -3149,18 +3212,18 @@ function renderClientDirectory() {
       <th style="width:40px"></th>
     </tr></thead>
     <tbody>${list.map(c=>{
-      const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '<span style="color:#bbb">—</span>';
+      const name = fEsc([c.firstName, c.lastName].filter(Boolean).join(' ')) || '<span style="color:#bbb">—</span>';
       const badge = c.confirmation === 'Accurate' ? '<span class="badge badge-success">Accurate</span>' :
                     c.confirmation === 'ION' ? '<span class="badge badge-warn">ION</span>' :
                     c.confirmation === 'Accurate ION' ? '<span class="badge badge-info">Acc+ION</span>' :
-                    c.confirmation ? `<span class="badge badge-info">${c.confirmation}</span>` : '';
+                    c.confirmation ? `<span class="badge badge-info">${fEsc(c.confirmation)}</span>` : '';
       return `<tr>
-        <td style="font-weight:700;color:var(--primary);">${c.clientId||'—'}</td>
-        <td>${name}${c.notes?`<div style="font-size:0.75em;color:#888;margin-top:2px;">${c.notes}</div>`:''}</td>
-        <td style="font-size:0.83em;color:#555;">${c.email||'—'}</td>
-        <td style="font-size:0.85em;">${c.phone||'—'}</td>
-        <td style="font-size:0.8em;"><span class="badge badge-info">${c.relationship||'Client'}</span></td>
-        <td style="font-size:0.83em;">${c.homeMeeting?`<span class="badge badge-info">${c.homeMeeting}</span>`:'—'}</td>
+        <td style="font-weight:700;color:var(--primary);">${fEsc(c.clientId)||'—'}</td>
+        <td>${name}${c.notes?`<div style="font-size:0.75em;color:#888;margin-top:2px;">${fEsc(c.notes)}</div>`:''}</td>
+        <td style="font-size:0.83em;color:#555;">${fEsc(c.email)||'—'}</td>
+        <td style="font-size:0.85em;">${fEsc(c.phone)||'—'}</td>
+        <td style="font-size:0.8em;"><span class="badge badge-info">${fEsc(c.relationship||'Client')}</span></td>
+        <td style="font-size:0.83em;">${c.homeMeeting?`<span class="badge badge-info">${fEsc(c.homeMeeting)}</span>`:'—'}</td>
         <td>${badge}</td>
         <td><button class="btn btn-outline" style="padding:4px 8px;font-size:0.75em;" onclick="openClientModal('${c._id}')">Edit</button></td>
       </tr>`;
@@ -3221,12 +3284,17 @@ async function saveClient() {
     confirmation: document.getElementById('cm-confirmation').value,
     notes: document.getElementById('cm-notes').value.trim(),
   };
-  if (id) {
-    await DB.updateClient(id, data);
-  } else {
-    await DB.addClient(data);
+  try {
+    if (id) {
+      await DB.updateClient(id, data);
+    } else {
+      await DB.addClient(data);
+    }
+    closeClientModal();
+  } catch (err) {
+    console.error('saveClient failed:', err);
+    alert('Could not save the client. Please check your connection and try again.');
   }
-  closeClientModal();
 }
 
 function deleteClient() {
@@ -3248,6 +3316,8 @@ const FUND_FOLLOWUP_DAYS = 90;  // remind to reach out after ~3 months
 const FUND_RELATIONSHIPS = ['Donor','Major Donor','Prospect','Board Member','Volunteer','Partner Org','Grantor','Community Member','Vendor','Other'];
 
 function fEsc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Strip internal cache-only fields before writing a cached object back to Firestore.
+function _stripInternal(obj){ const o={...obj}; delete o._id; delete o._type; delete o._createdAt; delete o._updatedAt; return o; }
 function fmtMoney(n){ const v=Number(n)||0; return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function fundLastContact(c){
@@ -3415,13 +3485,18 @@ async function saveFundContact(){
     notes: document.getElementById('fm-notes').value.trim(),
   };
   if (!data.firstName && !data.lastName && !data.org) { alert('Enter at least a name or organization.'); return; }
-  if (id) {
-    await DB.updateFundContact(id, data);   // merge — preserves interactions/gifts
-  } else {
-    await DB.addFundContact({...data, interactions:[], gifts:[], createdDate:new Date().toISOString().slice(0,10)});
+  try {
+    if (id) {
+      await DB.updateFundContact(id, data);   // merge — preserves interactions/gifts
+    } else {
+      await DB.addFundContact({...data, interactions:[], gifts:[], createdDate:new Date().toISOString().slice(0,10)});
+    }
+    closeContactModal();
+    if (id && _fundDetailId === id) renderContactDetail(id);
+  } catch (err) {
+    console.error('saveFundContact failed:', err);
+    alert('Could not save the contact. Please check your connection and try again.');
   }
-  closeContactModal();
-  if (id && _fundDetailId === id) renderContactDetail(id);
 }
 
 function openContactDetail(id){
@@ -3490,9 +3565,14 @@ async function addInteraction(){
   if (!summary && !date) { alert('Add a date or a summary for the interaction.'); return; }
   const entry = {id:uuid(), date, method, summary};
   const interactions = [...(c.interactions||[]), entry];
-  await DB.updateFundContact(_fundDetailId, {interactions});
-  document.getElementById('fd-int-summary').value = '';
-  renderContactDetail(_fundDetailId);
+  try {
+    await DB.updateFundContact(_fundDetailId, {interactions});
+    document.getElementById('fd-int-summary').value = '';
+    renderContactDetail(_fundDetailId);
+  } catch (err) {
+    console.error('addInteraction failed:', err);
+    alert('Could not log the interaction. Please try again.');
+  }
 }
 function deleteInteraction(entryId){
   if (!_fundDetailId) return;
@@ -3515,11 +3595,16 @@ async function addGift(){
   if (!(amount > 0)) { alert('Enter a gift amount greater than 0.'); return; }
   const entry = {id:uuid(), date, amount, fund, note};
   const gifts = [...(c.gifts||[]), entry];
-  await DB.updateFundContact(_fundDetailId, {gifts});
-  document.getElementById('fd-gift-amount').value = '';
-  document.getElementById('fd-gift-fund').value = '';
-  document.getElementById('fd-gift-note').value = '';
-  renderContactDetail(_fundDetailId);
+  try {
+    await DB.updateFundContact(_fundDetailId, {gifts});
+    document.getElementById('fd-gift-amount').value = '';
+    document.getElementById('fd-gift-fund').value = '';
+    document.getElementById('fd-gift-note').value = '';
+    renderContactDetail(_fundDetailId);
+  } catch (err) {
+    console.error('addGift failed:', err);
+    alert('Could not record the gift. Please try again.');
+  }
 }
 function deleteGift(entryId){
   if (!_fundDetailId) return;
@@ -3705,53 +3790,53 @@ function showEBMsg(type, html) {
   setTimeout(() => el.style.display = 'none', 8000);
 }
 
-document.getElementById('client-modal').addEventListener('click', function(e) {
+document.getElementById('client-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeClientModal();
 });
-document.getElementById('fund-modal').addEventListener('click', function(e) {
+document.getElementById('fund-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeContactModal();
 });
-document.getElementById('fund-detail').addEventListener('click', function(e) {
+document.getElementById('fund-detail')?.addEventListener('click', function(e) {
   if (e.target === this) closeContactDetail();
 });
-document.getElementById('dash-modal').addEventListener('click', function(e) {
+document.getElementById('dash-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeDashboardConfig();
 });
-document.getElementById('mymetrics-modal').addEventListener('click', function(e) {
+document.getElementById('mymetrics-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeMyMetricsConfig();
 });
-document.getElementById('task-modal').addEventListener('click', function(e) {
+document.getElementById('task-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeTaskModal();
 });
-document.getElementById('cal-modal').addEventListener('click', function(e) {
+document.getElementById('cal-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeCalEvent();
 });
-document.getElementById('cal-detail').addEventListener('click', function(e) {
+document.getElementById('cal-detail')?.addEventListener('click', function(e) {
   if (e.target === this) closeCalDetail();
 });
-document.getElementById('rj-modal').addEventListener('click', function(e) {
+document.getElementById('rj-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeRJCase();
 });
-document.getElementById('sp-modal').addEventListener('click', function(e) {
+document.getElementById('sp-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeServicePlan();
 });
-document.getElementById('msg-modal').addEventListener('click', function(e) {
+document.getElementById('msg-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeMentorMessages();
 });
-document.getElementById('mtask-modal').addEventListener('click', function(e) {
+document.getElementById('mtask-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeMentorTasks();
 });
-document.getElementById('staff-modal').addEventListener('click', function(e) {
+document.getElementById('staff-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeStaffModal();
 });
-document.getElementById('planner-modal').addEventListener('click', function(e) {
+document.getElementById('planner-modal')?.addEventListener('click', function(e) {
   if (e.target === this) closeAIPlanner();
 });
 
 // ===================================================================
 // NEEDS ASSESSMENT — form handlers and list/print renderers
 // ===================================================================
-document.getElementById('na-form').addEventListener('submit', async function(e) {
+document.getElementById('na-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
   btn.textContent = 'Saving…'; btn.disabled = true;
@@ -3759,11 +3844,17 @@ document.getElementById('na-form').addEventListener('submit', async function(e) 
   const data = {id:uuid(), submittedAt:new Date().toISOString()};
   for (const [k,v] of fd.entries()) { data[k] = v; }
   data.assistanceType = fd.get('assistanceType') || data.assistanceType || '';
-  const _sid = await saveForm('needs-assessment', data);
-  btn.textContent = 'Submit Needs Assessment'; btn.disabled = false;
-  this.reset();
-  window.scrollTo(0,0);
-  showFormSuccess('needs-assessment', _sid, data);
+  try {
+    const _sid = await saveForm('needs-assessment', data);
+    btn.textContent = 'Submit Needs Assessment'; btn.disabled = false;
+    this.reset();
+    window.scrollTo(0,0);
+    showFormSuccess('needs-assessment', _sid, data);
+  } catch (err) {
+    console.error('Needs assessment save failed:', err);
+    btn.textContent = 'Submit Needs Assessment'; btn.disabled = false;
+    alert('Could not save the needs assessment. Please check your connection and try again.');
+  }
 });
 
 // Reports: every submitted form, with Edit (name-locked), Download, admin Delete
@@ -3894,14 +3985,21 @@ async function savePassword(){
   const show=(msg,ok)=>{ if(st){ st.style.color=ok?'#43a047':'#e53935'; st.textContent=msg; } };
   if(!pw || pw.length<4){ show('Password must be at least 4 characters.',false); return; }
   if(pw!==pw2){ show('Passwords do not match.',false); return; }
-  await DB.updateRecord('staff', s._id, {password:pw});
-  show('Password updated ✓ Use it next time you log in.',true);
-  document.getElementById('pf-newpw').value=''; document.getElementById('pf-newpw2').value='';
+  try {
+    await DB.updateRecord('staff', s._id, {password:pw});
+    show('Password updated ✓ Use it next time you log in.',true);
+    document.getElementById('pf-newpw').value=''; document.getElementById('pf-newpw2').value='';
+  } catch (err) {
+    console.error('savePassword failed:', err);
+    show('Could not update password. Please try again.',false);
+  }
 }
 function resetPassword(){
   const s=myStaffRecord(); if(!s) return;
   if(!confirm('Reset your password back to the default ('+firstNameOf(s.name)+'1234)?')) return;
-  DB.updateRecord('staff', s._id, {password:''}).then(()=>renderProfile());
+  DB.updateRecord('staff', s._id, {password:''})
+    .then(()=>renderProfile())
+    .catch(err=>{ console.error('resetPassword failed:', err); alert('Could not reset password. Please try again.'); });
 }
 async function uploadProfilePhoto(input){
   const s=myStaffRecord(); const f=input.files&&input.files[0]; if(!s||!f) return;
@@ -3939,8 +4037,8 @@ function renderNAList() {
     <thead><tr><th>Date</th><th>Participant</th><th>Assistance Type</th><th>Amount</th><th>Submitted</th><th></th></tr></thead>
     <tbody>${list.slice().reverse().map(n=>`<tr>
       <td>${fmtDate(n.date)||'—'}</td>
-      <td>${n.participantName||'—'}</td>
-      <td>${n.assistanceType||'—'}</td>
+      <td>${fEsc(n.participantName)||'—'}</td>
+      <td>${fEsc(n.assistanceType)||'—'}</td>
       <td>${n.amountRequested?'$'+parseFloat(n.amountRequested).toFixed(2):'—'}</td>
       <td style="color:#999;font-size:0.82em;">${new Date(n.submittedAt).toLocaleDateString()}</td>
       <td><button class="btn btn-outline" style="padding:4px 10px;font-size:0.78em;" onclick="printNA('${n._id}')">🖨 Print</button></td>
@@ -3958,18 +4056,18 @@ function printNA(id) {
         <p>ReGroup Elite Squad</p>
       </div>
       <table class="na-info-table">
-        <tr><td><b>Date:</b></td><td>${fmtDate(n.date)||'_____________'}</td><td><b>Participant Name:</b></td><td>${n.participantName||'_____________'}</td></tr>
-        <tr><td><b>Contact Info:</b></td><td colspan="3">${n.contactInfo||'_____________'}</td></tr>
+        <tr><td><b>Date:</b></td><td>${fmtDate(n.date)||'_____________'}</td><td><b>Participant Name:</b></td><td>${fEsc(n.participantName)||'_____________'}</td></tr>
+        <tr><td><b>Contact Info:</b></td><td colspan="3">${fEsc(n.contactInfo)||'_____________'}</td></tr>
       </table>
       <div class="na-section">
         <div class="na-section-title">Section 1 — Type of Assistance Requested</div>
         <div class="na-checkbox-grid">${ASSISTANCE_TYPES.map(t=>`
-          <div class="na-cb-item"><span class="na-cb ${n.assistanceType===t?'na-cb-checked':''}"></span> ${t}</div>
+          <div class="na-cb-item"><span class="na-cb ${n.assistanceType===t?'na-cb-checked':''}"></span> ${fEsc(t)}</div>
         `).join('')}</div>
       </div>
       <div class="na-section">
         <div class="na-section-title">Section 2 — Description of Need</div>
-        <div class="na-text-box">${n.descriptionOfNeed||''}</div>
+        <div class="na-text-box">${fEsc(n.descriptionOfNeed)}</div>
       </div>
       <div class="na-section">
         <div class="na-section-title">Section 3 — Total Monetary Amount Requested</div>
@@ -3977,12 +4075,12 @@ function printNA(id) {
       </div>
       <div class="na-section">
         <div class="na-section-title">Section 4 — Supporting Information</div>
-        <div class="na-text-box">${n.supportingInfo||''}</div>
+        <div class="na-text-box">${fEsc(n.supportingInfo)}</div>
       </div>
       <div class="na-section">
         <div class="na-section-title">Section 5 — Referral &amp; Time Sensitivity</div>
         <table class="na-info-table">
-          <tr><td><b>Referred By:</b></td><td>${n.referredBy||'_____________'}</td><td><b>Date of Referral:</b></td><td>${fmtDate(n.referralDate)||'_____________'}</td></tr>
+          <tr><td><b>Referred By:</b></td><td>${fEsc(n.referredBy)||'_____________'}</td><td><b>Date of Referral:</b></td><td>${fmtDate(n.referralDate)||'_____________'}</td></tr>
           <tr><td><b>Response Needed By:</b></td><td colspan="3">${fmtDate(n.responseNeededBy)||'_____________'}</td></tr>
         </table>
       </div>
@@ -4054,7 +4152,7 @@ async function readImagesCompressed(files, {maxDim=1280, quality=0.7, maxCount=8
   return out;
 }
 
-document.getElementById('er-form').addEventListener('submit', async function(e) {
+document.getElementById('er-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
   btn.textContent = 'Saving…'; btn.disabled = true;
@@ -4089,15 +4187,21 @@ document.getElementById('er-form').addEventListener('submit', async function(e) 
   // new uploads, keep the existing ones (merge preserves them).
   if (receipts.length) data.receipts = receipts;
   else if (!_formEditId['expense-report']) data.receipts = [];
-  const _sid = await saveForm('expense-report', data);
-  _erEditReceipts = null;
-  btn.textContent = 'Submit Expense Report'; btn.disabled = false;
-  this.reset();
-  document.getElementById('er-items-body').innerHTML = '';
-  addERRow();
-  updateERTotal();
-  window.scrollTo(0,0);
-  showFormSuccess('expense-report', _sid, data);
+  try {
+    const _sid = await saveForm('expense-report', data);
+    _erEditReceipts = null;
+    btn.textContent = 'Submit Expense Report'; btn.disabled = false;
+    this.reset();
+    document.getElementById('er-items-body').innerHTML = '';
+    addERRow();
+    updateERTotal();
+    window.scrollTo(0,0);
+    showFormSuccess('expense-report', _sid, data);
+  } catch (err) {
+    console.error('Expense report save failed:', err);
+    btn.textContent = 'Submit Expense Report'; btn.disabled = false;
+    alert('Could not save the expense report. Please check your connection and try again.');
+  }
 });
 
 function renderERList() {
@@ -4107,9 +4211,9 @@ function renderERList() {
   el.innerHTML = `<div class="table-wrap"><table>
     <thead><tr><th>Employee</th><th>Period</th><th>Purpose</th><th>Total</th><th>Submitted</th><th></th></tr></thead>
     <tbody>${list.slice().reverse().map(r=>`<tr>
-      <td>${r.employeeName||'—'}</td>
+      <td>${fEsc(r.employeeName)||'—'}</td>
       <td>${r.periodFrom?fmtDate(r.periodFrom)+' – '+fmtDate(r.periodTo):'—'}</td>
-      <td>${r.businessPurpose||'—'}${r.receipts&&r.receipts.length?` <span class="badge badge-info" title="Receipts attached">🧾 ${r.receipts.length}</span>`:''}</td>
+      <td>${fEsc(r.businessPurpose)||'—'}${r.receipts&&r.receipts.length?` <span class="badge badge-info" title="Receipts attached">🧾 ${r.receipts.length}</span>`:''}</td>
       <td><b>$${(r.totalReimbursement||0).toFixed(2)}</b></td>
       <td style="color:#999;font-size:0.82em;">${new Date(r.submittedAt).toLocaleDateString()}</td>
       <td><button class="btn btn-outline" style="padding:4px 10px;font-size:0.78em;" onclick="printER('${r._id}')">🖨 Print</button></td>
@@ -4123,8 +4227,8 @@ function printER(id) {
   const itemRows = (r.items||[]).map(item=>`
     <tr>
       <td>${fmtDate(item.date)||''}</td>
-      <td>${item.description||''}</td>
-      <td>${item.category||''}</td>
+      <td>${fEsc(item.description)}</td>
+      <td>${fEsc(item.category)}</td>
       <td class="right">$${(item.cost||0).toFixed(2)}</td>
     </tr>`).join('');
   const html = `
@@ -4134,7 +4238,7 @@ function printER(id) {
         <p>ReGroup Elite Squad &nbsp;·&nbsp; <em>Don't forget to attach receipts! Mileage reimbursement = $0.70/mile</em></p>
       </div>
       <table class="er-info-table">
-        <tr><td><b>Name:</b></td><td>${r.employeeName||'_____________'}</td><td><b>Business Purpose:</b></td><td>${r.businessPurpose||'_____________'}</td></tr>
+        <tr><td><b>Name:</b></td><td>${fEsc(r.employeeName)||'_____________'}</td><td><b>Business Purpose:</b></td><td>${fEsc(r.businessPurpose)||'_____________'}</td></tr>
         <tr><td><b>Period From:</b></td><td>${fmtDate(r.periodFrom)||'_____________'}</td><td><b>Period To:</b></td><td>${fmtDate(r.periodTo)||'_____________'}</td></tr>
       </table>
       <table class="er-items-table">
@@ -4234,10 +4338,10 @@ const MY_METRICS = [
   {id:'mySessions',   label:'My Client Services', color:'#1e3a8a', calc:n=>DB.sessions().filter(s=>s.mentorName===n).length},
   {id:'myActivities', label:'My Activities',      color:'#7c4dff', calc:n=>DB.activities().filter(a=>a.mentorName===n).length},
   {id:'myHours',      label:'My Total Hours',     color:'#43a047', calc:n=>DB.allEntries().filter(e=>e.mentorName===n).reduce((s,e)=>s+Math.max(0,calcHours(e.startTime,e.endTime)),0).toFixed(1)},
-  {id:'myWeekHours',  label:'My Hours This Week', color:'#2f9bb5', calc:n=>{const w=dashWeekStats;const now=new Date();const mon=new Date(now);mon.setDate(now.getDate()-((now.getDay()+6)%7));const sun=new Date(mon);sun.setDate(mon.getDate()+6);const ws=mon.toISOString().slice(0,10),we=sun.toISOString().slice(0,10);return DB.allEntries().filter(e=>e.mentorName===n&&getDate(e)>=ws&&getDate(e)<=we).reduce((s,e)=>s+Math.max(0,calcHours(e.startTime,e.endTime)),0).toFixed(1);}},
-  {id:'myOpenTasks',  label:'My Open Tasks',      color:'#fb8c00', calc:n=>DB.tasks().filter(t=>t.mentorName===n&&t.status!=='Done').length},
+  {id:'myWeekHours',  label:'My Hours This Week', color:'#2f9bb5', calc:n=>{const now=new Date();const mon=new Date(now);mon.setDate(now.getDate()-((now.getDay()+6)%7));const sun=new Date(mon);sun.setDate(mon.getDate()+6);const ws=mon.toISOString().slice(0,10),we=sun.toISOString().slice(0,10);return DB.allEntries().filter(e=>e.mentorName===n&&getDate(e)>=ws&&getDate(e)<=we).reduce((s,e)=>s+Math.max(0,calcHours(e.startTime,e.endTime)),0).toFixed(1);}},
+  {id:'myOpenTasks',  label:'My Open Tasks',      color:'#fb8c00', calc:n=>DB.tasks().filter(t=>t.mentorName===n&&!_isDone(t)).length},
   {id:'myInProgress', label:'My Tasks In Progress',color:'#2f9bb5', calc:n=>DB.tasks().filter(t=>t.mentorName===n&&t.status==='In Progress').length},
-  {id:'myDoneTasks',  label:'My Completed Tasks', color:'#43a047', calc:n=>DB.tasks().filter(t=>t.mentorName===n&&t.status==='Done').length},
+  {id:'myDoneTasks',  label:'My Completed Tasks', color:'#43a047', calc:n=>DB.tasks().filter(t=>t.mentorName===n&&_isDone(t)).length},
   {id:'myUnread',     label:'My Unread Messages', color:'#e53935', calc:n=>DB.messages().filter(m=>m.mentorName===n&&!m.read).length},
   {id:'myClients',    label:'My Clients Served',  color:'#00897b', calc:n=>new Set(DB.sessions().filter(s=>s.mentorName===n).map(s=>s.clientId).filter(Boolean)).size},
   {id:'mySafety',     label:'My Safety Flags',    color:'#c62828', calc:n=>DB.allEntries().filter(e=>e.mentorName===n&&e.safetyConcerns&&e.safetyConcerns!=='No concerns'&&e.safetyConcerns!=='no').length},
@@ -4305,7 +4409,7 @@ function renderDashboard() {
   document.getElementById('mentor-hours-chart').innerHTML = sorted.length ?
     sorted.map(([n,h]) => `
       <div class="mentor-row">
-        <div style="min-width:130px;font-size:0.85em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
+        <div style="min-width:130px;font-size:0.85em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fEsc(n)}</div>
         <div class="mentor-bar-bg"><div class="mentor-bar" style="width:${(h/maxH*100).toFixed(1)}%"></div></div>
         <div style="min-width:48px;text-align:right;font-size:0.82em;color:#555;">${h.toFixed(1)}h</div>
       </div>
@@ -4341,7 +4445,7 @@ function renderDashboard() {
         </tr></thead>
         <tbody>${Object.entries(wMentors).map(([n,d])=>`
           <tr style="border-bottom:1px solid #f5f5f5;">
-            <td style="padding:6px 0;">${n}</td>
+            <td style="padding:6px 0;">${fEsc(n)}</td>
             <td style="text-align:center;">${d.sessions}</td>
             <td style="text-align:center;">${d.hours.toFixed(1)}</td>
           </tr>`).join('')}
@@ -4361,7 +4465,7 @@ function renderDashboard() {
   document.getElementById('service-breakdown').innerHTML = topSvc.length ?
     topSvc.map(([n,c]) => `
       <div class="mentor-row">
-        <div style="min-width:170px;font-size:0.82em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n}</div>
+        <div style="min-width:170px;font-size:0.82em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fEsc(n)}</div>
         <div class="mentor-bar-bg"><div class="mentor-bar" style="width:${(c/maxS*100).toFixed(1)}%;background:var(--purple)"></div></div>
         <div style="min-width:30px;text-align:right;font-size:0.82em;color:#555;">${c}</div>
       </div>
@@ -4374,8 +4478,8 @@ function renderDashboard() {
       <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #f5f5f5;">
         ${safeConcernBadge(e.safetyConcerns)}
         <div>
-          <div style="font-size:0.875em;font-weight:600;">${e.mentorName||''} — ${fmtDate(getDate(e))}</div>
-          <div style="font-size:0.8em;color:#666;margin-top:2px;">${e.concernDescription||e.safetyDescription||'No description'}</div>
+          <div style="font-size:0.875em;font-weight:600;">${fEsc(e.mentorName)} — ${fmtDate(getDate(e))}</div>
+          <div style="font-size:0.8em;color:#666;margin-top:2px;">${fEsc(e.concernDescription||e.safetyDescription||'No description')}</div>
         </div>
       </div>
     `).join('') : '<p style="color:#bbb;font-size:0.875em;">No safety flags reported.</p>';
@@ -4396,7 +4500,7 @@ function renderDashboardStaff(){
     const color = colors[h % colors.length];
     const activeTasks = tasks.filter(t=>t.mentorName===name && t.status!=='Done').length;
     const activeMsgs  = msgs.filter(m=>m.mentorName===name && !m.read).length;
-    const nm = name.replace(/'/g,"\\'");
+    const nm = fEsc(name.replace(/'/g,"\\'"));
     const avatar = s.photo
       ? `<div style="width:48px;height:48px;border-radius:50%;background-image:url('${s.photo}');background-size:cover;background-position:center;border:1px solid #e5e9f0;"></div>`
       : `<div style="width:48px;height:48px;border-radius:50%;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1em;">${initials}</div>`;
@@ -4495,13 +4599,13 @@ function renderTimesheetTable() {
   const tbody = document.querySelector('#timesheet-table tbody');
   tbody.innerHTML = entries.length ? entries.map(e=>`
     <tr>
-      <td>${e.mentorName||''}</td>
+      <td>${fEsc(e.mentorName)}</td>
       <td>${fmtDate(getDate(e))}</td>
       <td>${fmtTime(e.startTime)}</td>
       <td>${fmtTime(e.endTime)}</td>
-      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getActivityLabel(e)}</td>
+      <td style="max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fEsc(getActivityLabel(e))}</td>
       <td>${Math.max(0,calcHours(e.startTime,e.endTime)).toFixed(2)}</td>
-      <td>${e.grant||''}</td>
+      <td>${fEsc(e.grant)}</td>
       <td><span class="badge ${e._type==='client'?'badge-info':'badge-success'}">${e._type==='client'?'Client':'Activity'}</span></td>
     </tr>
   `).join('') : '<tr><td colspan="8" style="text-align:center;color:#bbb;padding:30px;">No entries yet.</td></tr>';
@@ -4518,7 +4622,7 @@ function renderSummaryTable() {
   const tbody = document.querySelector('#summary-table tbody');
   const rows = Object.entries(mentorData).sort((a,b)=>a[0].localeCompare(b[0]));
   tbody.innerHTML = rows.length ? rows.map(([n,d])=>`
-    <tr><td>${n}</td><td style="text-align:center">${d.sessions}</td><td style="text-align:center">${d.hours.toFixed(2)}</td></tr>
+    <tr><td>${fEsc(n)}</td><td style="text-align:center">${d.sessions}</td><td style="text-align:center">${d.hours.toFixed(2)}</td></tr>
   `).join('') : '<tr><td colspan="3" style="text-align:center;color:#bbb;padding:30px;">No data yet.</td></tr>';
 }
 
@@ -4527,11 +4631,11 @@ function renderSafetyTable() {
   const tbody = document.querySelector('#safety-table tbody');
   tbody.innerHTML = entries.length ? entries.map(e=>`
     <tr>
-      <td>${e.mentorName||''}</td>
+      <td>${fEsc(e.mentorName)}</td>
       <td>${fmtDate(getDate(e))}</td>
-      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getActivityLabel(e)}</td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fEsc(getActivityLabel(e))}</td>
       <td>${safeConcernBadge(e.safetyConcerns)}</td>
-      <td>${e.concernDescription||e.safetyDescription||''}</td>
+      <td>${fEsc(e.concernDescription||e.safetyDescription||'')}</td>
     </tr>
   `).join('') : '<tr><td colspan="5" style="text-align:center;color:#bbb;padding:30px;">No safety concerns logged.</td></tr>';
 }
@@ -4548,12 +4652,12 @@ function renderAllData() {
   tbody.innerHTML = entries.length ? entries.map(e=>`
     <tr>
       <td><span class="badge ${e._type==='client'?'badge-info':'badge-success'}">${e._type==='client'?'Client':'Activity'}</span></td>
-      <td>${e.mentorName||''}</td>
+      <td>${fEsc(e.mentorName)}</td>
       <td>${fmtDate(getDate(e))}</td>
-      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getActivityLabel(e)}</td>
-      <td style="font-size:0.82em;">${e.serviceOutcome||e.immediateOutcome||''}</td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fEsc(getActivityLabel(e))}</td>
+      <td style="font-size:0.82em;">${fEsc(e.serviceOutcome||e.immediateOutcome||'')}</td>
       <td>${Math.max(0,calcHours(e.startTime,e.endTime)).toFixed(2)}</td>
-      <td>${e.grant||''}</td>
+      <td>${fEsc(e.grant)}</td>
     </tr>
   `).join('') : '<tr><td colspan="7" style="text-align:center;color:#bbb;padding:30px;">No entries found.</td></tr>';
 }
@@ -4561,7 +4665,7 @@ function renderAllData() {
 function populateMentorFilter() {
   const mentors = [...new Set(dvEntries().map(e=>e.mentorName).filter(Boolean))].sort();
   const sel = document.getElementById('filter-mentor');
-  sel.innerHTML = '<option value="">All mentors</option>' + mentors.map(m=>`<option value="${m}">${m}</option>`).join('');
+  sel.innerHTML = '<option value="">All mentors</option>' + mentors.map(m=>`<option value="${fEsc(m)}">${fEsc(m)}</option>`).join('');
 }
 
 function filterPayPeriod() {
@@ -4573,13 +4677,13 @@ function filterPayPeriod() {
   const tbody = document.querySelector('#pp-table tbody');
   tbody.innerHTML = entries.length ? entries.map(e=>`
     <tr>
-      <td>${e.mentorName||''}</td>
+      <td>${fEsc(e.mentorName)}</td>
       <td>${fmtDate(getDate(e))}</td>
       <td>${fmtTime(e.startTime)}</td>
       <td>${fmtTime(e.endTime)}</td>
-      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${getActivityLabel(e)}</td>
+      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fEsc(getActivityLabel(e))}</td>
       <td>${Math.max(0,calcHours(e.startTime,e.endTime)).toFixed(2)}</td>
-      <td>${e.grant||''}</td>
+      <td>${fEsc(e.grant)}</td>
     </tr>
   `).join('') : '<tr><td colspan="7" style="text-align:center;color:#bbb;padding:20px;">No entries in this period.</td></tr>';
 }
@@ -4637,7 +4741,6 @@ function populateTsMentors() {
   }
 }
 
-function tsUpdateFromStaff() { /* fields removed — defaults now pulled from staff record */ }
 
 // Add N days to a YYYY-MM-DD string, returning YYYY-MM-DD
 function _addDays(ymd, n) {
@@ -4718,7 +4821,7 @@ function generateTimesheet() {
   const rowsHTML = [...dataRows.map(r=>`
     <tr class="data-row">
       <td class="left">${fmtDate(r.date)}</td>
-      <td class="left" style="max-width:180px;font-size:7.5pt;">${r.task}</td>
+      <td class="left" style="max-width:180px;font-size:7.5pt;">${fEsc(r.task)}</td>
       <td>${fmtTime(r.start)}</td>
       <td>${fmtTime(r.end)}</td>
       <td style="text-align:right">${r.regular.toFixed(2)}</td>
@@ -4726,7 +4829,7 @@ function generateTimesheet() {
       <td style="text-align:right"></td>
       <td style="text-align:right">${r.lunch.toFixed(1)}</td>
       <td style="text-align:right;font-weight:700;">${r.total.toFixed(2)}</td>
-      <td style="color:#1565c0;font-weight:600">${r.grant}</td>
+      <td style="color:#1565c0;font-weight:600">${fEsc(r.grant)}</td>
       <td style="text-align:right;font-weight:700;">$${r.bill.toFixed(2)}</td>
     </tr>`),
   ...padRows.map((_,i)=>`
@@ -4771,7 +4874,7 @@ function generateTimesheet() {
         </div>
       </div>
       <div class="ts-meta-row">
-        <div class="ts-meta-item"><label>Employee</label><span>${mentor}</span></div>
+        <div class="ts-meta-item"><label>Employee</label><span>${fEsc(mentor)}</span></div>
         <div class="ts-meta-item"><label>Start Date</label><span>${startDate ? fmtDateSlash(startDate) : '—'}</span></div>
         <div class="ts-meta-item"><label>Regular Hrs</label><span>${regHrs.toFixed(2)}</span></div>
         <div class="ts-meta-item"><label>Rate</label><span>$${rate.toFixed(2)}</span></div>
@@ -4864,7 +4967,7 @@ function computeClientAlerts() {
     const sorted = sortByDate(sess);
     const lastDate = new Date(getDate(sorted[sorted.length-1]) + 'T12:00:00');
     const daysSince = (now - lastDate) / msDay;
-    if (daysSince >= 90) {
+    if (!isNaN(daysSince) && daysSince >= 90) {
       const cRec = clients.find(c=>c.clientId===clientId);
       const name = cRec ? [cRec.firstName,cRec.lastName].filter(Boolean).join(' ') : clientId;
       alerts.push({
@@ -4947,11 +5050,11 @@ function renderAdminInbox() {
     return '<div class="card" style="border-left:4px solid ' + col + ';margin-bottom:14px;">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
         '<div style="flex:1;">' +
-          '<div style="font-weight:700;color:var(--primary);margin-bottom:4px;">' + icon + ' ' + (a.clientName||'Unknown') + ' <span style="font-size:0.75em;color:#999;font-weight:400;">#' + (a.clientId||'—') + '</span></div>' +
-          '<div style="font-size:0.875em;color:#555;margin-bottom:6px;">' + a.reason + '</div>' +
+          '<div style="font-weight:700;color:var(--primary);margin-bottom:4px;">' + icon + ' ' + fEsc(a.clientName||'Unknown') + ' <span style="font-size:0.75em;color:#999;font-weight:400;">#' + fEsc(a.clientId||'—') + '</span></div>' +
+          '<div style="font-size:0.875em;color:#555;margin-bottom:6px;">' + fEsc(a.reason) + '</div>' +
           '<div style="font-size:0.78em;color:#aaa;">Last contact: ' + (fmtDate(a.lastContact)||'Unknown') + ' · ' + a.sessionCount + ' session' + (a.sessionCount!==1?'s':'') + ' on record</div>' +
         '</div>' +
-        '<button class="btn btn-accent" style="white-space:nowrap;" onclick="openAssignModal(' + i + ')">Assign Task</button>' +
+        '<button class="btn btn-accent" style="white-space:nowrap;" onclick="openAssignModal(\'' + fEsc(String(a.clientId||'')) + '\')">Assign Task</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -4966,25 +5069,27 @@ function renderAdminTasks() {
     '<thead><tr><th>Assigned To</th><th>Client</th><th>Description</th><th>Due</th><th>Status</th><th></th></tr></thead>' +
     '<tbody>' + tasks.map(t =>
       '<tr>' +
-        '<td><b>' + (t.mentorName||'—') + '</b></td>' +
-        '<td>' + (t.clientName||'—') + '</td>' +
-        '<td style="font-size:0.85em;">' + (t.description||'—') + '</td>' +
+        '<td><b>' + fEsc(t.mentorName||'—') + '</b></td>' +
+        '<td>' + fEsc(t.clientName||'—') + '</td>' +
+        '<td style="font-size:0.85em;">' + fEsc(t.description||'—') + '</td>' +
         '<td style="font-size:0.82em;">' + (fmtDate(t.dueDate)||'—') + '</td>' +
-        '<td><span class="badge ' + (t.status==='Done'?'badge-success':t.status==='In Progress'?'badge-info':'badge-warn') + '">' + (t.status||'Open') + '</span></td>' +
+        '<td><span class="badge ' + (t.status==='Done'?'badge-success':t.status==='In Progress'?'badge-info':'badge-warn') + '">' + fEsc(t.status||'Open') + '</span></td>' +
         '<td><button class="btn btn-danger" style="padding:4px 8px;font-size:0.75em;" onclick="adminRemoveTask(\'' + t._id + '\')">Remove</button></td>' +
       '</tr>'
     ).join('') + '</tbody></table></div>';
 }
 
-function openAssignModal(alertIndex) {
-  const a = _cachedAlerts[alertIndex];
+function openAssignModal(clientId) {
+  // Look up by stable clientId rather than a positional index, which can point
+  // at the wrong alert if _cachedAlerts is recomputed between render and click (M3).
+  const a = _cachedAlerts.find(x => String(x.clientId) === String(clientId));
   if (!a) return;
   document.getElementById('am-alert-data').value = JSON.stringify(a);
   document.getElementById('am-description').value = 'Follow up with ' + a.clientName + ': ' + a.reason;
   document.getElementById('am-due').value = '';
   const sel = document.getElementById('am-mentor');
   sel.innerHTML = '<option value="">— Select mentor —</option>' +
-    DB.staff().map(s=>'<option value="' + s.name + '">' + s.name + '</option>').join('');
+    DB.staff().map(s=>'<option value="' + fEsc(s.name) + '">' + fEsc(s.name) + '</option>').join('');
   document.getElementById('assign-modal').style.display = 'flex';
 }
 
@@ -5027,7 +5132,7 @@ function renderMyTasks() {
   if (!isAdmin() && currentUserName()) { current = currentUserName(); sel.disabled = true; }
   else { sel.disabled = false; }
   sel.innerHTML = '<option value="">— Select your name —</option>' +
-    DB.staff().map(s=>'<option value="' + s.name + '"' + (s.name===current?' selected':'') + '>' + s.name + '</option>').join('');
+    DB.staff().map(s=>'<option value="' + fEsc(s.name) + '"' + (s.name===current?' selected':'') + '>' + fEsc(s.name) + '</option>').join('');
   sel.value = current;
   const el = document.getElementById('my-tasks-list');
   const msgsEl = document.getElementById('my-inbox-msgs');
@@ -5045,11 +5150,11 @@ function renderMyTasks() {
     const toSel = document.getElementById('mim-to');
     const prev = toSel.value;
     const opts = ['Admin', ...mentorNames().filter(n=>n!==current)];
-    toSel.innerHTML = opts.map(o=>`<option value="${fEsc(o)}"${o===prev?' selected':''}>${o==='Admin'?'Admin':o}</option>`).join('');
+    toSel.innerHTML = opts.map(o=>`<option value="${fEsc(o)}"${o===prev?' selected':''}>${o==='Admin'?'Admin':fEsc(o)}</option>`).join('');
   }
   // Inbox: messages addressed to me — show them and mark unread as read on view
   const myMsgs = DB.messages().filter(m=>m.mentorName===current);
-  myMsgs.filter(m=>!m.read).forEach(m=>DB.markMessageRead(m._id));
+  Promise.all(myMsgs.filter(m=>!m.read).map(m=>DB.markMessageRead(m._id))).catch(err=>console.error('mark-read batch failed:', err));
   if (msgsEl) msgsEl.innerHTML = renderMyMessagesCard(myMsgs);
   const tasks = DB.tasks().filter(t=>t.mentorName===current);
   const countEl = document.getElementById('my-tasks-count');
@@ -5060,10 +5165,10 @@ function renderMyTasks() {
     return '<div class="card" style="border-left:4px solid ' + col + ';margin-bottom:14px;">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">' +
         '<div style="flex:1;">' +
-          '<div style="font-weight:700;color:var(--primary);margin-bottom:4px;">' + (t.clientName||'General Task') + '</div>' +
-          '<div style="font-size:0.875em;color:#555;margin-bottom:8px;">' + (t.description||'') + '</div>' +
+          '<div style="font-weight:700;color:var(--primary);margin-bottom:4px;">' + fEsc(t.clientName||'General Task') + '</div>' +
+          '<div style="font-size:0.875em;color:#555;margin-bottom:8px;">' + fEsc(t.description||'') + '</div>' +
           (t.dueDate ? '<div style="font-size:0.78em;color:#888;">Due: ' + fmtDate(t.dueDate) + '</div>' : '') +
-          (t.reason  ? '<div style="font-size:0.78em;color:#999;margin-top:4px;font-style:italic;">Alert: ' + t.reason + '</div>' : '') +
+          (t.reason  ? '<div style="font-size:0.78em;color:#999;margin-top:4px;font-style:italic;">Alert: ' + fEsc(t.reason) + '</div>' : '') +
         '</div>' +
         '<select onchange="updateMyTaskStatus(\'' + t._id + '\',this.value)" style="padding:6px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:0.82em;min-width:120px;">' +
           '<option' + (t.status==='Open'?' selected':'') + '>Open</option>' +
@@ -5124,7 +5229,7 @@ function renderMentorPanel(){
     const unread = msgs.filter(m=>m.mentorName===name && !m.read).length;
     const uncompleted = tasks.filter(t=>t.mentorName===name && t.status!=='Done').length;
     const inprog = tasks.filter(t=>t.mentorName===name && t.status==='In Progress').length;
-    const nm = name.replace(/'/g,"\\'");
+    const nm = fEsc(name.replace(/'/g,"\\'"));
     const sid = (DB.staff().find(x=>x.name===name)||{})._id || '';
     return `<div class="card" style="margin-bottom:14px;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
@@ -5149,7 +5254,7 @@ function openMentorMessages(name){
   document.getElementById('msg-text').value = '';
   document.getElementById('msg-modal').style.display = 'flex';
   // Mark this mentor's messages to Admin as read (admin is reading them now)
-  DB.messages().filter(m=>m.mentorName==='Admin' && m.from===name && !m.read).forEach(m=>DB.markMessageRead(m._id));
+  Promise.all(DB.messages().filter(m=>m.mentorName==='Admin' && m.from===name && !m.read).map(m=>DB.markMessageRead(m._id))).catch(err=>console.error('mark-read batch failed:', err));
   renderMessageThread();
 }
 function closeMentorMessages(){ document.getElementById('msg-modal').style.display='none'; _msgMentor=null; }
@@ -5194,10 +5299,10 @@ function renderAdminMessages(){
   const el = document.getElementById('admin-msgs-list');
   if (!el) return;
   const msgs = DB.messages().filter(m=>m.mentorName==='Admin').slice().reverse();
-  msgs.filter(m=>!m.read).forEach(m=>DB.markMessageRead(m._id));   // admin is viewing
+  Promise.all(msgs.filter(m=>!m.read).map(m=>DB.markMessageRead(m._id))).catch(err=>console.error('mark-read batch failed:', err));   // admin is viewing
   if (!msgs.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:32px;">No messages from mentors yet.</div>'; return; }
   el.innerHTML = msgs.map(m=>{
-    const nm=(m.from||'').replace(/'/g,"\\'");
+    const nm=fEsc((m.from||'').replace(/'/g,"\\'"));
     return `<div class="card" style="margin-bottom:12px;${m.read?'':'border-left:4px solid var(--accent);'}">
       <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
         <div style="flex:1;min-width:0;">
@@ -5286,11 +5391,11 @@ function renderProjects() {
         '<div style="flex:1;">' +
           '<div style="font-weight:700;font-size:1.05em;color:var(--primary);margin-bottom:4px;">' +
             (isPMI?'<span style="font-size:0.7em;background:var(--purple);color:#fff;border-radius:4px;padding:2px 6px;margin-right:6px;vertical-align:middle;">PMI</span>':'') +
-            p.name + '</div>' +
-          (p.description?'<div style="font-size:0.875em;color:#666;margin-bottom:8px;">' + p.description + '</div>':'') +
+            fEsc(p.name) + '</div>' +
+          (p.description?'<div style="font-size:0.875em;color:#666;margin-bottom:8px;">' + fEsc(p.description) + '</div>':'') +
           '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">' +
-            '<span class="badge ' + (p.status==='Completed'?'badge-success':p.status==='On Hold'?'badge-warn':'badge-info') + '">' + (p.status||'Active') + '</span>' +
-            (p.assignedTo?'<span style="font-size:0.8em;color:#777;">👤 ' + p.assignedTo + '</span>':'') +
+            '<span class="badge ' + (p.status==='Completed'?'badge-success':p.status==='On Hold'?'badge-warn':'badge-info') + '">' + fEsc(p.status||'Active') + '</span>' +
+            (p.assignedTo?'<span style="font-size:0.8em;color:#777;">👤 ' + fEsc(p.assignedTo) + '</span>':'') +
             (p.updates&&p.updates.length?'<span style="font-size:0.78em;color:#aaa;">' + p.updates.length + ' update' + (p.updates.length!==1?'s':'') + '</span>':'') +
           '</div>' +
           pmiBar +
@@ -5301,7 +5406,7 @@ function renderProjects() {
           '<button class="btn btn-outline" style="padding:6px 12px;font-size:0.78em;" onclick="openProjectDetail(\'' + p._id + '\')">Updates →</button>' +
         '</div>' +
       '</div>' +
-      (last?'<div style="margin-top:8px;border-top:1px solid #eee;padding-top:8px;font-size:0.82em;color:#888;">Last update: <b>' + last.text.slice(0,80) + (last.text.length>80?'…':'') + '</b> <span style="color:#bbb;margin-left:6px;">' + new Date(last.at).toLocaleDateString() + '</span></div>':'') +
+      (last?'<div style="margin-top:8px;border-top:1px solid #eee;padding-top:8px;font-size:0.82em;color:#888;">Last update: <b>' + fEsc(last.text.slice(0,80)) + (last.text.length>80?'…':'') + '</b> <span style="color:#bbb;margin-left:6px;">' + new Date(last.at).toLocaleDateString() + '</span></div>':'') +
     '</div>';
   }).join('');
 }
@@ -5334,8 +5439,8 @@ function setProjectsView(mode){
   // clicking the active mode toggles back to list
   _projectsView = (_projectsView===mode) ? 'list' : mode;
   const listEl=document.getElementById('projects-list'), kb=document.getElementById('projects-kanban'), gt=document.getElementById('projects-gantt');
-  listEl.style.display = _projectsView==='list' ? 'block':'none';
-  kb.style.display = _projectsView==='kanban' ? 'block':'none';
+  if(listEl) listEl.style.display = _projectsView==='list' ? 'block':'none';
+  if(kb) kb.style.display = _projectsView==='kanban' ? 'block':'none';
   if(gt) gt.style.display = _projectsView==='gantt' ? 'block':'none';
   const kbBtn=document.getElementById('proj-view-toggle'); if(kbBtn) kbBtn.textContent = _projectsView==='kanban'?'📄 List View':'📋 Kanban Board';
   const gtBtn=document.getElementById('proj-gantt-toggle'); if(gtBtn) gtBtn.textContent = _projectsView==='gantt'?'📄 List View':'📊 Gantt';
@@ -5366,7 +5471,7 @@ function renderGantt(){
     blocks.map(b=>`<div style="margin-bottom:18px;">
       <div style="font-weight:700;color:var(--primary);margin-bottom:8px;">${b.p.type==='pmi'?'🏗 ':''}${fEsc(b.p.name)}</div>
       ${b.pts.sort((a,c)=>(a.s).localeCompare(c.s)).map(x=>{
-        const left=pct(x.s); const right=pct(x.e||x.s); const w=Math.max(2,right-left+ (100/span/ (span||1)) );
+        const left=pct(x.s); const right=pct(x.e||x.s);
         const wpct=Math.max(3, right-left || 3);
         const done=x.t.status==='Done';
         return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
@@ -5408,7 +5513,12 @@ async function kbDrop(e,status){
   const id=e.dataTransfer.getData('text/plain'); if(!id) return;
   const p=DB.projects().find(x=>x._id===id); if(!p) return;
   if(!isOwnerOrAdmin(p.assignedTo)){ alert('Only the project owner or an admin can move this project.'); return; }
-  await DB.updateProject(id, {...p, status});
+  try {
+    await DB.updateProject(id, _stripInternal({...p, status}));
+  } catch (err) {
+    console.error('kbDrop updateProject failed:', err);
+    alert('Could not move the project. Please try again.');
+  }
   renderKanban();
 }
 
@@ -5446,13 +5556,19 @@ async function saveProject() {
   const name = document.getElementById('pm-name').value.trim();
   if (!name) { alert('Project name is required.'); return; }
   const data = { name, description: document.getElementById('pm-desc').value.trim(), status: document.getElementById('pm-status').value, assignedTo: document.getElementById('pm-assignee').value };
-  if (id) {
-    const existing = DB.projects().find(p=>p._id===id);
-    await DB.updateProject(id, {...data, updates: existing?.updates||[]});
-  } else {
-    await DB.addProject({...data, updates:[]});
+  try {
+    if (id) {
+      const existing = DB.projects().find(p=>p._id===id);
+      // Merge over the full existing record so PMI/AI-Planner fields (pmi/type/source) survive an edit.
+      await DB.updateProject(id, _stripInternal({...(existing||{}), ...data}));
+    } else {
+      await DB.addProject({...data, updates:[]});
+    }
+    closeProjectModal();
+  } catch (err) {
+    console.error('saveProject failed:', err);
+    alert('Could not save the project. Please try again.');
   }
-  closeProjectModal();
 }
 
 function deleteProject() {
@@ -5484,10 +5600,10 @@ function renderProjectUpdates(p) {
   if (!updates.length) { el.innerHTML='<p style="color:#bbb;font-size:0.875em;">No updates yet. Post the first one below.</p>'; return; }
   el.innerHTML = updates.map(u =>
     '<div style="border-left:3px solid var(--accent);padding:10px 14px;margin-bottom:12px;background:#f8fbff;border-radius:0 8px 8px 0;">' +
-      '<div style="font-size:0.875em;color:#333;white-space:pre-wrap;">' + u.text + '</div>' +
+      '<div style="font-size:0.875em;color:#333;white-space:pre-wrap;">' + fEsc(u.text) + '</div>' +
       '<div style="display:flex;gap:10px;align-items:center;margin-top:6px;">' +
-        '<span style="font-size:0.75em;color:#aaa;">' + new Date(u.at).toLocaleString() + ' · ' + (u.by||'Staff') + '</span>' +
-        (u.status?'<span class="badge badge-info" style="font-size:0.7em;">' + u.status + '</span>':'') +
+        '<span style="font-size:0.75em;color:#aaa;">' + new Date(u.at).toLocaleString() + ' · ' + fEsc(u.by||'Staff') + '</span>' +
+        (u.status?'<span class="badge badge-info" style="font-size:0.7em;">' + fEsc(u.status) + '</span>':'') +
       '</div>' +
     '</div>'
   ).join('');
@@ -5505,10 +5621,15 @@ async function postProjectUpdate() {
   const updates = [...(p.updates||[]), {text, status, by:currentUserName()||'Staff', at: new Date().toISOString()}];
   const patch = {updates};
   if (status) patch.status = status;
-  await DB.updateProject(_activeProjectId, {...p, ...patch});
-  document.getElementById('pd-update-text').value = '';
-  document.getElementById('pd-update-status').value = '';
-  renderProjectUpdates({...p, ...patch});
+  try {
+    await DB.updateProject(_activeProjectId, _stripInternal({...p, ...patch}));
+    document.getElementById('pd-update-text').value = '';
+    document.getElementById('pd-update-status').value = '';
+    renderProjectUpdates({...p, ...patch});
+  } catch (err) {
+    console.error('postProjectUpdate failed:', err);
+    alert('Could not post the update. Please try again.');
+  }
 }
 
 // ===================================================================
@@ -5569,6 +5690,11 @@ function renderPlannerKeyStatus(forceEdit){
     </div>`;
   }
 }
+// SECURITY NOTE (M8): The Anthropic API key is kept in localStorage and sent
+// directly from the browser via 'anthropic-dangerous-direct-browser-access'.
+// Any XSS can exfiltrate it and it is readable by anyone on a shared machine.
+// TODO(security): Proxy all Claude calls through the meeting-bot backend (which
+// already holds a server-side key) so the key never reaches the browser.
 function savePlannerKey(){
   const inp = document.getElementById('plan-key');
   const v = (inp?.value||'').trim();
@@ -5631,7 +5757,7 @@ async function generatePlanAI(){
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers,
-      body:JSON.stringify({model:'claude-opus-4-8', max_tokens:3072, messages:[{role:'user',content}]})
+      body:JSON.stringify({model:'claude-opus-4-5', max_tokens:3072, messages:[{role:'user',content}]})
     });
     if (!resp.ok){
       let detail=''; try{ const e=await resp.json(); detail = (e.error && e.error.message) || ''; }catch(_){}
@@ -5725,7 +5851,7 @@ async function createPlannerTasks(){
 function openPMIWizard(id) {
   _pmiPhaseIndex = 0;
   _pmiShowingSummary = false;
-  document.getElementById('pmi-project-id').value = id || '';
+  const _pidEl = document.getElementById('pmi-project-id'); if (_pidEl) _pidEl.value = id || '';
 
   if (id) {
     const p = DB.projects().find(x=>x._id===id);
@@ -5741,11 +5867,11 @@ function openPMIWizard(id) {
   }
 
   _renderPMIPhase();
-  document.getElementById('pmi-wizard').style.display = 'flex';
+  const _wiz = document.getElementById('pmi-wizard'); if (_wiz) _wiz.style.display = 'flex';
 }
 
 function closePMIWizard() {
-  document.getElementById('pmi-wizard').style.display = 'none';
+  const _wiz = document.getElementById('pmi-wizard'); if (_wiz) _wiz.style.display = 'none';
 }
 
 function _clearPMIFields() {
@@ -5778,7 +5904,7 @@ function _prefillPMIPhase(p, idx) {
   f('pmi-p3-kpis',       ph.monitoring?.kpis);
   f('pmi-p3-changes',    ph.monitoring?.changes);
   f('pmi-p3-issues',     ph.monitoring?.issues);
-  if (ph.monitoring?.cadence) document.getElementById('pmi-p3-cadence').value = ph.monitoring.cadence;
+  if (ph.monitoring?.cadence) { const _c=document.getElementById('pmi-p3-cadence'); if(_c) _c.value = ph.monitoring.cadence; }
   f('pmi-p4-acceptance', ph.closing?.acceptance);
   f('pmi-p4-lessons',    ph.closing?.lessons);
   f('pmi-p4-report',     ph.closing?.report);
@@ -5787,12 +5913,14 @@ function _prefillPMIPhase(p, idx) {
 
 function _renderPMIPhase() {
   const ph = PMI_PHASES[_pmiPhaseIndex];
-  document.getElementById('pmi-phase-title').textContent = ph.label;
+  const setText = (id,txt)=>{ const el=document.getElementById(id); if(el) el.textContent=txt; };
+  const setDisp = (id,d)=>{ const el=document.getElementById(id); if(el) el.style.display=d; };
+  setText('pmi-phase-title', ph.label);
 
   // Step indicators
   PMI_PHASES.forEach((_,i) => {
     const el = document.getElementById('pmi-step-'+i);
-    el.className = 'pmi-step' + (i < _pmiPhaseIndex ? ' done' : i===_pmiPhaseIndex ? ' active' : '');
+    if (el) el.className = 'pmi-step' + (i < _pmiPhaseIndex ? ' done' : i===_pmiPhaseIndex ? ' active' : '');
   });
 
   // Show/hide phase forms and summary
@@ -5800,14 +5928,14 @@ function _renderPMIPhase() {
     const el = document.getElementById('pmi-phase-'+i);
     if (el) el.style.display = (!_pmiShowingSummary && i===_pmiPhaseIndex) ? 'block' : 'none';
   });
-  document.getElementById('pmi-summary-panel').style.display = _pmiShowingSummary ? 'block' : 'none';
+  setDisp('pmi-summary-panel', _pmiShowingSummary ? 'block' : 'none');
 
   // Buttons
-  document.getElementById('pmi-back-btn').style.display     = _pmiPhaseIndex>0 && !_pmiShowingSummary ? 'inline-flex' : 'none';
-  document.getElementById('pmi-complete-btn').style.display  = !_pmiShowingSummary ? 'inline-flex' : 'none';
-  document.getElementById('pmi-next-btn').style.display      = _pmiShowingSummary && _pmiPhaseIndex<4 ? 'inline-flex' : 'none';
-  document.getElementById('pmi-next-btn').textContent        = 'Ready for ' + (PMI_PHASES[_pmiPhaseIndex+1]?.short||'Next') + ' →';
-  document.getElementById('pmi-finish-btn').style.display    = _pmiShowingSummary && _pmiPhaseIndex===4 ? 'inline-flex' : 'none';
+  setDisp('pmi-back-btn',      _pmiPhaseIndex>0 && !_pmiShowingSummary ? 'inline-flex' : 'none');
+  setDisp('pmi-complete-btn',  !_pmiShowingSummary ? 'inline-flex' : 'none');
+  setDisp('pmi-next-btn',      _pmiShowingSummary && _pmiPhaseIndex<4 ? 'inline-flex' : 'none');
+  setText('pmi-next-btn',      'Ready for ' + (PMI_PHASES[_pmiPhaseIndex+1]?.short||'Next') + ' →');
+  setDisp('pmi-finish-btn',    _pmiShowingSummary && _pmiPhaseIndex===4 ? 'inline-flex' : 'none');
 }
 
 function _gatherPhaseData(idx) {
@@ -5816,7 +5944,7 @@ function _gatherPhaseData(idx) {
     case 0: return { problem:g('pmi-p0-problem'), sponsor:g('pmi-p0-sponsor'), goal:g('pmi-p0-goal'), stakeholders:g('pmi-p0-stakeholders'), complete:true };
     case 1: return { scopeIn:g('pmi-p1-scope-in'), scopeOut:g('pmi-p1-scope-out'), milestones:g('pmi-p1-milestones'), budget:g('pmi-p1-budget'), risks:g('pmi-p1-risks'), comms:g('pmi-p1-comms'), complete:true };
     case 2: return { deliverables:g('pmi-p2-deliverables'), assignments:g('pmi-p2-assignments'), dependencies:g('pmi-p2-dependencies'), complete:true };
-    case 3: return { kpis:g('pmi-p3-kpis'), cadence:document.getElementById('pmi-p3-cadence').value, changes:g('pmi-p3-changes'), issues:g('pmi-p3-issues'), complete:true };
+    case 3: return { kpis:g('pmi-p3-kpis'), cadence:(document.getElementById('pmi-p3-cadence')?.value||''), changes:g('pmi-p3-changes'), issues:g('pmi-p3-issues'), complete:true };
     case 4: return { acceptance:g('pmi-p4-acceptance'), lessons:g('pmi-p4-lessons'), report:g('pmi-p4-report'), handoff:g('pmi-p4-handoff'), complete:true };
   }
 }
@@ -5908,7 +6036,7 @@ async function pmiCompletePhase() {
   const tasks     = _buildPhaseTasks(idx, phaseData, projectName);
 
   // Save to Firestore
-  const projectId = document.getElementById('pmi-project-id').value;
+  const projectId = document.getElementById('pmi-project-id')?.value || '';
   const pmiKey    = PMI_PHASES[idx].key;
   const pmiPatch  = {};
   pmiPatch[pmiKey] = phaseData;
@@ -5925,31 +6053,33 @@ async function pmiCompletePhase() {
       updates:     []
     });
     savedId = ref;
-    document.getElementById('pmi-project-id').value = savedId;
+    const _pid = document.getElementById('pmi-project-id'); if (_pid) _pid.value = savedId;
   } else {
     const existing = DB.projects().find(p=>p._id===projectId);
     const pmi = {...(existing?.pmi||{}), ...pmiPatch};
-    await DB.updateProject(projectId, {...existing, pmi, name: projectName||existing?.name||''});
+    await DB.updateProject(projectId, _stripInternal({...existing, pmi, name: projectName||existing?.name||''}));
   }
 
   // Show summary
-  document.getElementById('pmi-summary-text').textContent = summary;
-  document.getElementById('pmi-tasks-phase-label').textContent = PMI_PHASES[idx].short;
+  const _sumEl = document.getElementById('pmi-summary-text'); if (_sumEl) _sumEl.textContent = summary;
+  const _lblEl = document.getElementById('pmi-tasks-phase-label'); if (_lblEl) _lblEl.textContent = PMI_PHASES[idx].short;
 
   // Render task assignment rows
-  const staffOptions = DB.staff().map(s=>'<option value="' + s.name + '">' + s.name + '</option>').join('');
-  document.getElementById('pmi-tasks-list').innerHTML = tasks.map((t,i) =>
+  const staffOptions = DB.staff().map(s=>'<option value="' + fEsc(s.name) + '">' + fEsc(s.name) + '</option>').join('');
+  const _tasksEl = document.getElementById('pmi-tasks-list');
+  if (_tasksEl) _tasksEl.innerHTML = tasks.map((t,i) =>
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">' +
-      '<div style="flex:1;min-width:200px;font-size:0.875em;color:#333;">' + t.desc + '</div>' +
+      '<div style="flex:1;min-width:200px;font-size:0.875em;color:#333;">' + fEsc(t.desc) + '</div>' +
       '<select id="pmi-task-owner-' + i + '" style="padding:6px 10px;border:1.5px solid #ddd;border-radius:7px;font-size:0.82em;min-width:130px;">' +
         '<option value="">Assign to…</option>' + staffOptions +
       '</select>' +
-      '<input type="text" id="pmi-task-due-' + i + '" value="' + t.trigger + '" style="width:110px;padding:6px 8px;border:1.5px solid #ddd;border-radius:7px;font-size:0.82em;" placeholder="Due/Trigger">' +
-      '<button class="btn btn-accent" style="padding:5px 10px;font-size:0.75em;" onclick="pmiAssignTask(' + i + ',\'' + savedId + '\',\'' + pmiKey + '\')">Assign</button>' +
+      '<input type="text" id="pmi-task-due-' + i + '" value="' + fEsc(t.trigger) + '" style="width:110px;padding:6px 8px;border:1.5px solid #ddd;border-radius:7px;font-size:0.82em;" placeholder="Due/Trigger">' +
+      '<button class="btn btn-accent" style="padding:5px 10px;font-size:0.75em;" onclick="pmiAssignTask(this,' + i + ',\'' + savedId + '\',\'' + pmiKey + '\')">Assign</button>' +
     '</div>'
   ).join('') + '<p style="font-size:0.78em;color:#aaa;margin-top:6px;">Select a mentor and click Assign to send tasks to their inbox.</p>';
 
-  document.getElementById('pmi-next-prompt').textContent =
+  const _nextEl = document.getElementById('pmi-next-prompt');
+  if (_nextEl) _nextEl.textContent =
     idx < 4
       ? 'Ready for ' + PMI_PHASES[idx+1].label + '?'
       : '🏁 All 5 phases complete. Click "Finish Project" to close the wizard.';
@@ -5958,25 +6088,29 @@ async function pmiCompletePhase() {
   _renderPMIPhase();
 }
 
-async function pmiAssignTask(taskIdx, projectId, phaseKey) {
+async function pmiAssignTask(btn, taskIdx, projectId, phaseKey) {
   const owner = document.getElementById('pmi-task-owner-' + taskIdx)?.value;
   const due   = document.getElementById('pmi-task-due-' + taskIdx)?.value;
-  const btn   = event.target;
   if (!owner) { alert('Select a mentor to assign this task to.'); return; }
   const desc  = btn.closest('div').querySelector('div').textContent.trim();
-  await DB.addTask({
-    mentorName:  owner,
-    clientName:  '',
-    clientId:    '',
-    description: desc,
-    dueDate:     due,
-    status:      'Open',
-    alertType:   'pmi',
-    reason:      'PMI ' + phaseKey + ' task — Project: ' + (DB.projects().find(p=>p._id===projectId)?.name||projectId)
-  });
-  btn.textContent = '✅';
-  btn.disabled = true;
-  btn.style.background = 'var(--success)';
+  try {
+    await DB.addTask({
+      mentorName:  owner,
+      clientName:  '',
+      clientId:    '',
+      description: desc,
+      dueDate:     due,
+      status:      'Open',
+      alertType:   'pmi',
+      reason:      'PMI ' + phaseKey + ' task — Project: ' + (DB.projects().find(p=>p._id===projectId)?.name||projectId)
+    });
+    btn.textContent = '✅';
+    btn.disabled = true;
+    btn.style.background = 'var(--success)';
+  } catch (err) {
+    console.error('pmiAssignTask failed:', err);
+    alert('Could not assign the task. Please try again.');
+  }
 }
 
 function pmiBack() {
@@ -5996,7 +6130,7 @@ async function pmiFinish() {
   const id = document.getElementById('pmi-project-id').value;
   if (id) {
     const p = DB.projects().find(x=>x._id===id);
-    if (p) await DB.updateProject(id, {...p, status:'Active'});
+    if (p) await DB.updateProject(id, _stripInternal({...p, status:'Active'}));
   }
   closePMIWizard();
 }
@@ -6080,7 +6214,7 @@ async function generateAllPostsAI(data) {
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: 'claude-opus-4-8',
+      model: 'claude-opus-4-5',
       max_tokens: 2048,
       messages: [
         { role: 'user', content: prompt },
@@ -6102,7 +6236,7 @@ async function generateAllPostsAI(data) {
   return Object.keys(out).length ? out : null;
 }
 
-document.getElementById('event-form').addEventListener('submit', async function(e) {
+document.getElementById('event-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
   btn.textContent = 'Generating…'; btn.disabled = true;
@@ -6124,11 +6258,17 @@ document.getElementById('event-form').addEventListener('submit', async function(
     const ai = await generateAllPostsAI(data);
     if (ai) Object.assign(data.generatedPosts, ai);
   } catch (err) { console.warn('AI post generation failed, using templates:', err); }
-  const _sid = await saveForm('events', data);
-  _evEditPhotos = null;
-  btn.textContent = 'Generate Posts & Save'; btn.disabled = false;
-  this.reset();
-  showFormSuccess('events', _sid, data);
+  try {
+    const _sid = await saveForm('events', data);
+    _evEditPhotos = null;
+    btn.textContent = 'Generate Posts & Save'; btn.disabled = false;
+    this.reset();
+    showFormSuccess('events', _sid, data);
+  } catch (err) {
+    console.error('Event save failed:', err);
+    btn.textContent = 'Generate Posts & Save'; btn.disabled = false;
+    alert('Could not save the event. Please check your connection and try again.');
+  }
 });
 
 function renderEvents() {
@@ -6148,8 +6288,8 @@ function renderEvents() {
     ];
     return '<div class="card" style="margin-bottom:20px;">' +
       '<div style="margin-bottom:14px;">' +
-        '<div style="font-weight:700;font-size:1.05em;color:var(--primary);">📸 ' + (ev.title||'Event') + '</div>' +
-        '<div style="font-size:0.8em;color:#999;">' + (ev.eventDate?fmtDate(ev.eventDate)+' · ':'') + 'Posted by ' + (ev.postedBy||'Staff') + '</div>' +
+        '<div style="font-weight:700;font-size:1.05em;color:var(--primary);">📸 ' + fEsc(ev.title||'Event') + '</div>' +
+        '<div style="font-size:0.8em;color:#999;">' + (ev.eventDate?fmtDate(ev.eventDate)+' · ':'') + 'Posted by ' + fEsc(ev.postedBy||'Staff') + '</div>' +
       '</div>' +
       ((ev.photos&&ev.photos.length) ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">' + ev.photos.map((src,i)=>'<a href="'+src+'" download="'+(ev.title||'event').replace(/[^a-z0-9]+/gi,'-')+'-'+(i+1)+'.jpg" title="Click to download photo"><img src="'+src+'" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;"></a>').join('') + '</div>' : '') +
       '<div class="tabs" style="margin-bottom:14px;">' +
@@ -6255,12 +6395,13 @@ function renderSettings() {
   const mbAuto = document.getElementById('meetingbot-auto');
   if (mbAuto) mbAuto.checked = localStorage.getItem('rg_meetingbot_auto')==='1';
   const staff = DB.staff();
-  document.getElementById('staff-list').innerHTML = staff.length ? staff.map(s=>`
+  const _staffListEl = document.getElementById('staff-list');
+  if (_staffListEl) _staffListEl.innerHTML = staff.length ? staff.map(s=>`
     <div class="staff-card">
-      <div class="staff-avatar">${s.name.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)}</div>
+      <div class="staff-avatar">${fEsc((s.name||'').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2))}</div>
       <div class="staff-info">
-        <div class="name">${s.name}</div>
-        <div class="meta">${s.role} · $${s.rate}/hr · ${s.regularHrs}h/pay period · ${s.defaultGrant}</div>
+        <div class="name">${fEsc(s.name)}</div>
+        <div class="meta">${fEsc(s.role)} · $${s.rate}/hr · ${s.regularHrs}h/pay period · ${fEsc(s.defaultGrant)}</div>
         ${s.startDate?`<div class="meta">Start: ${fmtDate(s.startDate)}</div>`:''}
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
@@ -6278,16 +6419,26 @@ function showAddStaff() {
 async function addStaff() {
   const name = document.getElementById('staff-name').value.trim();
   if (!name) { alert('Name is required.'); return; }
-  await DB.saveStaffMember({
-    name,
-    role: document.getElementById('staff-role').value,
-    startDate: document.getElementById('staff-start-date').value,
-    rate: parseFloat(document.getElementById('staff-rate').value)||20,
-    regularHrs: parseFloat(document.getElementById('staff-reg-hrs').value)||16,
-    defaultGrant: document.getElementById('staff-grant').value
-  });
-  document.getElementById('add-staff-form').style.display='none';
-  document.getElementById('staff-name').value='';
+  try {
+    // NOTE (M7): `email` is required for meeting-bot calendar invitations to
+    // internal staff to work (sendMeetingBot reads s.email). Staff records added
+    // without an email will be silently skipped as bot invitees.
+    await DB.saveStaffMember({
+      name,
+      email: (document.getElementById('staff-email')?.value||'').trim(),
+      role: document.getElementById('staff-role').value,
+      startDate: document.getElementById('staff-start-date').value,
+      rate: parseFloat(document.getElementById('staff-rate').value)||20,
+      regularHrs: parseFloat(document.getElementById('staff-reg-hrs').value)||16,
+      defaultGrant: document.getElementById('staff-grant').value
+    });
+    document.getElementById('add-staff-form').style.display='none';
+    document.getElementById('staff-name').value='';
+    const se=document.getElementById('staff-email'); if(se) se.value='';
+  } catch (err) {
+    console.error('addStaff failed:', err);
+    alert('Could not add the staff member. Please try again.');
+  }
 }
 
 async function removeStaff(id) {
@@ -6303,6 +6454,7 @@ function openStaffModal(id){
     document.getElementById('staff-modal-title').textContent = 'Edit ' + (s.name||'Staff Member');
     document.getElementById('sm-id').value = s._id;
     document.getElementById('sm-name').value = s.name||'';
+    const sme=document.getElementById('sm-email'); if(sme) sme.value = s.email||'';
     document.getElementById('sm-role').value = s.role||'REP';
     document.getElementById('sm-start-date').value = s.startDate||'';
     document.getElementById('sm-rate').value = (s.rate!=null?s.rate:20);
@@ -6319,6 +6471,7 @@ async function saveStaffModal(){
   if (!name) { alert('Name is required.'); return; }
   const data = {
     name,
+    email: (document.getElementById('sm-email')?.value||'').trim(),
     role: document.getElementById('sm-role').value,
     startDate: document.getElementById('sm-start-date').value,
     rate: parseFloat(document.getElementById('sm-rate').value)||0,
@@ -6326,8 +6479,13 @@ async function saveStaffModal(){
     defaultGrant: document.getElementById('sm-grant').value
   };
   if (id) data._id = id;
-  await DB.saveStaffMember(data);
-  closeStaffModal();
+  try {
+    await DB.saveStaffMember(data);
+    closeStaffModal();
+  } catch (err) {
+    console.error('saveStaffModal failed:', err);
+    alert('Could not save the staff member. Please try again.');
+  }
 }
 function deleteStaffFromModal(){
   const id = document.getElementById('sm-id').value;
@@ -6433,7 +6591,7 @@ let _gcalEvents = {};       // userName -> [events]
 let _gcalToken = null, _gcalTokenClient = null;
 function getGcalClientId(){ return (localStorage.getItem('rg_gcal_client_id')||'').trim(); }
 function saveGcalClientId(){
-  const v=(document.getElementById('gcal-clientid-input').value||'').trim();
+  const v=(document.getElementById('gcal-clientid-input')?.value||'').trim();
   localStorage.setItem('rg_gcal_client_id', v);
   const m=document.getElementById('gcal-clientid-msg'); if(m){ m.style.color='#43a047'; m.textContent=v?'✓ Saved. Staff can now connect from the Calendar tab.':'Cleared.'; }
 }
@@ -6750,7 +6908,7 @@ async function summarizeMeeting(id){
   const prompt='You are a meeting-notes assistant for ReGroup / TJC Oregon. Summarize the meeting transcript/notes below in Markdown with sections: **Summary** (2-4 sentences), **Key Points** (bullets), **Decisions** (bullets), **Action Items** (each as "owner — task — due if stated"). Be faithful; do not invent. Meeting: "'+(e.title||'')+'" on '+fmtDate(e.date)+'.\n\nTRANSCRIPT/NOTES:\n'+transcript;
   let text='';
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:1500,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:1500,messages:[{role:'user',content:prompt}]})});
     if(!resp.ok){ let d=''; try{const j=await resp.json(); d=(j.error&&j.error.message)||'';}catch(_){} throw new Error('Anthropic API '+resp.status+(d?': '+d:'')); }
     const j=await resp.json();
     text=(j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
@@ -6913,7 +7071,7 @@ async function runGrantsAgent(){
   const btn=document.getElementById('grants-run-btn');
   btn.disabled=true; status.style.color='#666'; status.textContent='Researching grants & funding (this can take 20–60s)…';
   document.getElementById('grants-results').innerHTML='';
-  const mkBody=(useTool)=>JSON.stringify(Object.assign({model:'claude-opus-4-8',max_tokens:4096,messages:[{role:'user',content:prompt}]}, useTool?{tools:[{type:'web_search_20250305',name:'web_search',max_uses:6}]}:{}));
+  const mkBody=(useTool)=>JSON.stringify(Object.assign({model:'claude-opus-4-5',max_tokens:4096,messages:[{role:'user',content:prompt}]}, useTool?{tools:[{type:'web_search_20250305',name:'web_search',max_uses:6}]}:{}));
   async function call(useTool){
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:mkBody(useTool)});
     if(!resp.ok){ let d=''; try{const e=await resp.json(); d=(e.error&&e.error.message)||'';}catch(_){} throw new Error('Anthropic API '+resp.status+(d?': '+d:'')); }
@@ -6981,8 +7139,10 @@ const RJ_STEPS = [
   ]},
   { key:'checkins', title:'Check-Ins', focus:'Follow-through, not punishment monitoring. Revisit goals, encourage revision, and document progress. Add a check-in each time you follow up.', fields:[] },
 ];
-let _rjId = null, _rjStep = 0;
-function rjCaseById(id){ return DB.rjCases().find(c=>c._id===id); }
+let _rjId = null, _rjStep = 0, _rjOptimistic = null;
+// Prefer the live snapshot; fall back to an optimistic just-written copy so the
+// wizard can render immediately without sleeping for the listener to fire (M3).
+function rjCaseById(id){ return DB.rjCases().find(c=>c._id===id) || (_rjOptimistic && _rjOptimistic._id===id ? _rjOptimistic : null); }
 function rjStatusBadge(c){ const s=c.status||'Open'; const cls=s==='Closed'?'badge-success':s==='Withdrawn'?'badge-warn':'badge-info'; return `<span class="badge ${cls}">${s}</span>`; }
 
 function renderRJ(){
@@ -7006,8 +7166,11 @@ async function openRJCase(id){
   if(!id){
     const nums=DB.rjCases().map(c=>c.caseNumber||0);
     const caseNumber=(nums.length?Math.max(...nums):1000)+1;
-    id=await DB.addRJCase({caseNumber, status:'Open', currentStep:0, referralSource:'Self-referral', createdBy:currentUserName()});
-    await new Promise(r=>setTimeout(r,350));
+    const newCase={caseNumber, status:'Open', currentStep:0, referralSource:'Self-referral', createdBy:currentUserName()};
+    id=await DB.addRJCase(newCase);
+    _rjOptimistic={...newCase, _id:id};   // render immediately even before the snapshot lands
+  } else {
+    _rjOptimistic=null;
   }
   _rjId=id;
   const c=rjCaseById(id);
@@ -7070,9 +7233,15 @@ async function rjSaveAndNext(){
   patch.currentStep=Math.max(c.currentStep||0,_rjStep+1);
   if(step.key==='assessment') patch.referralSource=patch.assessment.referralSource;
   if(step.key==='closure' && patch.closure.rjTeamApproved) patch.status='Closed';
-  await DB.updateRJCase(_rjId, patch);
+  try {
+    await DB.updateRJCase(_rjId, patch);
+  } catch (err) {
+    console.error('rjSaveAndNext failed:', err);
+    alert('Could not save this step. Please try again.');
+    return;
+  }
+  if(_rjOptimistic && _rjOptimistic._id===_rjId) _rjOptimistic={..._rjOptimistic, ...patch};
   _rjStep++;
-  await new Promise(r=>setTimeout(r,150));
   rjRenderStep();
 }
 function rjBack(){ if(_rjStep>0){ _rjStep--; rjRenderStep(); } }
@@ -7084,8 +7253,15 @@ async function rjAddCheckin(){
   const notes=document.getElementById('rjci-notes').value.trim();
   if(!progress && !notes){ alert('Add some check-in detail first.'); return; }
   const checkins=[...(c.checkins||[]), {date, progress, notes, by:currentUserName()}];
-  await DB.updateRJCase(_rjId, {checkins, currentStep:Math.max(c.currentStep||0,5)});
-  await new Promise(r=>setTimeout(r,200));
+  const patch={checkins, currentStep:Math.max(c.currentStep||0,5)};
+  try {
+    await DB.updateRJCase(_rjId, patch);
+  } catch (err) {
+    console.error('rjAddCheckin failed:', err);
+    alert('Could not add the check-in. Please try again.');
+    return;
+  }
+  if(_rjOptimistic && _rjOptimistic._id===_rjId) _rjOptimistic={..._rjOptimistic, ...patch};
   rjRenderStep();
 }
 function deleteRJCase(){ if(!_rjId) return; requireAdmin(async()=>{ if(!confirm('Delete this RJ case permanently? This cannot be undone.')) return; await DB.removeRJCase(_rjId); closeRJCase(); }); }
@@ -7103,7 +7279,7 @@ setInterval(()=>{ if(_currentUser){ try{ checkMeetingSummaries(); autoDispatchBo
 // (required because <script type="module"> does not share scope with HTML attributes)
 Object.assign(window, {
   navigate, goBack, switchTab, filterPayPeriod, exportTableCSV,
-  generateTimesheet, tsUpdateFromStaff, populateTsMentors,
+  generateTimesheet, populateTsMentors,
   showAddStaff, addStaff, removeStaff,
   openStaffModal, closeStaffModal, saveStaffModal, deleteStaffFromModal,
   exportData, importDataJSON, importCSV, clearAllData,
