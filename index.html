@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ReGroup Operations Platform</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
   --primary: #1a237e;
@@ -394,8 +395,12 @@ table tr:hover td{background:#fafbff;}
           <button class="btn btn-outline" style="padding:6px 12px;" onclick="calShiftMonth(1)">›</button>
           <button class="btn btn-outline" style="font-size:0.8em;" onclick="calToday()">Today</button>
         </div>
-        <button class="btn btn-accent" onclick="openCalEvent(null)">＋ Add Event</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-outline" id="gcal-btn" style="font-size:0.8em;" onclick="connectGcal()">🔗 Connect Google Calendar</button>
+          <button class="btn btn-accent" onclick="openCalEvent(null)">＋ Add Event</button>
+        </div>
       </div>
+      <div id="gcal-status" class="no-print" style="font-size:0.8em;color:#888;margin-bottom:8px;"></div>
       <div class="card"><div id="cal-grid"></div></div>
     </div>
 
@@ -1178,6 +1183,25 @@ table tr:hover td{background:#fafbff;}
             <button class="btn btn-outline" onclick="testMeetingBot()">Test connection</button>
           </div>
           <div id="meetingbot-msg" style="font-size:0.8em;margin-top:8px;"></div>
+        </div>
+        <div class="card">
+          <h3>📅 Google Calendar Sync</h3>
+          <p style="font-size:0.85em;color:#666;margin-bottom:12px;">Paste a Google <b>OAuth Client ID</b> (one-time, free, set by an admin). Then each staff member can connect their own <code>@tjcoregon.org</code> Google Calendar from the Calendar tab — their events show in the app calendar.</p>
+          <input id="gcal-clientid-input" type="text" placeholder="xxxxxxxx.apps.googleusercontent.com"
+            style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9em;margin-bottom:10px;">
+          <button class="btn btn-accent" onclick="saveGcalClientId()">💾 Save Client ID</button>
+          <div id="gcal-clientid-msg" style="font-size:0.8em;margin-top:8px;"></div>
+          <details style="margin-top:10px;background:#f4f6fb;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;">
+            <summary style="cursor:pointer;font-weight:600;font-size:0.83em;color:var(--primary);">ℹ️ How to get the Client ID (≈5 min)</summary>
+            <ol style="font-size:0.8em;color:#555;margin:10px 0 4px;padding-left:18px;line-height:1.6;">
+              <li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener" style="color:#2f9bb5;">console.cloud.google.com</a> → create/select a project.</li>
+              <li><b>APIs &amp; Services → Library</b> → enable <b>Google Calendar API</b>.</li>
+              <li><b>OAuth consent screen</b> → Internal (for tjcoregon.org) → add the calendar.readonly scope.</li>
+              <li><b>Credentials → Create credentials → OAuth client ID → Web application</b>.</li>
+              <li>Under <b>Authorized JavaScript origins</b> add <code>https://cameronrthayes-star.github.io</code>.</li>
+              <li>Copy the Client ID (ends in <code>.apps.googleusercontent.com</code>) and paste it above.</li>
+            </ol>
+          </details>
         </div>
         <div class="card">
           <h3>Data Management</h3>
@@ -6221,6 +6245,8 @@ function renderSettings() {
   if (keyInput) keyInput.value = localStorage.getItem('rg_anthropic_key') || '';
   const mbInput = document.getElementById('meetingbot-url-input');
   if (mbInput) mbInput.value = localStorage.getItem('rg_meetingbot_url') || DEFAULT_MEETING_BACKEND;
+  const gcInput = document.getElementById('gcal-clientid-input');
+  if (gcInput) gcInput.value = localStorage.getItem('rg_gcal_client_id') || '';
   const staff = DB.staff();
   document.getElementById('staff-list').innerHTML = staff.length ? staff.map(s=>`
     <div class="staff-card">
@@ -6395,8 +6421,60 @@ function calShiftMonth(n){ _calMonth.setMonth(_calMonth.getMonth()+n); renderCal
 function calToday(){ _calMonth=new Date(); _calMonth.setDate(1); renderCalendar(); }
 function populateStaffNameList(){ const dl=document.getElementById('staff-name-list'); if(dl) dl.innerHTML=DB.staff().map(s=>`<option>${fEsc(s.name)}</option>`).join(''); }
 
+// ===== Google Calendar sync (client-side OAuth — each staff connects their own) =====
+let _gcalEvents = {};       // userName -> [events]
+let _gcalToken = null, _gcalTokenClient = null;
+function getGcalClientId(){ return (localStorage.getItem('rg_gcal_client_id')||'').trim(); }
+function saveGcalClientId(){
+  const v=(document.getElementById('gcal-clientid-input').value||'').trim();
+  localStorage.setItem('rg_gcal_client_id', v);
+  const m=document.getElementById('gcal-clientid-msg'); if(m){ m.style.color='#43a047'; m.textContent=v?'✓ Saved. Staff can now connect from the Calendar tab.':'Cleared.'; }
+}
+function gcalConnectedKey(){ return 'rg_gcal_connected_'+(currentUserName()||'anon'); }
+function connectGcal(){
+  const status=document.getElementById('gcal-status');
+  const cid=getGcalClientId();
+  if(!cid){ if(status){status.style.color='#e53935'; status.innerHTML='No Google Client ID set yet — an admin adds it in <b>Settings → Google Calendar Sync</b>.';} return; }
+  if(!(window.google && google.accounts && google.accounts.oauth2)){ if(status){status.style.color='#e53935'; status.textContent='Google sign-in is still loading — try again in a few seconds.';} return; }
+  if(status){ status.style.color='#666'; status.textContent='Opening Google sign-in…'; }
+  try{
+    _gcalTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: 'https://www.googleapis.com/auth/calendar.readonly',
+      callback: (resp)=>{ if(resp&&resp.access_token){ _gcalToken=resp.access_token; localStorage.setItem(gcalConnectedKey(),'1'); fetchGcal(); }
+        else if(status){ status.style.color='#e53935'; status.textContent='Google sign-in was cancelled.'; } }
+    });
+    _gcalTokenClient.requestAccessToken({prompt: localStorage.getItem(gcalConnectedKey())==='1' ? '' : 'consent'});
+  }catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Google connect error: '+e.message; } }
+}
+async function fetchGcal(){
+  const status=document.getElementById('gcal-status');
+  if(!_gcalToken) return;
+  if(status){ status.style.color='#666'; status.textContent='Loading your Google Calendar…'; }
+  try{
+    const tMin=new Date(); tMin.setMonth(tMin.getMonth()-1);
+    const tMax=new Date(); tMax.setMonth(tMax.getMonth()+3);
+    const url='https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250'
+      +'&timeMin='+encodeURIComponent(tMin.toISOString())+'&timeMax='+encodeURIComponent(tMax.toISOString());
+    const r=await fetch(url,{headers:{'Authorization':'Bearer '+_gcalToken}});
+    if(!r.ok){ throw new Error('Calendar API '+r.status+(r.status===403?' (enable Calendar API / check origin)':'')); }
+    const d=await r.json();
+    const evs=(d.items||[]).map(it=>{
+      const s=(it.start&&(it.start.dateTime||it.start.date))||'';
+      return {title:it.summary||'(no title)', date:s.slice(0,10), time:(it.start&&it.start.dateTime)?s.slice(11,16):'', _gcal:true, htmlLink:it.htmlLink||'', video:it.hangoutLink||''};
+    }).filter(e=>e.date);
+    _gcalEvents[currentUserName()]=evs;
+    if(status){ status.style.color='#15803d'; status.textContent='✓ Synced '+evs.length+' Google Calendar events for '+(currentUserName()||'you')+'.'; }
+    const btn=document.getElementById('gcal-btn'); if(btn) btn.textContent='🔄 Refresh Google Calendar';
+    renderCalendar();
+  }catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Could not load Google Calendar — '+e.message; } }
+}
+function gcalAutoSync(){
+  if(getGcalClientId() && localStorage.getItem(gcalConnectedKey())==='1' && !_gcalToken && window.google && google.accounts) connectGcal();
+}
 function renderCalendar(){
   populateStaffNameList();
+  gcalAutoSync();
   const label=document.getElementById('cal-month-label');
   if(label) label.textContent=_calMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   const grid=document.getElementById('cal-grid'); if(!grid) return;
@@ -6406,6 +6484,7 @@ function renderCalendar(){
   const todayStr=new Date().toISOString().slice(0,10);
   const byDate={};
   DB.calendar().forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
+  (_gcalEvents[currentUserName()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
   const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let cells='';
   for(let i=0;i<startDow;i++) cells+='<div style="background:#fafbfd;border-radius:8px;min-height:82px;"></div>';
@@ -6415,7 +6494,9 @@ function renderCalendar(){
     const isToday=ds===todayStr;
     cells+=`<div onclick="openCalEvent(null,'${ds}')" style="background:#fff;border:1px solid ${isToday?'var(--accent)':'#eef'};border-radius:8px;min-height:82px;padding:5px 6px;cursor:pointer;">
       <div style="font-size:0.74em;font-weight:700;color:${isToday?'var(--accent)':'#94a3b8'};margin-bottom:3px;">${d}</div>
-      ${evs.slice(0,3).map(e=>`<div onclick="event.stopPropagation();openCalDetail('${e._id}')" title="${fEsc(e.title)}" style="background:#eef3fb;border-left:3px solid var(--primary);border-radius:4px;padding:1px 4px;margin-bottom:2px;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.video?'🎥 ':''}${fEsc(e.title)}</div>`).join('')}
+      ${evs.slice(0,3).map(e=> e._gcal
+        ? `<div onclick="event.stopPropagation();${e.htmlLink?`window.open('${e.htmlLink}','_blank')`:''}" title="${fEsc(e.title)} (Google Calendar)" style="background:#e8f0fe;border-left:3px solid #4285F4;border-radius:4px;padding:1px 4px;margin-bottom:2px;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:700;color:#4285F4;">G</span> ${e.video?'🎥 ':''}${fEsc(e.title)}</div>`
+        : `<div onclick="event.stopPropagation();openCalDetail('${e._id}')" title="${fEsc(e.title)}" style="background:#eef3fb;border-left:3px solid var(--primary);border-radius:4px;padding:1px 4px;margin-bottom:2px;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.video?'🎥 ':''}${fEsc(e.title)}</div>`).join('')}
       ${evs.length>3?`<div style="font-size:0.64em;color:#94a3b8;">+${evs.length-3} more</div>`:''}</div>`;
   }
   grid.innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">
@@ -6973,6 +7054,7 @@ Object.assign(window, {
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, saveMeetingBotUrl, testMeetingBot, toggleMeetingRecording,
+  connectGcal, saveGcalClientId, fetchGcal,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
