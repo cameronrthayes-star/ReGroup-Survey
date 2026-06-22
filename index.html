@@ -6766,16 +6766,24 @@ async function syncIcsCalendar(){
   const status=document.getElementById('gcal-status');
   const icsUrl=getMyIcsUrl();
   if(!icsUrl){ if(status){status.style.color='#9a3412';status.textContent='No iCal link saved yet — click “📎 Sync via iCal link” and paste your calendar’s secret iCal URL.';} return; }
-  const base=(localStorage.getItem('rg_meetingbot_url')||DEFAULT_MEETING_BACKEND).replace(/\/+$/,'');
-  if(status){ status.style.color='#666'; status.textContent='Syncing your calendar (backend may take ~15s to wake)…'; }
-  try{
-    const r=await fetch(base+'/api/ics?url='+encodeURIComponent(icsUrl));
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
-    _icsEvents[currentUserName()]=(d.events||[]).map(e=>({title:e.title,date:e.date,time:e.time,location:e.location,_gcal:true}));
-    if(status){ status.style.color='#15803d'; status.textContent='✓ Synced '+(d.events||[]).length+' calendar events from your iCal link.'; }
-    renderCalendar();
-  }catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Calendar sync error — '+e.message+' (check the link, or wait ~15s for the backend to wake and retry).'; } }
+  // The /api/ics proxy lives on the known-good backend; don't rely on a possibly-misconfigured Meeting Bot URL.
+  const base=DEFAULT_MEETING_BACKEND.replace(/\/+$/,'');
+  const reqUrl=base+'/api/ics?url='+encodeURIComponent(icsUrl);
+  if(status){ status.style.color='#666'; status.textContent='Syncing your calendar (backend may take up to ~60s to wake)…'; }
+  // Cold-start retry: the free backend can be asleep, so retry a couple of times.
+  let lastErr=null;
+  for(let attempt=0; attempt<3; attempt++){
+    try{
+      const r=await fetch(reqUrl, {cache:'no-store'});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+      _icsEvents[currentUserName()]=(d.events||[]).map(e=>({title:e.title,date:e.date,time:e.time,location:e.location,video:e.video||'',attendees:e.attendees||[],description:e.description||'',_gcal:true}));
+      if(status){ status.style.color='#15803d'; status.textContent='✓ Synced '+(d.events||[]).length+' calendar events from your iCal link.'; }
+      renderCalendar();
+      return;
+    }catch(e){ lastErr=e; if(status){ status.style.color='#666'; status.textContent='Waking the sync backend… (attempt '+(attempt+1)+' of 3)'; } await new Promise(r=>setTimeout(r,5000)); }
+  }
+  if(status){ status.style.color='#e53935'; status.textContent='Calendar sync error — '+(lastErr&&lastErr.message||'could not reach the backend')+'. Try again in a moment, or re-check your iCal link.'; }
 }
 function icsAutoSync(){ if(getMyIcsUrl() && !_icsEvents[currentUserName()]) syncIcsCalendar(); }
 function getGcalClientId(){ return (localStorage.getItem('rg_gcal_client_id')||'').trim(); }
