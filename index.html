@@ -471,7 +471,7 @@ table tr:hover td{background:#fafbff;}
         <div id="synced-status" style="font-size:0.82em;margin-top:10px;"></div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
           <button class="btn btn-outline" onclick="closeSyncedDetail()">Close</button>
-          <button id="synced-sendbot" class="btn btn-accent" onclick="sendBotForSynced()">🤖 Send recording bot</button>
+          <button id="synced-sendbot" class="btn btn-accent" onclick="sendBotForSynced()">🤖 Send Bot To This Meeting</button>
         </div>
       </div>
     </div>
@@ -1210,7 +1210,7 @@ table tr:hover td{background:#fafbff;}
         </div>
         <div class="card">
           <h3>🤖 Meeting Bot</h3>
-          <p style="font-size:0.85em;color:#666;margin-bottom:12px;">Paste the URL of your deployed Meeting Bot backend (see <code>meeting-bot-server/</code>). Once set, calendar events with a video link show a “Send recording bot” button — the bot joins, records, summarizes, and messages attendees.</p>
+          <p style="font-size:0.85em;color:#666;margin-bottom:12px;">Paste the URL of your deployed Meeting Bot backend (see <code>meeting-bot-server/</code>). Once set, calendar events with a video link show a “Send Bot To This Meeting” button — the bot joins, records, summarizes, and messages attendees.</p>
           <input id="meetingbot-url-input" type="text" placeholder="https://your-meeting-bot.onrender.com"
             style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9em;margin-bottom:10px;">
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -7077,7 +7077,7 @@ function openCalDetail(id){
     ${e.video?`<div style="background:#eef3fb;border:1px solid #dbe6f7;border-radius:10px;padding:12px;margin-bottom:12px;">
       <div style="font-size:0.85em;font-weight:600;color:var(--primary);margin-bottom:6px;">🤖 Auto: send a recording bot</div>
       <p style="font-size:0.78em;color:#777;margin-bottom:8px;">The bot joins this video meeting, records &amp; transcribes it, and automatically messages the summary to every invited staff member's inbox when it ends.</p>
-      <button class="btn btn-accent" style="font-size:0.82em;" onclick="sendMeetingBot('${id}')">🤖 Send recording bot to this meeting</button>
+      <button class="btn btn-accent" style="font-size:0.82em;" onclick="sendMeetingBot('${id}')">🤖 Send Bot To This Meeting</button>
       <span id="mtg-bot-status" style="font-size:0.82em;color:#666;margin-left:8px;"></span>
     </div>`:''}
     <div style="background:#f8f9fa;border:1px solid #e5e9f0;border-radius:10px;padding:12px;margin-bottom:10px;">

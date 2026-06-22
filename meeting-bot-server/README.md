@@ -1,30 +1,70 @@
-# ReGroup Meeting Bot
+# ReGroup Meeting Agent Backend
 
-A small server that sends a recording **bot into a meeting**, transcribes it, **summarizes** it, and drops the summary into the **inbox of everyone who attended** (the app's Firestore `messages`).
+This backend supports the ReGroup app calendar and meeting bot flow.
 
-The app itself (a static site) can't join calls — that needs this service. You deploy it once.
+It provides:
 
-## What you need (3 accounts/keys)
-1. **Recall.ai** account → an **API key** (this is the service whose bot actually joins Zoom/Meet/Teams and records). Paid.
-2. **Anthropic** API key (`sk-ant-…`) — already used by the app — for the summary.
-3. A **Firebase service-account JSON** for project `regroup-elite-squad` (Firebase Console → Project settings → Service accounts → *Generate new private key*).
+- `/api/ics` for syncing Google/Outlook/iCloud iCal feeds into the app calendar.
+- `/api/meeting-agent/events` for sending a Recall.ai bot into a selected meeting.
+- `/api/recall/webhook` and `/webhook` for Recall status callbacks.
+- A 60-second poller that can process finished bots even when the webhook is delayed.
+- Legacy `/api/bot` support for older app code.
 
-## Deploy (Render — free/cheap, ~10 min)
-1. Push this `meeting-bot-server/` folder to a repo (it's already in your ReGroup-Survey repo).
-2. Go to **render.com → New → Web Service**, connect the repo, set **Root Directory** = `meeting-bot-server`.
-3. Build command `npm install`, Start command `npm start`.
-4. Add **Environment Variables**:
-   - `RECALL_API_KEY` = your Recall key
-   - `RECALL_REGION` = your Recall region (e.g. `us-west-2`)
-   - `ANTHROPIC_API_KEY` = `sk-ant-…`
-   - `FIREBASE_SERVICE_ACCOUNT` = the **entire** service-account JSON, pasted as one value
-   - (optional) `ALLOW_ORIGIN` = `https://cameronrthayes-star.github.io`
-5. Deploy. Copy the service URL, e.g. `https://regroup-meeting-bot.onrender.com`.
-6. Open `https://YOUR-URL/health` — you should see `recall_configured: true, anthropic_configured: true, firestore_configured: true`.
-7. In **Recall.ai → Webhooks**, add `https://YOUR-URL/webhook`.
+## Required services
 
-## Connect the app
-In the ReGroup app: **Settings → Meeting Bot backend URL**, paste `https://YOUR-URL`, Save.
+1. Recall.ai API key.
+2. Firebase service-account JSON for `regroup-elite-squad`.
+3. Optional Anthropic or OpenAI key for backend-generated summaries.
 
-## Use it
-Open a **Calendar** event that has a video link → **🤖 Send recording bot**. The bot joins, records, and when the call ends the summary is messaged to every invited staff member's inbox + Admin automatically.
+The app can also summarize from the browser with its saved Anthropic key, so the backend summary key is useful but not the only path.
+
+## Render setup
+
+Create a Render web service with:
+
+```text
+Root Directory: meeting-bot-server
+Build Command: npm install
+Start Command: npm start
+Health Check Path: /health
+```
+
+Environment variables:
+
+```text
+RECALL_API_KEY=your Recall key
+RECALL_REGION=us-west-2
+FIREBASE_SERVICE_ACCOUNT=the full Firebase service-account JSON
+ALLOW_ORIGIN=https://cameronrthayes-star.github.io
+ANTHROPIC_API_KEY=optional sk-ant key
+OPENAI_API_KEY=optional OpenAI key
+```
+
+## App flow
+
+1. Staff sync their Google calendar by pasting their secret iCal URL in the Calendar tab.
+2. Synced events appear on the app calendar.
+3. Clicking a synced event opens the meeting details pulled from the calendar, including video URL when present.
+4. Pressing `Send Bot To This Meeting` imports the synced meeting into the app calendar and calls `/api/meeting-agent/events`.
+5. The backend asks Recall.ai to send `ReGroup Summary Agent` into the call.
+6. When the call ends, the backend webhook or poller processes the transcript and exposes the summary for the app inbox flow.
+
+## Health check
+
+Open:
+
+```text
+https://YOUR-BACKEND/health
+```
+
+Expected important fields:
+
+```json
+{
+  "ok": true,
+  "recall_configured": true,
+  "recall_auth_ok": true,
+  "recall_region": "us-west-2",
+  "firestore_configured": true
+}
+```
