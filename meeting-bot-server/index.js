@@ -16,6 +16,15 @@
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
+
+// Constant-time string compare to avoid leaking the secret via timing.
+function safeEqual(a, b) {
+  const ab = Buffer.from(String(a || ''));
+  const bb = Buffer.from(String(b || ''));
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
 
 const RECALL_API_KEY = process.env.RECALL_API_KEY;
 const RECALL_REGION  = process.env.RECALL_REGION || 'us-west-2';
@@ -23,9 +32,20 @@ const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const RECALL_BASE = `https://${RECALL_REGION}.recall.ai/api/v1`;
 
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
+  try {
+    const svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    admin.initializeApp({ credential: admin.credential.cert(svc) });
+  } catch (e) {
+    // Don't crash the process on a malformed env var — log clearly and run without Firestore.
+    // The /health endpoint will report firestore_configured:false so the misconfig is visible.
+    console.error('FIREBASE_SERVICE_ACCOUNT is not valid JSON — Firestore disabled:', e.message);
+  }
 }
 const db = admin.apps.length ? admin.firestore() : null;
+
+// Optional shared secret for verifying Recall webhooks (M9). Set RECALL_WEBHOOK_SECRET
+// to the value configured in the Recall dashboard to reject forged POSTs.
+const RECALL_WEBHOOK_SECRET = process.env.RECALL_WEBHOOK_SECRET || '';
 
 const app = express();
 app.use(cors({ origin: process.env.ALLOW_ORIGIN || '*' }));
@@ -68,6 +88,16 @@ app.post('/api/bot', async (req, res) => {
 
 // Recall webhook — fires as the bot's status changes / transcript is ready
 app.post('/webhook', async (req, res) => {
+  // Verify a shared secret before trusting the payload (M9). Without this, anyone
+  // who learns the URL can forge bot_ids and inject summaries into every inbox.
+  // Configure RECALL_WEBHOOK_SECRET and pass it as the `svix-signature` /
+  // `x-webhook-secret` header or a `?secret=` query param from Recall.
+  if (RECALL_WEBHOOK_SECRET) {
+    const provided = req.get('x-webhook-secret') || req.get('svix-signature') || (req.query && req.query.secret) || '';
+    if (!safeEqual(provided, RECALL_WEBHOOK_SECRET)) {
+      return res.status(401).json({ error: 'invalid webhook signature' });
+    }
+  }
   res.json({ ok: true }); // ack immediately
   try {
     const ev = req.body || {};
@@ -102,7 +132,7 @@ async function summarize(text, title) {
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 1600, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-opus-4-5', max_tokens: 1600, messages: [{ role: 'user', content: prompt }] })
   });
   const j = await r.json();
   return (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim() || '(summary unavailable)';
@@ -111,7 +141,9 @@ async function summarize(text, title) {
 // Write the summary to each attendee's inbox (Firestore "messages") + Admin, and onto the calendar event
 async function deliver(summary, job) {
   const msg = `🎙 Meeting summary — "${job.title}":\n\n${summary}`;
-  const recipients = new Set([...(job.attendees || []), 'Admin']);
+  // Use 'Administrator' to match the app's admin user record (the app names the
+  // admin 'Administrator'; 'Admin' would route to a nonexistent inbox) (M12).
+  const recipients = new Set([...(job.attendees || []), 'Administrator']);
   const batch = db.batch();
   recipients.forEach(name => {
     const ref = db.collection('messages').doc();

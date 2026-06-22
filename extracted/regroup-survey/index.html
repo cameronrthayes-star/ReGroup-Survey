@@ -163,13 +163,18 @@
                 You just helped keep ReGroup alive.
             </div>
 
-            <form id="regroupForm" method="POST">
+            <!-- NOTE: This form posts directly to formsubmit.co with a hardcoded
+                 staff email (chayes@tjcoregon.org) below. That email is exposed in
+                 public source and responses are relayed through a third party rather
+                 than stored in the app's Firestore. Consider posting to Firestore and
+                 removing the hardcoded email if anonymity/retention matter. (Bug L4) -->
+            <form id="regroupForm" method="POST" action="https://formsubmit.co/chayes@tjcoregon.org">
                 <h2 style="color: #1a237e; text-align: center; margin-bottom: 30px;">Community Check-In</h2>
 
                 <div class="question-group">
                     <div class="question">
                         <label>How long have you been connected with ReGroup?</label>
-                        <select name="connection_length">
+                        <select name="connection_length" required>
                             <option value="">Choose one...</option>
                             <option value="new">New (less than 3 months)</option>
                             <option value="3-6months">3-6 months</option>
@@ -212,7 +217,7 @@
                     <div class="question">
                         <label>Since connecting with ReGroup, how are things overall?</label>
                         <div class="radio-group">
-                            <label><input type="radio" name="overall_improvement" value="much_better"> Much better</label>
+                            <label><input type="radio" name="overall_improvement" value="much_better" required> Much better</label>
                             <label><input type="radio" name="overall_improvement" value="somewhat_better"> Somewhat better</label>
                             <label><input type="radio" name="overall_improvement" value="about_same"> About the same</label>
                             <label><input type="radio" name="overall_improvement" value="harder"> Things have gotten harder</label>
@@ -307,7 +312,7 @@
                     <div class="question">
                         <label>Would you recommend ReGroup to someone who needs support?</label>
                         <div class="radio-group">
-                            <label><input type="radio" name="recommend" value="definitely"> Definitely</label>
+                            <label><input type="radio" name="recommend" value="definitely" required> Definitely</label>
                             <label><input type="radio" name="recommend" value="probably"> Probably</label>
                             <label><input type="radio" name="recommend" value="maybe"> Maybe</label>
                             <label><input type="radio" name="recommend" value="probably_not"> Probably not</label>
