@@ -4048,6 +4048,14 @@ function deleteReport(coll, id){
 // ===================================================================
 function fileToDataURL(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('Could not read file')); r.readAsDataURL(f); }); }
 function myStaffRecord(){ return DB.staff().find(s => s.name === currentUserName()); }
+function profileEmails(raw){
+  return String(raw||'').split(/[;,\s]+/).map(e=>e.trim()).filter(e=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+}
+function primaryProfileEmail(staff){
+  const emails = profileEmails(staff && staff.email);
+  return (emails.find(e=>/@tjcoregon\.org$/i.test(e)) || emails[0] || '').toLowerCase();
+}
+function currentProfileEmail(){ return primaryProfileEmail(myStaffRecord()); }
 
 function renderProfile(){
   const host=document.getElementById('profile-body'); if(!host) return;
@@ -4113,13 +4121,26 @@ function renderProfile(){
 }
 async function saveProfile(){
   const s=myStaffRecord(); if(!s) return;
+  const oldEmail = primaryProfileEmail(s);
+  const nextEmailRaw = document.getElementById('pf-email').value.trim();
+  const nextEmail = primaryProfileEmail({email:nextEmailRaw});
   await DB.updateRecord('staff', s._id, {
     phone:document.getElementById('pf-phone').value.trim(),
     preferredContact:document.getElementById('pf-pref').value,
-    email:document.getElementById('pf-email').value.trim(),
+    email:nextEmailRaw,
     address:document.getElementById('pf-address').value.trim(),
   });
-  const st=document.getElementById('pf-status'); if(st){ st.textContent='Saved ✓'; setTimeout(()=>{if(st)st.textContent='';},3000); }
+  if (oldEmail !== nextEmail) {
+    if (oldEmail) localStorage.removeItem(gcalConnectedKey(oldEmail));
+    _gcalToken = null;
+    _gcalTokenEmail = '';
+    if (oldEmail) delete _gcalEvents[oldEmail];
+    if (document.getElementById('view-calendar')?.classList.contains('active')) renderCalendar();
+  }
+  const st=document.getElementById('pf-status'); if(st){
+    st.textContent=nextEmail ? 'Saved ✓ Calendar sync will use '+nextEmail+'.' : 'Saved ✓ Add a profile email to enable Google Calendar sync.';
+    setTimeout(()=>{if(st)st.textContent='';},4000);
+  }
 }
 async function savePassword(){
   const s=myStaffRecord(); if(!s) return;
@@ -6663,37 +6684,70 @@ function calShiftMonth(n){ _calMonth.setMonth(_calMonth.getMonth()+n); renderCal
 function calToday(){ _calMonth=new Date(); _calMonth.setDate(1); renderCalendar(); }
 function populateStaffNameList(){ const dl=document.getElementById('staff-name-list'); if(dl) dl.innerHTML=DB.staff().map(s=>`<option>${fEsc(s.name)}</option>`).join(''); }
 
-// ===== Google Calendar sync (client-side OAuth — each staff connects their own) =====
-let _gcalEvents = {};       // userName -> [events]
-let _gcalToken = null, _gcalTokenClient = null;
+// ===== Google Calendar sync (client-side OAuth — each staff profile email connects its own calendar) =====
+let _gcalEvents = {};       // profileEmail -> [events]
+let _gcalToken = null, _gcalTokenClient = null, _gcalTokenEmail = '';
 function getGcalClientId(){ return (localStorage.getItem('rg_gcal_client_id')||'').trim(); }
 function saveGcalClientId(){
   const v=(document.getElementById('gcal-clientid-input').value||'').trim();
   localStorage.setItem('rg_gcal_client_id', v);
   const m=document.getElementById('gcal-clientid-msg'); if(m){ m.style.color='#43a047'; m.textContent=v?'✓ Saved. Staff can now connect from the Calendar tab.':'Cleared.'; }
 }
-function gcalConnectedKey(){ return 'rg_gcal_connected_'+(currentUserName()||'anon'); }
+function gcalConnectedKey(email){ return 'rg_gcal_connected_'+String(email||currentProfileEmail()||'anon').toLowerCase(); }
+function updateGcalProfileUi(){
+  const email = currentProfileEmail();
+  const status = document.getElementById('gcal-status');
+  const btn = document.getElementById('gcal-btn');
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = email
+      ? (localStorage.getItem(gcalConnectedKey(email))==='1' ? '🔄 Refresh '+email+' Calendar' : '🔗 Connect '+email+' Calendar')
+      : 'Add profile email to sync calendar';
+  }
+  if (!email && status) {
+    status.style.color = '#9a3412';
+    status.innerHTML = 'Add your work email under <b>My Profile → Email Address(es)</b>. Calendar sync will use that profile email automatically.';
+  }
+}
 function connectGcal(){
   const status=document.getElementById('gcal-status');
+  const email=currentProfileEmail();
   const cid=getGcalClientId();
+  if(!email){ updateGcalProfileUi(); return; }
   if(!cid){ if(status){status.style.color='#e53935'; status.innerHTML='No Google Client ID set yet — an admin adds it in <b>Settings → Google Calendar Sync</b>.';} return; }
   if(!(window.google && google.accounts && google.accounts.oauth2)){ if(status){status.style.color='#e53935'; status.textContent='Google sign-in is still loading — try again in a few seconds.';} return; }
-  if(status){ status.style.color='#666'; status.textContent='Opening Google sign-in…'; }
+  if(status){ status.style.color='#666'; status.textContent='Opening Google sign-in for '+email+'…'; }
   try{
     _gcalTokenClient = google.accounts.oauth2.initTokenClient({
       client_id: cid,
-      scope: 'https://www.googleapis.com/auth/calendar.readonly',
-      callback: (resp)=>{ if(resp&&resp.access_token){ _gcalToken=resp.access_token; localStorage.setItem(gcalConnectedKey(),'1'); fetchGcal(); }
+      scope: 'openid email https://www.googleapis.com/auth/calendar.readonly',
+      hint: email,
+      callback: (resp)=>{ if(resp&&resp.access_token){ _gcalToken=resp.access_token; _gcalTokenEmail=email; localStorage.setItem(gcalConnectedKey(email),'1'); fetchGcal(email); }
         else if(status){ status.style.color='#e53935'; status.textContent='Google sign-in was cancelled.'; } }
     });
-    _gcalTokenClient.requestAccessToken({prompt: localStorage.getItem(gcalConnectedKey())==='1' ? '' : 'consent'});
+    _gcalTokenClient.requestAccessToken({prompt: localStorage.getItem(gcalConnectedKey(email))==='1' ? '' : 'consent'});
   }catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Google connect error: '+e.message; } }
 }
-async function fetchGcal(){
+async function fetchGcal(profileEmail){
   const status=document.getElementById('gcal-status');
+  const email=(profileEmail||currentProfileEmail()||'').toLowerCase();
+  if(!email){ updateGcalProfileUi(); return; }
   if(!_gcalToken) return;
-  if(status){ status.style.color='#666'; status.textContent='Loading your Google Calendar…'; }
+  if(status){ status.style.color='#666'; status.textContent='Loading Google Calendar for '+email+'…'; }
   try{
+    try {
+      const u=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{'Authorization':'Bearer '+_gcalToken}});
+      if(u.ok){
+        const info=await u.json();
+        const signedIn=String(info.email||'').toLowerCase();
+        if(signedIn && signedIn!==email){
+          _gcalToken=null; _gcalTokenEmail=''; localStorage.removeItem(gcalConnectedKey(email));
+          if(status){ status.style.color='#e53935'; status.textContent='Signed in as '+signedIn+', but this profile is set to '+email+'. Reconnect with the profile email account.'; }
+          updateGcalProfileUi();
+          return;
+        }
+      }
+    } catch(_) {}
     const tMin=new Date(); tMin.setMonth(tMin.getMonth()-1);
     const tMax=new Date(); tMax.setMonth(tMax.getMonth()+3);
     const url='https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250'
@@ -6705,17 +6759,19 @@ async function fetchGcal(){
       const s=(it.start&&(it.start.dateTime||it.start.date))||'';
       return {title:it.summary||'(no title)', date:s.slice(0,10), time:(it.start&&it.start.dateTime)?s.slice(11,16):'', _gcal:true, htmlLink:it.htmlLink||'', video:it.hangoutLink||''};
     }).filter(e=>e.date);
-    _gcalEvents[currentUserName()]=evs;
-    if(status){ status.style.color='#15803d'; status.textContent='✓ Synced '+evs.length+' Google Calendar events for '+(currentUserName()||'you')+'.'; }
-    const btn=document.getElementById('gcal-btn'); if(btn) btn.textContent='🔄 Refresh Google Calendar';
+    _gcalEvents[email]=evs;
+    if(status){ status.style.color='#15803d'; status.textContent='✓ Synced '+evs.length+' Google Calendar events for '+email+'.'; }
+    updateGcalProfileUi();
     renderCalendar();
   }catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Could not load Google Calendar — '+e.message; } }
 }
 function gcalAutoSync(){
-  if(getGcalClientId() && localStorage.getItem(gcalConnectedKey())==='1' && !_gcalToken && window.google && google.accounts) connectGcal();
+  const email=currentProfileEmail();
+  if(email && getGcalClientId() && localStorage.getItem(gcalConnectedKey(email))==='1' && (!_gcalToken || _gcalTokenEmail!==email) && window.google && google.accounts) connectGcal();
 }
 function renderCalendar(){
   populateStaffNameList();
+  updateGcalProfileUi();
   gcalAutoSync();
   checkMeetingSummaries();
   autoDispatchBots();
@@ -6728,7 +6784,7 @@ function renderCalendar(){
   const todayStr=new Date().toISOString().slice(0,10);
   const byDate={};
   DB.calendar().forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
-  (_gcalEvents[currentUserName()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
+  (_gcalEvents[currentProfileEmail()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
   const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let cells='';
   for(let i=0;i<startDow;i++) cells+='<div style="background:#fafbfd;border-radius:8px;min-height:82px;"></div>';
