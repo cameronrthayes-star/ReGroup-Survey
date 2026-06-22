@@ -18,7 +18,7 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 
 const RECALL_API_KEY = process.env.RECALL_API_KEY;
-const RECALL_REGION  = process.env.RECALL_REGION || 'us-west-2';
+const RECALL_REGION  = process.env.RECALL_REGION || 'us-west-2'; // Oregon/TJC default; override per your Recall key's region
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const RECALL_BASE = `https://${RECALL_REGION}.recall.ai/api/v1`;
 
