@@ -6690,30 +6690,39 @@ let _gcalEvents = {};       // profileEmail -> [events]
 let _icsEvents = {};        // userName -> [events] (iCal-link sync, no Google Cloud project needed)
 let _gcalToken = null, _gcalTokenClient = null, _gcalTokenEmail = '';
 // iCal-link sync: paste a calendar's secret ICS URL; fetched via the backend proxy (avoids browser CORS)
-function openIcsSetup(){
+// Works for any account — staff store the URL on their staff doc (syncs across devices); admin/no-staff use localStorage.
+function getMyIcsUrl(){
   const s=(typeof myStaffRecord==='function')?myStaffRecord():null;
-  if(!s){ alert('Your account has no staff profile yet — an admin can add you in Settings.'); return; }
-  const url=prompt('Paste your calendar\'s SECRET iCal URL:\n\nGoogle Calendar → Settings → click your calendar → "Secret address in iCal format" → copy.\n(Outlook & iCloud also provide an ICS/iCal link.)', s.icsUrl||'');
+  if(s && s.icsUrl) return s.icsUrl;
+  try{ return localStorage.getItem('rg_ics_'+(currentUserName()||'admin').toLowerCase())||''; }catch(_){ return ''; }
+}
+async function setMyIcsUrl(v){
+  const s=(typeof myStaffRecord==='function')?myStaffRecord():null;
+  if(s){ try{ await DB.updateRecord('staff', s._id, {icsUrl:v}); }catch(_){} }
+  try{ localStorage.setItem('rg_ics_'+(currentUserName()||'admin').toLowerCase(), v); }catch(_){}
+}
+function openIcsSetup(){
+  const url=prompt('Paste your calendar\'s SECRET iCal URL:\n\nGoogle Calendar → Settings → click your calendar (left side) → scroll to "Secret address in iCal format" → copy that link.\n(Outlook & iCloud also provide an ICS/iCal link.)', getMyIcsUrl());
   if(url===null) return;
   const v=url.trim();
-  DB.updateRecord('staff', s._id, {icsUrl:v}).then(()=>{ if(v){ syncIcsCalendar(); } else { delete _icsEvents[currentUserName()]; renderCalendar(); } });
+  setMyIcsUrl(v).then(()=>{ if(v){ syncIcsCalendar(); } else { delete _icsEvents[currentUserName()]; renderCalendar(); } });
 }
 async function syncIcsCalendar(){
-  const s=(typeof myStaffRecord==='function')?myStaffRecord():null;
   const status=document.getElementById('gcal-status');
-  if(!s||!s.icsUrl) return;
+  const icsUrl=getMyIcsUrl();
+  if(!icsUrl){ if(status){status.style.color='#9a3412';status.textContent='No iCal link saved yet — click “📎 Sync via iCal link” and paste your calendar’s secret iCal URL.';} return; }
   const base=(localStorage.getItem('rg_meetingbot_url')||DEFAULT_MEETING_BACKEND).replace(/\/+$/,'');
   if(status){ status.style.color='#666'; status.textContent='Syncing your calendar (backend may take ~15s to wake)…'; }
   try{
-    const r=await fetch(base+'/api/ics?url='+encodeURIComponent(s.icsUrl));
+    const r=await fetch(base+'/api/ics?url='+encodeURIComponent(icsUrl));
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
     _icsEvents[currentUserName()]=(d.events||[]).map(e=>({title:e.title,date:e.date,time:e.time,location:e.location,_gcal:true}));
     if(status){ status.style.color='#15803d'; status.textContent='✓ Synced '+(d.events||[]).length+' calendar events from your iCal link.'; }
     renderCalendar();
-  }catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Calendar sync error — '+e.message; } }
+  }catch(e){ if(status){ status.style.color='#e53935'; status.textContent='Calendar sync error — '+e.message+' (check the link, or wait ~15s for the backend to wake and retry).'; } }
 }
-function icsAutoSync(){ const s=(typeof myStaffRecord==='function')?myStaffRecord():null; if(s&&s.icsUrl&&!_icsEvents[currentUserName()]) syncIcsCalendar(); }
+function icsAutoSync(){ if(getMyIcsUrl() && !_icsEvents[currentUserName()]) syncIcsCalendar(); }
 function getGcalClientId(){ return (localStorage.getItem('rg_gcal_client_id')||'').trim(); }
 function saveGcalClientId(){
   const v=(document.getElementById('gcal-clientid-input').value||'').trim();
