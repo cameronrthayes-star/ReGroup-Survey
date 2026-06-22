@@ -2415,7 +2415,7 @@ const DB = {
   async removeRJCase(id)     { await deleteDoc(doc(db,'rjCases',id)); },
 
   calendar: () => _calendar,
-  async addCalEvent(e)       { await addDoc(collection(db,'calendar'), {...e, _createdAt: serverTimestamp()}); },
+  async addCalEvent(e)       { const r=await addDoc(collection(db,'calendar'), {...e, _createdAt: serverTimestamp()}); return r.id; },
   async updateCalEvent(id,e) { await setDoc(doc(db,'calendar',id), {...e, _updatedAt: serverTimestamp()}, {merge:true}); },
   async removeCalEvent(id)   { await deleteDoc(doc(db,'calendar',id)); },
 
@@ -6701,8 +6701,79 @@ function populateStaffNameList(){ const dl=document.getElementById('staff-name-l
 
 // ===== Google Calendar sync (client-side OAuth — each staff profile email connects its own calendar) =====
 let _gcalEvents = {};       // profileEmail -> [events]
-let _icsEvents = {};        // userName -> [events] (iCal-link sync, no Google Cloud project needed)
+let _icsEvents = {};        // profile email/display identity -> [events] (iCal-link sync, no Google Cloud project needed)
 let _syncedIndex = {}, _calSidN = 0, _syncedCurrent = null;  // for clicking synced (Google) events
+function calendarSyncOwnerKey(){
+  return (currentProfileEmail() || currentUserName() || 'admin').toLowerCase();
+}
+function splitEmails(value){
+  return String(value||'').split(/[;,\s]+/).map(s=>s.trim()).filter(s=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
+}
+function cleanUrl(url){
+  return String(url||'').trim().replace(/[),.;\]]+$/,'');
+}
+function urlsFromText(value){
+  const matches = String(value||'').match(/https?:\/\/[^\s<>"']+/gi) || [];
+  return matches.map(cleanUrl).filter(Boolean);
+}
+function isVideoMeetingUrl(url){
+  return /meet\.google\.com|zoom\.us|zoomgov\.com|teams\.microsoft\.com|webex\.com|gotomeeting\.com|bluejeans\.com|whereby\.com/i.test(String(url||''));
+}
+function extractMeetingUrl(){
+  const urls = Array.from(arguments).flatMap(urlsFromText);
+  return (urls.find(isVideoMeetingUrl) || urls[0] || '').trim();
+}
+function syncedSourceKey(e){
+  return e.sourceKey || e.htmlLink || [e.title,e.date,e.time,e.video].join('|').toLowerCase();
+}
+function matchedStaffNamesForEmails(emails){
+  const staff=DB.staff();
+  const names=[];
+  splitEmails((emails||[]).join(',')).forEach(email=>{
+    const match=staff.find(s=>splitEmails(s.email).some(em=>em.toLowerCase()===email.toLowerCase()));
+    if(match && !names.some(n=>n.toLowerCase()===(match.name||'').toLowerCase())) names.push(match.name);
+  });
+  return names;
+}
+function staffNamesForEmails(emails){
+  const names=matchedStaffNamesForEmails(emails);
+  const me=currentUserName();
+  if(me && !names.some(n=>n.toLowerCase()===me.toLowerCase())) names.push(me);
+  return names;
+}
+function syncedEventAttendees(e){
+  const raw=Array.isArray(e.attendees) ? e.attendees.join(',') : (e.attendees||'');
+  const emails=new Set(splitEmails(raw));
+  const profileEmail=currentProfileEmail();
+  if(profileEmail) emails.add(profileEmail);
+  return Array.from(emails);
+}
+function mapGoogleCalendarEvent(it){
+  const start=(it.start&&(it.start.dateTime||it.start.date))||'';
+  const end=(it.end&&(it.end.dateTime||it.end.date))||'';
+  const entryPoints=(it.conferenceData&&Array.isArray(it.conferenceData.entryPoints))?it.conferenceData.entryPoints:[];
+  const videoEp=entryPoints.find(ep=>ep && ep.entryPointType==='video' && ep.uri);
+  const phoneEp=entryPoints.find(ep=>ep && ep.entryPointType==='phone' && (ep.uri||ep.label));
+  const video=(videoEp&&videoEp.uri) || it.hangoutLink || extractMeetingUrl(it.location,it.description,it.summary);
+  const attendeeEmails=(it.attendees||[]).map(a=>a.email).filter(Boolean);
+  const organizerEmail=it.organizer&&it.organizer.email;
+  const creatorEmail=it.creator&&it.creator.email;
+  [organizerEmail, creatorEmail].filter(Boolean).forEach(em=>attendeeEmails.push(em));
+  const time=start && it.start.dateTime ? start.slice(11,16)+(end&&it.end&&it.end.dateTime?'-'+end.slice(11,16):'') : '';
+  return {
+    title:it.summary||'(no title)',
+    date:start.slice(0,10),
+    time,
+    location:it.location||'',
+    description:it.description||'',
+    attendees:Array.from(new Set(attendeeEmails.map(em=>em.toLowerCase()))),
+    video,
+    phone:(phoneEp&&(phoneEp.label||phoneEp.uri))||'',
+    htmlLink:it.htmlLink||'',
+    sourceKey:'gcal:'+(it.id||it.iCalUID||it.htmlLink||[it.summary,start].join('|')),
+    _gcal:true
+  };
+}
 // A calendar chip — synced (Google) events open an action panel; app events open their detail
 function calChip(e){
   if(e._gcal){
@@ -6725,7 +6796,7 @@ function openSyncedDetail(sid){
   document.getElementById('synced-modal').style.display='flex';
 }
 function closeSyncedDetail(){ document.getElementById('synced-modal').style.display='none'; _syncedCurrent=null; }
-async function sendBotForSynced(){
+async function sendBotForSyncedLegacy(){
   const e=_syncedCurrent; if(!e||!e.video) return;
   const status=document.getElementById('synced-status');
   const base=(localStorage.getItem('rg_meetingbot_url')||DEFAULT_MEETING_BACKEND).replace(/\/+$/,'');
@@ -6743,24 +6814,65 @@ async function sendBotForSynced(){
     status.style.color='#15803d'; status.textContent='✓ Bot dispatched'+(botId?(' (id '+botId+')'):'')+'. Admit “ReGroup Summary Agent” in the meeting; the summary goes to attendee inboxes when it ends.';
   }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message; }
 }
+async function ensureSyncedCalEvent(e){
+  const sourceKey=syncedSourceKey(e);
+  const existing=DB.calendar().find(x=>x.syncedSourceKey===sourceKey || (!x.syncedSourceKey && x.date===e.date && x.title===e.title && x.video===e.video));
+  if(existing) return existing;
+  const attendees=syncedEventAttendees(e);
+  const staffNames=staffNamesForEmails(attendees);
+  const external=attendees.filter(email=>!matchedStaffNamesForEmails([email]).length);
+  const notes=[
+    e.description||'',
+    e.htmlLink ? 'Source calendar event: '+e.htmlLink : '',
+    e.phone ? 'Phone join: '+e.phone : ''
+  ].filter(Boolean).join('\n\n');
+  const data={
+    title:e.title||'Meeting',
+    date:e.date||new Date().toISOString().slice(0,10),
+    time:e.time||'',
+    video:e.video||'',
+    address:e.location||'',
+    invited:staffNames.join(', '),
+    external:external.join(', '),
+    notes,
+    createdBy:currentUserName(),
+    syncedSource:'google_or_ical',
+    syncedSourceKey:sourceKey
+  };
+  const id=await DB.addCalEvent(data);
+  return {...data,_id:id};
+}
+async function sendBotForSynced(){
+  const e=_syncedCurrent; if(!e||!e.video) return;
+  const status=document.getElementById('synced-status');
+  status.style.color='#666'; status.textContent='Importing synced event and dispatching bot (backend may take ~15s to wake)...';
+  try{
+    const appEvent=await ensureSyncedCalEvent(e);
+    const res=await dispatchMeetingBot(appEvent);
+    if(!res.ok) throw new Error(res.error||'bot dispatch failed');
+    _syncedCurrent._appCalendarId=appEvent._id;
+    status.style.color='#15803d'; status.textContent='Bot requested and linked to this app calendar event. Admit "ReGroup Summary Agent" if it waits in the lobby; the summary will be tracked here and delivered to attendee inboxes.';
+    renderCalendar();
+  }catch(err){ status.style.color='#e53935'; status.textContent='Bot error - '+err.message; }
+}
 let _gcalToken = null, _gcalTokenClient = null, _gcalTokenEmail = '';
 // iCal-link sync: paste a calendar's secret ICS URL; fetched via the backend proxy (avoids browser CORS)
 // Works for any account — staff store the URL on their staff doc (syncs across devices); admin/no-staff use localStorage.
 function getMyIcsUrl(){
   const s=(typeof myStaffRecord==='function')?myStaffRecord():null;
   if(s && s.icsUrl) return s.icsUrl;
-  try{ return localStorage.getItem('rg_ics_'+(currentUserName()||'admin').toLowerCase())||''; }catch(_){ return ''; }
+  try{ return localStorage.getItem('rg_ics_'+calendarSyncOwnerKey())||''; }catch(_){ return ''; }
 }
 async function setMyIcsUrl(v){
   const s=(typeof myStaffRecord==='function')?myStaffRecord():null;
   if(s){ try{ await DB.updateRecord('staff', s._id, {icsUrl:v}); }catch(_){} }
-  try{ localStorage.setItem('rg_ics_'+(currentUserName()||'admin').toLowerCase(), v); }catch(_){}
+  try{ localStorage.setItem('rg_ics_'+calendarSyncOwnerKey(), v); }catch(_){}
 }
 function openIcsSetup(){
   const url=prompt('Paste your calendar\'s SECRET iCal URL:\n\nGoogle Calendar → Settings → click your calendar (left side) → scroll to "Secret address in iCal format" → copy that link.\n(Outlook & iCloud also provide an ICS/iCal link.)', getMyIcsUrl());
   if(url===null) return;
   const v=url.trim();
-  setMyIcsUrl(v).then(()=>{ if(v){ syncIcsCalendar(); } else { delete _icsEvents[currentUserName()]; renderCalendar(); } });
+  setMyIcsUrl(v).then(()=>{ if(v){ syncIcsCalendar(); } else { delete _icsEvents[calendarSyncOwnerKey()]; renderCalendar(); } });
 }
 async function syncIcsCalendar(){
   const status=document.getElementById('gcal-status');
@@ -6777,7 +6889,7 @@ async function syncIcsCalendar(){
       const r=await fetch(reqUrl, {cache:'no-store'});
       const d=await r.json().catch(()=>({}));
       if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
-      _icsEvents[currentUserName()]=(d.events||[]).map(e=>({title:e.title,date:e.date,time:e.time,location:e.location,video:e.video||'',attendees:e.attendees||[],description:e.description||'',_gcal:true}));
+      _icsEvents[calendarSyncOwnerKey()]=(d.events||[]).map(e=>({title:e.title,date:e.date,time:e.time,location:e.location,video:e.video||extractMeetingUrl(e.location,e.description,e.title),attendees:splitEmails((e.attendees||[]).join(',')),description:e.description||'',sourceKey:'ics:'+(e.uid||[e.title,e.date,e.time,e.location].join('|')),_gcal:true}));
       if(status){ status.style.color='#15803d'; status.textContent='✓ Synced '+(d.events||[]).length+' calendar events from your iCal link.'; }
       renderCalendar();
       return;
@@ -6785,7 +6897,7 @@ async function syncIcsCalendar(){
   }
   if(status){ status.style.color='#e53935'; status.textContent='Calendar sync error — '+(lastErr&&lastErr.message||'could not reach the backend')+'. Try again in a moment, or re-check your iCal link.'; }
 }
-function icsAutoSync(){ if(getMyIcsUrl() && !_icsEvents[currentUserName()]) syncIcsCalendar(); }
+function icsAutoSync(){ if(getMyIcsUrl() && !_icsEvents[calendarSyncOwnerKey()]) syncIcsCalendar(); }
 function getGcalClientId(){ return (localStorage.getItem('rg_gcal_client_id')||'').trim(); }
 function saveGcalClientId(){
   const v=(document.getElementById('gcal-clientid-input').value||'').trim();
@@ -6854,10 +6966,7 @@ async function fetchGcal(profileEmail){
     const r=await fetch(url,{headers:{'Authorization':'Bearer '+_gcalToken}});
     if(!r.ok){ throw new Error('Calendar API '+r.status+(r.status===403?' (enable Calendar API / check origin)':'')); }
     const d=await r.json();
-    const evs=(d.items||[]).map(it=>{
-      const s=(it.start&&(it.start.dateTime||it.start.date))||'';
-      return {title:it.summary||'(no title)', date:s.slice(0,10), time:(it.start&&it.start.dateTime)?s.slice(11,16):'', _gcal:true, htmlLink:it.htmlLink||'', video:it.hangoutLink||''};
-    }).filter(e=>e.date);
+    const evs=(d.items||[]).map(mapGoogleCalendarEvent).filter(e=>e.date);
     _gcalEvents[email]=evs;
     if(status){ status.style.color='#15803d'; status.textContent='✓ Synced '+evs.length+' Google Calendar events for '+email+'.'; }
     updateGcalProfileUi();
@@ -6885,7 +6994,7 @@ function renderCalendar(){
   const byDate={};
   DB.calendar().forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
   (_gcalEvents[currentProfileEmail()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
-  (_icsEvents[currentUserName()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
+  (_icsEvents[calendarSyncOwnerKey()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
   const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   _syncedIndex={}; _calSidN=0;
   let cells='';
