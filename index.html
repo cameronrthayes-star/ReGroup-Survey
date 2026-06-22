@@ -462,6 +462,20 @@ table tr:hover td{background:#fafbff;}
       </div>
     </div>
 
+    <!-- Synced (Google) event action modal -->
+    <div id="synced-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+        <h3 id="synced-title" style="color:var(--primary);margin-bottom:4px;">Event</h3>
+        <p style="font-size:0.74em;color:#4285F4;font-weight:600;margin-bottom:12px;">📅 From Google Calendar</p>
+        <div id="synced-body"></div>
+        <div id="synced-status" style="font-size:0.82em;margin-top:10px;"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+          <button class="btn btn-outline" onclick="closeSyncedDetail()">Close</button>
+          <button id="synced-sendbot" class="btn btn-accent" onclick="sendBotForSynced()">🤖 Send recording bot</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== RESTORATIVE JUSTICE ===== -->
     <div id="view-rj" class="view">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
@@ -6688,6 +6702,47 @@ function populateStaffNameList(){ const dl=document.getElementById('staff-name-l
 // ===== Google Calendar sync (client-side OAuth — each staff profile email connects its own calendar) =====
 let _gcalEvents = {};       // profileEmail -> [events]
 let _icsEvents = {};        // userName -> [events] (iCal-link sync, no Google Cloud project needed)
+let _syncedIndex = {}, _calSidN = 0, _syncedCurrent = null;  // for clicking synced (Google) events
+// A calendar chip — synced (Google) events open an action panel; app events open their detail
+function calChip(e){
+  if(e._gcal){
+    const sid='s'+(_calSidN++); _syncedIndex[sid]=e;
+    return `<div onclick="event.stopPropagation();openSyncedDetail('${sid}')" title="${fEsc(e.title)} (Google Calendar — click to send bot)" style="background:#e8f0fe;border-left:3px solid #4285F4;border-radius:4px;padding:1px 4px;margin-bottom:2px;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;"><span style="font-weight:700;color:#4285F4;">G</span> ${e.video?'🎥 ':''}${fEsc(e.title)}</div>`;
+  }
+  return `<div onclick="event.stopPropagation();openCalDetail('${e._id}')" title="${fEsc(e.title)}" style="background:#eef3fb;border-left:3px solid var(--primary);border-radius:4px;padding:1px 4px;margin-bottom:2px;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;">${e.video?'🎥 ':''}${fEsc(e.title)}</div>`;
+}
+function openSyncedDetail(sid){
+  const e=_syncedIndex[sid]; if(!e) return; _syncedCurrent=e;
+  document.getElementById('synced-title').textContent=e.title||'Event';
+  const att=(e.attendees||[]);
+  document.getElementById('synced-body').innerHTML=
+    `<div style="font-size:0.85em;color:#555;margin-bottom:8px;">${fmtDate(e.date)}${e.time?' · '+e.time:''}${e.location?' · 📍 '+fEsc(e.location):''}</div>`+
+    (e.video?`<div style="margin-bottom:8px;font-size:0.85em;">🎥 <a href="${e.video}" target="_blank" rel="noopener" style="color:#2f9bb5;word-break:break-all;">${fEsc(e.video)}</a></div>`:'<div style="font-size:0.82em;color:#9a3412;margin-bottom:8px;">No meeting/video link on this event — the bot needs one to join.</div>')+
+    (att.length?`<div style="font-size:0.82em;color:#666;margin-bottom:8px;"><b>Attendees:</b> ${att.map(fEsc).join(', ')}</div>`:'')+
+    (e.description?`<div style="font-size:0.8em;color:#777;white-space:pre-wrap;max-height:120px;overflow:auto;border-top:1px solid #eef;padding-top:6px;">${fEsc(e.description)}</div>`:'');
+  document.getElementById('synced-sendbot').style.display=e.video?'inline-flex':'none';
+  document.getElementById('synced-status').textContent='';
+  document.getElementById('synced-modal').style.display='flex';
+}
+function closeSyncedDetail(){ document.getElementById('synced-modal').style.display='none'; _syncedCurrent=null; }
+async function sendBotForSynced(){
+  const e=_syncedCurrent; if(!e||!e.video) return;
+  const status=document.getElementById('synced-status');
+  const base=(localStorage.getItem('rg_meetingbot_url')||DEFAULT_MEETING_BACKEND).replace(/\/+$/,'');
+  const attendees=(e.attendees||[]).map(em=>({email:em}));
+  status.style.color='#666'; status.textContent='Dispatching bot (backend may take ~15s to wake)…';
+  try{
+    const r=await fetch(base+'/api/meeting-agent/events',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+      title:e.title||'Meeting', meeting_url:e.video, platform:'auto', attendees,
+      notice_text:'ReGroup Summary Agent may join to record/transcribe and summarize this meeting for authorized attendees.',
+      consent_confirmed:true, send_to_attendees:true, review_required:false, create_bot_now:true, source:'regroup_app_synced_calendar'
+    })});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error((d.error&&(d.error.message||JSON.stringify(d.error)))||('HTTP '+r.status));
+    const ev=d.event||d; const botId=ev.provider_bot_id||ev.bot_id||'';
+    status.style.color='#15803d'; status.textContent='✓ Bot dispatched'+(botId?(' (id '+botId+')'):'')+'. Admit “ReGroup Summary Agent” in the meeting; the summary goes to attendee inboxes when it ends.';
+  }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message; }
+}
 let _gcalToken = null, _gcalTokenClient = null, _gcalTokenEmail = '';
 // iCal-link sync: paste a calendar's secret ICS URL; fetched via the backend proxy (avoids browser CORS)
 // Works for any account — staff store the URL on their staff doc (syncs across devices); admin/no-staff use localStorage.
@@ -6824,6 +6879,7 @@ function renderCalendar(){
   (_gcalEvents[currentProfileEmail()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
   (_icsEvents[currentUserName()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
   const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  _syncedIndex={}; _calSidN=0;
   let cells='';
   for(let i=0;i<startDow;i++) cells+='<div style="background:#fafbfd;border-radius:8px;min-height:82px;"></div>';
   for(let d=1; d<=daysInMonth; d++){
@@ -6832,9 +6888,7 @@ function renderCalendar(){
     const isToday=ds===todayStr;
     cells+=`<div onclick="openCalEvent(null,'${ds}')" style="background:#fff;border:1px solid ${isToday?'var(--accent)':'#eef'};border-radius:8px;min-height:82px;padding:5px 6px;cursor:pointer;">
       <div style="font-size:0.74em;font-weight:700;color:${isToday?'var(--accent)':'#94a3b8'};margin-bottom:3px;">${d}</div>
-      ${evs.slice(0,3).map(e=> e._gcal
-        ? `<div onclick="event.stopPropagation();${e.htmlLink?`window.open('${e.htmlLink}','_blank')`:''}" title="${fEsc(e.title)} (Google Calendar)" style="background:#e8f0fe;border-left:3px solid #4285F4;border-radius:4px;padding:1px 4px;margin-bottom:2px;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:700;color:#4285F4;">G</span> ${e.video?'🎥 ':''}${fEsc(e.title)}</div>`
-        : `<div onclick="event.stopPropagation();openCalDetail('${e._id}')" title="${fEsc(e.title)}" style="background:#eef3fb;border-left:3px solid var(--primary);border-radius:4px;padding:1px 4px;margin-bottom:2px;font-size:0.68em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.video?'🎥 ':''}${fEsc(e.title)}</div>`).join('')}
+      ${evs.slice(0,3).map(calChip).join('')}
       ${evs.length>3?`<div style="font-size:0.64em;color:#94a3b8;">+${evs.length-3} more</div>`:''}</div>`;
   }
   grid.innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">
@@ -7461,7 +7515,7 @@ Object.assign(window, {
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
-  openIcsSetup, syncIcsCalendar,
+  openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
