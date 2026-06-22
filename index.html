@@ -100,6 +100,26 @@ table th{background:#f4f7ff;color:var(--primary);padding:11px 14px;text-align:le
 table td{padding:10px 14px;border-bottom:1px solid #f0f3f8;vertical-align:top;}
 table tr:hover td{background:#fafbff;}
 
+/* === EXAMPLE / HOW-IT-SHOULD-LOOK PANELS === */
+.example-panel{background:#fff;border:1px solid #dbe6f7;border-left:4px solid var(--accent);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;box-shadow:0 2px 14px rgba(26,35,126,0.06);}
+.example-panel h3{color:var(--primary);margin-bottom:6px;font-size:1em;}
+.example-panel p{color:#5b6472;font-size:0.86em;line-height:1.55;margin-bottom:12px;}
+.example-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;}
+.example-mini{background:#f8fbff;border:1px solid #e4ecf8;border-radius:10px;padding:10px 12px;font-size:0.82em;color:#475569;}
+.example-mini strong{display:block;color:var(--primary);font-size:0.88em;margin-bottom:3px;}
+.example-chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.example-process{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:8px;margin-top:12px;}
+.example-step{background:#f4f7fc;border:1px solid #e2e8f0;border-radius:10px;padding:9px 10px;font-size:0.78em;color:#4b5563;}
+.example-step b{display:block;color:var(--primary);margin-bottom:2px;}
+.example-kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:8px;margin-top:12px;}
+.example-col{background:#f4f7fc;border:1px solid #e2e8f0;border-radius:10px;padding:9px;}
+.example-col h4{font-size:0.72em;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+.example-task{background:#fff;border-left:3px solid var(--accent);border-radius:8px;padding:7px 8px;margin-bottom:6px;font-size:0.78em;color:#475569;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+.example-gantt{display:grid;gap:8px;margin-top:12px;background:#f8fbff;border:1px solid #e4ecf8;border-radius:10px;padding:10px;}
+.example-gantt-row{display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;font-size:0.78em;color:#475569;}
+.example-gantt-track{height:12px;background:#e8edf5;border-radius:999px;position:relative;overflow:hidden;}
+.example-gantt-bar{position:absolute;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--primary));}
+
 /* === BADGES === */
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.72em;font-weight:700;}
 .badge-success{background:#e6f9ec;color:#2a7d3f;}
@@ -2551,6 +2571,7 @@ function cancelPIN() {
 // APP LOGIN / CURRENT USER (per-staff profiles)
 // ===================================================================
 let _currentUser = null;          // {name, firstName, isAdmin}
+let _postLoginView = null;
 
 function firstNameOf(name){ return (name||'').trim().split(/\s+/)[0] || ''; }
 function currentUserName(){ return _currentUser ? _currentUser.name : ''; }
@@ -2563,12 +2584,15 @@ function setCurrentUser(u){
   try { localStorage.setItem('rg_current_user', JSON.stringify(u)); } catch(e){}
   document.getElementById('app-login').style.display = 'none';
   updateUserChrome();
-  navigate('dashboard');
+  const target = (u.isAdmin && _postLoginView) ? _postLoginView : 'dashboard';
+  _postLoginView = null;
+  navigate(target);
 }
 function logout(){
   _currentUser = null; _adminUnlocked = false;
   try { localStorage.removeItem('rg_current_user'); } catch(e){}
   const inp = document.getElementById('app-password-input'); if (inp) inp.value='';
+  const err = document.getElementById('app-login-error'); if (err && !_postLoginView) err.textContent='';
   document.getElementById('app-login').style.display = 'flex';
 }
 function updateUserChrome(){
@@ -2611,6 +2635,7 @@ function submitAppLogin() {
     setCurrentUser({name:staff.name, firstName:firstNameOf(staff.name), isAdmin:!!staff.isAdmin});
     document.getElementById('app-password-input').value=''; return;
   }
+  if (err) err.style.color = '#ef5350';
   if (!DB.staff().length){ err.textContent='⏳ Still loading staff — wait a moment and try again.'; return; }
   err.textContent='❌ Incorrect. Your password is your first name + 1234 (e.g. Cameron1234).';
   document.getElementById('app-password-input').value='';
@@ -2632,10 +2657,23 @@ async function changeAdminPIN() {
   }
 }
 
+function showAdminPasswordPage() {
+  _postLoginView = 'settings';
+  logout();
+  const err = document.getElementById('app-login-error');
+  if (err) {
+    err.style.color = '#1a237e';
+    err.textContent = 'Enter the admin PIN/password to open Settings.';
+  }
+  const inp = document.getElementById('app-password-input');
+  if (inp) inp.focus();
+  closeNav();
+}
+
 let _navHistory = [];
 function navigate(v, isBack) {
   if (v === 'settings' && !isAdmin()) {
-    alert('That section is admin-only. Log in as an administrator to access it.');
+    showAdminPasswordPage();
     return;
   }
   // Track history so the Back button can return to the previous page
@@ -3155,7 +3193,7 @@ function renderClientDirectory() {
       <th style="width:100px">Relationship</th>
       <th>Home Meeting</th>
       <th style="width:90px">Status</th>
-      <th style="width:40px"></th>
+      <th style="width:84px">Actions</th>
     </tr></thead>
     <tbody>${list.map(c=>{
       const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '<span style="color:#bbb">—</span>';
@@ -3171,7 +3209,7 @@ function renderClientDirectory() {
         <td style="font-size:0.8em;"><span class="badge badge-info">${c.relationship||'Client'}</span></td>
         <td style="font-size:0.83em;">${c.homeMeeting?`<span class="badge badge-info">${c.homeMeeting}</span>`:'—'}</td>
         <td>${badge}</td>
-        <td><button class="btn btn-outline" style="padding:4px 8px;font-size:0.75em;" onclick="openClientModal('${c._id}')">Edit</button></td>
+        <td><button class="btn btn-outline" style="padding:4px 8px;font-size:0.75em;" onclick="openClientModal('${c._id}')">Edit Fields</button></td>
       </tr>`;
     }).join('')}</tbody>
   </table>`;
@@ -3183,7 +3221,7 @@ function openClientModal(id) {
   if (id) {
     const c = DB.clients().find(x=>x._id===id);
     if (!c) return;
-    document.getElementById('client-modal-title').textContent = 'Edit Client';
+    document.getElementById('client-modal-title').textContent = 'Edit Directory Contact';
     document.getElementById('cm-id').value = id;
     document.getElementById('cm-clientId').value = c.clientId||'';
     document.getElementById('cm-firstName').value = c.firstName||'';
@@ -3197,7 +3235,7 @@ function openClientModal(id) {
     document.getElementById('cm-notes').value = c.notes||'';
     deleteBtn.style.display = 'inline-flex';
   } else {
-    document.getElementById('client-modal-title').textContent = 'Add Client';
+    document.getElementById('client-modal-title').textContent = 'Add Directory Contact';
     document.getElementById('cm-id').value = '';
     ['cm-clientId','cm-firstName','cm-lastName','cm-email','cm-phone','cm-address','cm-homeMeeting','cm-notes'].forEach(i=>document.getElementById(i).value='');
     document.getElementById('cm-confirmation').value = '';
@@ -3258,6 +3296,194 @@ const FUND_RELATIONSHIPS = ['Donor','Major Donor','Prospect','Board Member','Vol
 
 function fEsc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtMoney(n){ const v=Number(n)||0; return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function injectExamplePanels(){
+  const panels = {
+    'view-progress-note': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: completed progress note</h3>
+        <p>Use the real client, mentor, service date, and default grant. A strong DAP note is specific, factual, and ends with the next step.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Mentor / client</strong>Cameron Hayes · Client #1241 · ReGroup Office</div>
+          <div class="example-mini"><strong>Data</strong>Client arrived on time, brought two job leads, and reviewed ID replacement status.</div>
+          <div class="example-mini"><strong>Assessment</strong>Client is making progress on employment goal; barrier is transportation to interviews.</div>
+          <div class="example-mini"><strong>Plan</strong>Mentor will text bus-pass resource today and meet again on 06/25/2026.</div>
+        </div>
+      </div>`,
+    'view-activity-log': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: completed activity log</h3>
+        <p>Use this for non-client work: outreach, meetings, trainings, admin tasks, community events, and program prep.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Activity</strong>Community partner outreach call</div>
+          <div class="example-mini"><strong>Purpose</strong>Discussed warm referral path for housing support.</div>
+          <div class="example-mini"><strong>Time</strong>9:30 AM - 10:15 AM · 0.75 hours</div>
+          <div class="example-mini"><strong>Outcome</strong>Partner agreed to send eligibility checklist by email.</div>
+        </div>
+      </div>`,
+    'view-calendar': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: shared calendar event</h3>
+        <p>A complete calendar item includes the video link, physical address when relevant, invited staff, outside attendees, and meeting notes.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Title</strong>Housing partner check-in</div>
+          <div class="example-mini"><strong>Video</strong>Google Meet or Zoom link pasted in the video field</div>
+          <div class="example-mini"><strong>Invited</strong>Cameron Hayes, Steven Chambers, partner contact</div>
+          <div class="example-mini"><strong>Notes</strong>Review referral status, documents needed, and next available appointments.</div>
+        </div>
+      </div>`,
+    'view-rj': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>How an RJ case moves through the app</h3>
+        <p>Start a new case, then the wizard walks staff through each stage from suitability to closure. Record process facts, support needs, and goals; do not record incriminating details.</p>
+        <div class="example-process">
+          <div class="example-step"><b>1. Assessment</b>Review suitability, safety, participants, and referral source.</div>
+          <div class="example-step"><b>2. Intake</b>Confirm voluntary participation, rights, and confidentiality.</div>
+          <div class="example-step"><b>3. Restorative Work</b>Education, circles, participant plan, and readiness.</div>
+          <div class="example-step"><b>4. Debrief</b>Stabilize, clarify needs, and record follow-up tasks.</div>
+          <div class="example-step"><b>5. Closure</b>RJ Team agrees active casework is complete.</div>
+          <div class="example-step"><b>6. Check-ins</b>Support follow-through and update goals over time.</div>
+        </div>
+      </div>`,
+    'view-service-plans': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: service plan filled out</h3>
+        <p>Build one plan per client, then add goals that mentors can connect to progress notes.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Client</strong>Jordan R. · #1241 · Primary mentor: Steven Chambers</div>
+          <div class="example-mini"><strong>Need areas</strong>Housing, Employment, ID documents, Transportation</div>
+          <div class="example-mini"><strong>Goal</strong>Secure two job interviews by 07/15/2026 · In progress</div>
+          <div class="example-mini"><strong>Next step</strong>Mentor helps client upload resume and apply to two warehouse roles.</div>
+        </div>
+      </div>`,
+    'view-grants': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>How the grants agent works</h3>
+        <p>Give the agent the project idea, population, geography, amount, timeline, and funding types. It searches broadly beyond reentry grants, then sends the matching opportunities and a funding strategy to your inbox and the admin inbox.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Input example</strong>Mobile reentry resource fair · $35,000 · Portland metro · 6-month launch.</div>
+          <div class="example-mini"><strong>Search scope</strong>Foundations, city/county grants, corporate giving, banks, credit unions, sponsorships.</div>
+          <div class="example-mini"><strong>Inbox result</strong>Top funders, deadline notes, links, fit explanation, and recommended next action.</div>
+          <div class="example-mini"><strong>Strategy</strong>60-day plan mixing grant asks, sponsor packets, individual donors, and in-kind support.</div>
+        </div>
+      </div>`,
+    'view-clients': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: directory contact</h3>
+        <p>The Edit Fields button opens every editable contact field: ID, name, email, phone, address, relationship, home meeting, confirmation status, and notes.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>ID / name</strong>#1241 · Jordan Reed</div>
+          <div class="example-mini"><strong>Relationship</strong>Client · Home meeting: Monday Night Group</div>
+          <div class="example-mini"><strong>Contact</strong>jordan@example.org · 503-555-0141</div>
+          <div class="example-mini"><strong>Notes</strong>Release 06/20/2026; prefers text; needs ID follow-up.</div>
+        </div>
+      </div>`,
+    'view-fundraising': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: fundraising CRM contact</h3>
+        <p>Use fundraising contacts separately from the general directory. Log giving history, relationship category, shared contacts, notes, and the last meaningful call/email/meeting.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Contact</strong>Maria Lopez · Prospect · Credit union community fund</div>
+          <div class="example-mini"><strong>Giving history</strong>$2,500 sponsorship pledged for summer event</div>
+          <div class="example-mini"><strong>Common contacts</strong>TJC board member, workforce partner</div>
+          <div class="example-mini"><strong>Reminder</strong>Follow up if no call/email/meeting has happened for 3+ months.</div>
+        </div>
+      </div>`,
+    'view-email-blast': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: email blast setup</h3>
+        <p>Pick a list or choose Customize, check the exact names to include, then send from a TJC email address.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Audience</strong>Directory filtered to Supporter + Monday Night Group</div>
+          <div class="example-mini"><strong>Subject</strong>Volunteer opportunity: reentry resource fair</div>
+          <div class="example-mini"><strong>Body</strong>Short invitation, date/time, call to action, contact person.</div>
+          <div class="example-mini"><strong>Sender</strong>mentor@tjcoregon.org or admin@tjcoregon.org</div>
+        </div>
+      </div>`,
+    'view-projects': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: whole project view</h3>
+        <p>A complete project can be created through PMI steps or the AI Planner, then tracked as a list, Kanban board, and Gantt chart.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Project</strong>Spring Reentry Job Fair · Active · Owner: Program Manager</div>
+          <div class="example-mini"><strong>PMI</strong>Initiation done, Planning done, Execution active, Monitoring scheduled, Closing pending.</div>
+          <div class="example-mini"><strong>Tasks</strong>Confirm venue, recruit employers, build flyer, assign intake table, collect outcomes.</div>
+          <div class="example-mini"><strong>Outcome</strong>Dashboard shows open tasks; inbox tells owners what is assigned.</div>
+        </div>
+        <div class="example-kanban">
+          <div class="example-col"><h4>Open</h4><div class="example-task">Recruit 10 employers</div><div class="example-task">Draft sponsor email</div></div>
+          <div class="example-col"><h4>In Progress</h4><div class="example-task">Confirm venue agreement</div></div>
+          <div class="example-col"><h4>Done</h4><div class="example-task">Set project goal and sponsor</div></div>
+        </div>
+        <div class="example-gantt">
+          <div class="example-gantt-row"><span>Initiation</span><div class="example-gantt-track"><span class="example-gantt-bar" style="left:0%;width:20%;"></span></div></div>
+          <div class="example-gantt-row"><span>Planning</span><div class="example-gantt-track"><span class="example-gantt-bar" style="left:18%;width:28%;"></span></div></div>
+          <div class="example-gantt-row"><span>Execution</span><div class="example-gantt-track"><span class="example-gantt-bar" style="left:42%;width:38%;"></span></div></div>
+          <div class="example-gantt-row"><span>Closing</span><div class="example-gantt-track"><span class="example-gantt-bar" style="left:78%;width:18%;"></span></div></div>
+        </div>
+      </div>`,
+    'view-events': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: event and social post</h3>
+        <p>Fill out what happened, upload photos if you have them, and the app saves generated copy for LinkedIn, Instagram, Facebook, X/Twitter, and the newsletter.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Event title</strong>Community Resource Fair</div>
+          <div class="example-mini"><strong>Summary</strong>Staff and partners helped 18 people connect with IDs, housing referrals, and job leads.</div>
+          <div class="example-mini"><strong>Impact</strong>6 follow-up appointments scheduled; 3 resumes started onsite.</div>
+          <div class="example-mini"><strong>Generated post</strong>"Today we saw community show up in practical ways..." + platform-specific hashtags.</div>
+        </div>
+      </div>`,
+    'view-meetings': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: meeting log</h3>
+        <p>Log who attended, where it happened, the main topic, decisions, and follow-up actions.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Location</strong>Zoom + TJC office</div>
+          <div class="example-mini"><strong>Attendees</strong>Cameron Hayes, mentor team, housing partner</div>
+          <div class="example-mini"><strong>Topic</strong>Referral process for urgent housing support</div>
+          <div class="example-mini"><strong>Notes</strong>Partner will send eligibility checklist; mentor will follow up with three clients.</div>
+        </div>
+      </div>`,
+    'view-needs-assessment': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: needs assessment</h3>
+        <p>Submit one form for each need so the follow-up is clear and reportable.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Need</strong>Transportation assistance for job interviews</div>
+          <div class="example-mini"><strong>Contact</strong>Client phone/email and preferred time to reach them</div>
+          <div class="example-mini"><strong>Urgency</strong>Needed before interview on 06/27/2026</div>
+          <div class="example-mini"><strong>Action</strong>Assign mentor to confirm bus pass or ride resource.</div>
+        </div>
+      </div>`,
+    'view-expense-report': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: expense report</h3>
+        <p>Attach receipt photos directly to the expense report and list each expense line separately.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Staff</strong>Steven Chambers · CVI grant</div>
+          <div class="example-mini"><strong>Expense line</strong>06/21/2026 · bus passes · $48.00 · client transportation</div>
+          <div class="example-mini"><strong>Receipt</strong>Upload clear photo or PDF of the receipt.</div>
+          <div class="example-mini"><strong>Review</strong>Admin downloads the report from Reports and deletes only when appropriate.</div>
+        </div>
+      </div>`,
+    'view-timesheets': `
+      <div class="example-panel no-print" data-example-panel>
+        <h3>Example: timesheet cycle</h3>
+        <p>Select the mentor and a 14-day pay cycle. The app builds the timesheet from submitted notes and activity logs.</p>
+        <div class="example-grid">
+          <div class="example-mini"><strong>Pay cycle</strong>06/12/2026 - 06/26/2026</div>
+          <div class="example-mini"><strong>Entries</strong>Progress notes + activity logs in that date range</div>
+          <div class="example-mini"><strong>Grant</strong>Uses the staff member's default grant unless changed by admin</div>
+          <div class="example-mini"><strong>Output</strong>Download PDF after the timesheet is built.</div>
+        </div>
+      </div>`
+  };
+  Object.entries(panels).forEach(([viewId, html]) => {
+    const view = document.getElementById(viewId);
+    if (!view || view.querySelector('[data-example-panel]')) return;
+    view.insertAdjacentHTML('afterbegin', html);
+  });
+}
 
 function fundLastContact(c){
   // "Last contact" reflects only actual logged interactions — NOT the date the
@@ -7103,6 +7329,7 @@ function deleteRJCase(){ if(!_rjId) return; requireAdmin(async()=>{ if(!confirm(
 // INIT
 // ===================================================================
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+injectExamplePanels();
 initForms();
 restoreSession();
 // Poll the meeting backend so finished summaries reach attendee inboxes even when off the Calendar tab
