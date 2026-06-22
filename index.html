@@ -1150,9 +1150,9 @@ table tr:hover td{background:#fafbff;}
         <div style="display:flex;flex-direction:column;gap:20px;">
         <div class="card">
           <h3>Security</h3>
-          <p style="font-size:0.85em;color:#666;margin-bottom:14px;">The admin PIN protects Staff &amp; Settings from being changed by mentors. Default PIN is <b>1234</b> — change it below.</p>
+          <p style="font-size:0.85em;color:#666;margin-bottom:14px;">The admin PIN protects Staff &amp; Settings from being changed by mentors. Default PIN is <b>12345678</b> — change it below.</p>
           <button class="btn btn-accent" onclick="changeAdminPIN()">🔑 Change Admin PIN</button>
-          <p style="font-size:0.78em;color:#aaa;margin-top:10px;">PIN is stored on this device. Share it only with admins.</p>
+          <p style="font-size:0.78em;color:#aaa;margin-top:10px;">PIN changes are saved to the shared app database and apply for every admin device.</p>
         </div>
         <div class="card">
           <h3>AI — Social Media & Newsletter Writer</h3>
@@ -2141,7 +2141,7 @@ table tr:hover td{background:#fafbff;}
       <button onclick="cancelPIN()" class="btn btn-outline" style="flex:1;">Cancel</button>
       <button onclick="submitPIN()" class="btn btn-primary" style="flex:1;">Unlock</button>
     </div>
-    <p style="color:#bbb;font-size:0.75em;margin-top:18px;">Default PIN: 1234 — change it in Settings once unlocked.</p>
+    <p style="color:#bbb;font-size:0.75em;margin-top:18px;">Default PIN: 12345678 — change it in Settings once unlocked.</p>
   </div>
 </div>
 
@@ -2256,6 +2256,7 @@ let _events   = [];
 let _meetings = [];
 let _fundContacts = [];
 let _dashboardConfig = null;
+let _securityConfig = {};
 let _messages = [];
 let _calendar = [];
 let _rjCases = [];
@@ -2313,7 +2314,9 @@ onSnapshot(query(collection(db,'fundContacts'), orderBy('_createdAt','asc')), sn
 });
 onSnapshot(collection(db,'config'), snap => {
   const d = snap.docs.find(x => x.id === 'dashboard');
+  const security = snap.docs.find(x => x.id === 'admin');
   _dashboardConfig = d ? d.data() : null;
+  _securityConfig = security ? security.data() : {};
   _onReady();
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
 });
@@ -2363,6 +2366,8 @@ const DB = {
 
   dashboardConfig: () => _dashboardConfig,
   async setDashboardConfig(metrics){ await setDoc(doc(db,'config','dashboard'), {metrics, _updatedAt: serverTimestamp()}); },
+  securityConfig: () => _securityConfig,
+  async setAdminPIN(adminPIN){ await setDoc(doc(db,'config','admin'), {adminPIN, _updatedAt: serverTimestamp()}, {merge:true}); },
 
   servicePlans: () => _servicePlans,
   async addServicePlan(p)      { const r=await addDoc(collection(db,'servicePlans'), {...p, _createdAt: serverTimestamp()}); return r.id; },
@@ -2506,11 +2511,12 @@ const VIEW_TITLES = {
 // ===================================================================
 // AUTH — PIN gate for Settings view
 // ===================================================================
-const DEFAULT_ADMIN_PIN = '118824';
+const DEFAULT_ADMIN_PIN = '12345678';
 let _adminUnlocked = false;
 
 function getAdminPIN() {
-  return localStorage.getItem('rg_admin_pin') || DEFAULT_ADMIN_PIN;
+  const sharedPin = String((_securityConfig && _securityConfig.adminPIN) || '').trim();
+  return sharedPin || DEFAULT_ADMIN_PIN;
 }
 
 function promptAdminPIN(onSuccess) {
@@ -2544,7 +2550,6 @@ function cancelPIN() {
 // ===================================================================
 // APP LOGIN / CURRENT USER (per-staff profiles)
 // ===================================================================
-const APP_PASSWORD = 'ELITE';     // master fallback (admin), in case staff list is empty
 let _currentUser = null;          // {name, firstName, isAdmin}
 
 function firstNameOf(name){ return (name||'').trim().split(/\s+/)[0] || ''; }
@@ -2593,8 +2598,8 @@ function submitAppLogin() {
   const entered = (document.getElementById('app-password-input').value||'').trim();
   const err = document.getElementById('app-login-error');
   if (!entered) return;
-  // Admin login: admin password (118824 by default, changeable) or ELITE master fallback
-  if (entered === getAdminPIN() || entered === APP_PASSWORD){
+  // Admin login: shared admin PIN. Default is 12345678 until an admin changes it.
+  if (entered === getAdminPIN()){
     setCurrentUser({name:'Administrator', firstName:'Admin', isAdmin:true});
     document.getElementById('app-password-input').value=''; return;
   }
@@ -2612,15 +2617,19 @@ function submitAppLogin() {
   document.getElementById('app-password-input').focus();
 }
 
-function changeAdminPIN() {
+async function changeAdminPIN() {
   const current = prompt('Enter current PIN:');
   if (current !== getAdminPIN()) { alert('Incorrect current PIN.'); return; }
   const next = prompt('Enter new PIN (4–8 digits):');
   if (!next || !/^\d{4,8}$/.test(next)) { alert('PIN must be 4–8 digits.'); return; }
   const confirm2 = prompt('Confirm new PIN:');
   if (next !== confirm2) { alert('PINs do not match.'); return; }
-  localStorage.setItem('rg_admin_pin', next);
-  alert('✅ PIN changed successfully.');
+  try {
+    await DB.setAdminPIN(next);
+    alert('✅ PIN changed successfully for all devices.');
+  } catch (error) {
+    alert('Could not save the admin PIN. Check your connection and try again.');
+  }
 }
 
 let _navHistory = [];
