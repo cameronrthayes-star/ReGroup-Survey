@@ -4121,6 +4121,15 @@ function renderProfile(){
       </div>
       <div id="pf-pw-status" style="font-size:0.82em;margin-top:8px;"></div>
     </div>
+    <div class="card" style="margin-bottom:18px;">
+      <h3>📅 My Calendar Sync</h3>
+      <p style="font-size:0.8em;color:#888;margin-bottom:10px;">Paste your calendar's <b>secret iCal URL</b> to show your own events on the shared Calendar. Google Calendar → Settings → your calendar → "Secret address in iCal format". (Outlook/iCloud also provide one.)</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div class="form-group" style="margin:0;flex:1;min-width:240px;"><label>Your iCal URL</label><input type="text" id="pf-ics" value="${fEsc(s.icsUrl||'')}" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"></div>
+        <button class="btn btn-primary" onclick="saveProfileIcs()">Save &amp; Sync</button>
+      </div>
+      <div id="pf-ics-status" style="font-size:0.82em;margin-top:8px;color:#888;"></div>
+    </div>
     <div class="card">
       <h3>Documents</h3>
       <p style="font-size:0.8em;color:#888;margin-bottom:10px;">Store documents here (images or PDFs, up to ~700 KB each). You and admins can add; only admins can delete.</p>
@@ -5318,10 +5327,10 @@ function renderMyTasks() {
     const opts = ['Admin', ...mentorNames().filter(n=>n!==current)];
     toSel.innerHTML = opts.map(o=>`<option value="${fEsc(o)}"${o===prev?' selected':''}>${o==='Admin'?'Admin':o}</option>`).join('');
   }
-  // Inbox: messages addressed to me — show them and mark unread as read on view
-  const myMsgs = DB.messages().filter(m=>m.mentorName===current);
-  myMsgs.filter(m=>!m.read).forEach(m=>DB.markMessageRead(m._id));
-  if (msgsEl) msgsEl.innerHTML = renderMyMessagesCard(myMsgs);
+  // Inbox: full conversations involving me (sent + received), grouped into threads
+  const involving = DB.messages().filter(m=>m.mentorName===current || m.from===current);
+  involving.filter(m=>m.mentorName===current && !m.read).forEach(m=>DB.markMessageRead(m._id));
+  if (msgsEl) msgsEl.innerHTML = renderMyThreads(current, involving);
   const tasks = DB.tasks().filter(t=>t.mentorName===current);
   const countEl = document.getElementById('my-tasks-count');
   if (countEl) countEl.textContent = tasks.filter(t=>t.status!=='Done').length + ' open';
@@ -5515,16 +5524,37 @@ function openMentorTasks(name, mode){
 }
 function closeMentorTasks(){ document.getElementById('mtask-modal').style.display='none'; _mtaskMentor=null; }
 
-function renderMyMessagesCard(msgs){
-  if (!msgs.length) return '<div class="card" style="color:#bbb;text-align:center;padding:20px;margin-bottom:18px;">No messages in your inbox yet.</div>';
-  return '<div class="card" style="margin-bottom:18px;border-left:4px solid var(--accent);">' +
-    '<h3 style="margin-bottom:12px;">✉ My Messages</h3>' +
-    msgs.slice().reverse().map(m=>
-      '<div style="padding:8px 0;border-bottom:1px solid #f3f3f3;">' +
-        '<div style="font-size:0.9em;white-space:pre-wrap;">' + fEsc(m.text) + '</div>' +
-        '<div style="font-size:0.72em;color:#aaa;margin-top:3px;">From <b>' + fEsc(m.from||'Admin') + '</b> · ' + fmtMsgTime(m) + '</div>' +
-      '</div>').join('') +
-  '</div>';
+function _msgTs(m){ return (m._createdAt && m._createdAt.seconds) || (m._createdAt && typeof m._createdAt.toMillis==='function' ? m._createdAt.toMillis()/1000 : 0) || 0; }
+// Group all messages involving `me` into per-person threads, with an inline reply box on each.
+function renderMyThreads(me, msgs){
+  if (!msgs.length) return '<div class="card" style="color:#bbb;text-align:center;padding:20px;margin-bottom:18px;">No messages yet. Use “✉ Send a Message” below to start one — replies appear here as a thread.</div>';
+  const threads={};
+  msgs.forEach(m=>{ const partner=(m.from===me ? m.mentorName : m.from)||'Unknown'; (threads[partner]=threads[partner]||[]).push(m); });
+  const partners=Object.keys(threads).sort((a,b)=>_msgTs(threads[b][threads[b].length-1])-_msgTs(threads[a][threads[a].length-1]));
+  return '<div class="card" style="margin-bottom:18px;border-left:4px solid var(--accent);"><h3 style="margin-bottom:12px;">✉ My Messages</h3>'+
+    partners.map(p=>{
+      const list=threads[p].slice().sort((a,b)=>_msgTs(a)-_msgTs(b));
+      const pe=fEsc(p), pjs=p.replace(/'/g,"\\'");
+      const unread=list.some(m=>m.mentorName===me && !m.read);
+      return `<details class="msg-thread" style="border:1px solid #eef;border-radius:10px;margin-bottom:10px;" ${unread?'open':''}>
+        <summary style="cursor:pointer;font-weight:600;color:var(--primary);padding:8px 10px;list-style:none;">💬 ${pe} <span style="color:#aaa;font-weight:400;font-size:0.85em;">(${list.length})</span></summary>
+        <div style="padding:4px 10px 10px;">
+          ${list.map(m=>{ const mine=m.from===me; return `<div style="display:flex;justify-content:${mine?'flex-end':'flex-start'};margin-bottom:6px;"><div style="max-width:82%;background:${mine?'#e8f6fa':'#eef3fb'};border:1px solid ${mine?'#cdebf3':'#dbe6f7'};border-radius:10px;padding:7px 10px;font-size:0.88em;white-space:pre-wrap;">${fEsc(m.text)}<div style="font-size:0.66em;color:#aaa;margin-top:3px;">${mine?'You':fEsc(m.from)} · ${fmtMsgTime(m)}</div></div></div>`; }).join('')}
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <input type="text" class="thread-reply" placeholder="Reply to ${pe}…" style="flex:1;padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:0.85em;" onkeydown="if(event.key==='Enter'){replyThread(this,'${pjs}');}">
+            <button class="btn btn-accent" style="font-size:0.8em;" onclick="replyThread(this.previousElementSibling,'${pjs}')">Reply</button>
+          </div>
+        </div>
+      </details>`;
+    }).join('')+'</div>';
+}
+async function replyThread(inputEl, partner){
+  const me=(document.getElementById('my-tasks-mentor')||{}).value || currentUserName();
+  const text=(inputEl && inputEl.value||'').trim();
+  if(!me){ alert('Select your name first.'); return; }
+  if(!text) return;
+  inputEl.value='';
+  await DB.addMessage({mentorName:partner, from:me, text, read:false});
 }
 
 // ===================================================================
@@ -6868,6 +6898,15 @@ async function setMyIcsUrl(v){
   if(s){ try{ await DB.updateRecord('staff', s._id, {icsUrl:v}); }catch(_){} }
   try{ localStorage.setItem('rg_ics_'+calendarSyncOwnerKey(), v); }catch(_){}
 }
+async function saveProfileIcs(){
+  const v=(document.getElementById('pf-ics').value||'').trim();
+  const st=document.getElementById('pf-ics-status');
+  await setMyIcsUrl(v);
+  if(!v){ try{ delete _icsEvents[calendarSyncOwnerKey()]; }catch(_){} if(st){st.style.color='#888';st.textContent='Cleared.';} return; }
+  if(st){ st.style.color='#666'; st.textContent='Saved ✓ — syncing… (first sync can take ~60s if the backend is asleep)'; }
+  try{ await syncIcsCalendar(); if(st){st.style.color='#43a047';st.textContent='Saved ✓ — synced. Open the Calendar tab to see your events.';} }
+  catch(e){ if(st){st.style.color='#e53935';st.textContent='Saved, but sync failed — '+e.message;} }
+}
 function openIcsSetup(){
   const url=prompt('Paste your calendar\'s SECRET iCal URL:\n\nGoogle Calendar → Settings → click your calendar (left side) → scroll to "Secret address in iCal format" → copy that link.\n(Outlook & iCloud also provide an ICS/iCal link.)', getMyIcsUrl());
   if(url===null) return;
@@ -7629,7 +7668,7 @@ Object.assign(window, {
   renderERList, printER, addERRow, updateERTotal,
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
-  renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc,
+  renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc, saveProfileIcs,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
@@ -7658,7 +7697,7 @@ Object.assign(window, {
   openMyMetricsConfig, closeMyMetricsConfig, saveMyMetricsConfig,
   toggleNav, closeNav,
   renderMentorPanel, openMentorMessages, closeMentorMessages, sendMentorMessage, deleteMessage,
-  openMentorTasks, closeMentorTasks, sendMyMessage, renderAdminMessages,
+  openMentorTasks, closeMentorTasks, sendMyMessage, renderAdminMessages, replyThread,
 });
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
