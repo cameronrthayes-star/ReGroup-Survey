@@ -1,0 +1,172 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: presentation
+    description: Presentation generation operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /presentation/generate:
+    post:
+      operationId: generatePresentation
+      tags: [presentation]
+      summary: Generate a ReGroup presentation
+      description: Generates a customized ReGroup presentation based on user answers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresentationRequest"
+      responses:
+        "200":
+          description: Generated presentation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PresentationResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Generation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    PresentationRequest:
+      type: object
+      required:
+        - audience
+        - purpose
+        - durationMinutes
+        - tone
+      properties:
+        audience:
+          type: string
+          description: "Target audience (e.g. Funders, County officials, Community-based organizations)"
+        purpose:
+          type: string
+          description: "Main purpose of the presentation"
+        durationMinutes:
+          type: integer
+          description: "Target duration in minutes"
+        slideCount:
+          type: ["string", "null"]
+          description: "Number of slides or 'auto'"
+        tone:
+          type: string
+          description: "Presentation tone"
+        livedExperienceFraming:
+          type: ["string", "null"]
+          description: "How to include lived experience framing"
+        dataInclusion:
+          type: ["string", "null"]
+          description: "How to include data or evidence"
+        callToAction:
+          type: ["string", "null"]
+          description: "What call to action to include"
+        keyMessage:
+          type: ["string", "null"]
+          description: "What the audience should remember"
+        requiredPoints:
+          type: ["string", "null"]
+          description: "Required points, people, programs, or constraints"
+        contextualMaterial:
+          type: ["string", "null"]
+          description: "Additional context extracted from uploaded files or pasted text, to be incorporated into the presentation"
+    PresentationSlide:
+      type: object
+      required:
+        - number
+        - title
+        - bullets
+        - speakerNotes
+      properties:
+        number:
+          type: integer
+        title:
+          type: string
+        bullets:
+          type: array
+          items:
+            type: string
+        speakerNotes:
+          type: string
+        visualSuggestion:
+          type: ["string", "null"]
+        sourceNotes:
+          type: ["string", "null"]
+        audienceAdaptation:
+          type: ["string", "null"]
+    PresentationResult:
+      type: object
+      required:
+        - title
+        - audience
+        - purpose
+        - durationMinutes
+        - slides
+        - factualReviewNotes
+      properties:
+        title:
+          type: string
+        audience:
+          type: string
+        purpose:
+          type: string
+        durationMinutes:
+          type: integer
+        slides:
+          type: array
+          items:
+            $ref: "#/components/schemas/PresentationSlide"
+        handoutSummary:
+          type: ["string", "null"]
+        callToAction:
+          type: ["string", "null"]
+        followUpEmail:
+          type: ["string", "null"]
+        factualReviewNotes:
+          type: array
+          items:
+            type: string
