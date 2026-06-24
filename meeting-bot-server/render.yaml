@@ -30,7 +30,7 @@ services:
       - key: GEMINI_API_KEY
         sync: false        # paste your Gemini auth key or API key for Presentation Studio
       - key: GEMINI_MODEL
-        value: gemini-1.5-flash
+        value: gemini-2.5-flash
       - key: FIREBASE_SERVICE_ACCOUNT
         sync: false        # paste the full Firebase service-account JSON
       - key: ALLOW_ORIGIN

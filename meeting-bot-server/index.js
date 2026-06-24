@@ -383,7 +383,7 @@ function normalizePresentationResult(raw, request) {
 async function generatePresentationWithGemini(request, { env = process.env, fetchImpl = fetch } = {}) {
   const apiKey = String(env.GEMINI_API_KEY || '').trim();
   if (!apiKey) throw new MeetingBotConfigError('GEMINI_API_KEY is not configured');
-  const model = String(env.GEMINI_MODEL || 'gemini-1.5-flash').trim();
+  const model = String(env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
   const response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
