@@ -533,6 +533,7 @@ table tr:hover td{background:#fafbff;}
         </div>
         <button class="btn btn-accent" onclick="openPresentationStudio()">＋ New Presentation</button>
       </div>
+      <div id="presentation-key-setup" style="margin-bottom:14px;"></div>
       <div class="card no-print" style="margin-bottom:14px;">
         <div class="form-grid">
           <div class="form-group"><label>Audience *</label><input type="text" id="pres-audience" placeholder="e.g. Funders, county partners, board members"></div>
@@ -549,7 +550,7 @@ table tr:hover td{background:#fafbff;}
           <div class="form-group full"><label>Contextual material</label><textarea id="pres-context" rows="4" placeholder="Paste source notes, a project brief, or text from an uploaded document."></textarea></div>
         </div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-          <button class="btn btn-primary" id="pres-generate-btn" onclick="generatePresentation()">✨ Generate Presentation</button>
+          <button class="btn btn-primary" id="pres-generate-btn" onclick="generatePresentationNow()">✨ Generate Presentation</button>
           <span id="pres-status" style="font-size:0.85em;color:#666;"></span>
         </div>
       </div>
@@ -7567,6 +7568,7 @@ function deleteServicePlan(){ if(!_spId) return; requireAdmin(async()=>{ if(!con
 // ===================================================================
 const PRESENTATION_HISTORY_KEY='regroup_presentation_history';
 const PRESENTATION_HISTORY_LIMIT=10;
+const PRESENTATION_GEMINI_MODEL='gemini-1.5-flash';
 let _presentationFile = null;
 let _presentationRequest = null;
 
@@ -7632,12 +7634,94 @@ function loadPresentationFromHistory(id){
   renderPresentationOutput(entry.result || null);
   populatePresentationForm(entry.request || {});
 }
+function renderPresentationKeyStatus(forceEdit){
+  const el=document.getElementById('presentation-key-setup');
+  if(!el) return;
+  const key=(localStorage.getItem('rg_gemini_key')||'').trim();
+  if(key && !forceEdit){
+    el.innerHTML = `<div style="background:#e7f6ec;border:1px solid #b7e1c4;border-radius:10px;padding:10px 14px;font-size:0.84em;color:#15803d;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span>Gemini key connected. Presentation Studio can generate directly from this device if the backend is unavailable.</span>
+      <a onclick="renderPresentationKeyStatus(true)" style="color:#0e6e87;cursor:pointer;text-decoration:underline;white-space:nowrap;">Change key</a>
+    </div>`;
+  } else {
+    el.innerHTML = `<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:12px 14px;">
+      <div style="font-weight:600;font-size:0.85em;color:#9a3412;margin-bottom:6px;">Connect a Gemini API key for Presentation Studio</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="pres-key-input" type="password" placeholder="Gemini auth key or API key" style="flex:1;min-width:220px;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88em;">
+        <button class="btn btn-accent" style="font-size:0.82em;" onclick="savePresentationKey()">Save Key</button>
+      </div>
+      <div id="pres-key-msg" style="font-size:0.78em;color:#43a047;margin-top:6px;"></div>
+      <p style="font-size:0.76em;color:#777;margin:8px 0 0;">Stored only on this device. This is a fallback path so Create keeps working even when the backend Gemini key is not configured.</p>
+    </div>`;
+  }
+}
+function savePresentationKey(){
+  const inp=document.getElementById('pres-key-input');
+  const v=(inp?.value||'').trim();
+  const msg=document.getElementById('pres-key-msg');
+  if(!v){
+    if(msg){ msg.style.color='#e53935'; msg.textContent='Paste the Gemini key first.'; }
+    return;
+  }
+  localStorage.setItem('rg_gemini_key', v);
+  if(msg){ msg.style.color='#15803d'; msg.textContent='Gemini key saved on this device.'; }
+  renderPresentationKeyStatus();
+}
 function renderPresentations(){
+  renderPresentationKeyStatus();
   renderPresentationHistory();
   if(!_presentationRequest) renderPresentationOutput(null);
 }
 function presentationBackendBase(){
   return meetingBotBaseUrl();
+}
+function extractPresentationJson(text){
+  const raw=String(text||'').trim();
+  const fence=raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if(fence && fence[1]) return fence[1].trim();
+  const start=raw.indexOf('{');
+  const end=raw.lastIndexOf('}');
+  if(start!==-1 && end!==-1 && end>start) return raw.slice(start, end+1);
+  return raw;
+}
+async function generatePresentationDirect(payload){
+  const key=(localStorage.getItem('rg_gemini_key')||'').trim();
+  if(!key) throw new Error('No Gemini key is saved for direct generation.');
+  const prompt = [
+    'You are generating a ReGroup presentation plan for an internal team.',
+    'Return valid JSON only with keys: title, audience, purpose, durationMinutes, slides, handoutSummary, callToAction, followUpEmail, factualReviewNotes.',
+    'Each slide must have: number, title, bullets, speakerNotes, visualSuggestion, sourceNotes, audienceAdaptation.',
+    'Keep the deck practical and concise. Do not invent statistics or outcomes.',
+    `Audience: ${payload.audience}`,
+    `Purpose: ${payload.purpose}`,
+    `Duration minutes: ${payload.durationMinutes}`,
+    `Slide count: ${payload.slideCount || 'auto'}`,
+    `Tone: ${payload.tone || 'clear and practical'}`,
+    `Lived experience framing: ${payload.livedExperienceFraming || 'not specified'}`,
+    `Data inclusion: ${payload.dataInclusion || 'not specified'}`,
+    `Call to action: ${payload.callToAction || 'not specified'}`,
+    `Key message: ${payload.keyMessage || 'not specified'}`,
+    `Required points: ${payload.requiredPoints || 'not specified'}`,
+    '',
+    'Contextual material:',
+    payload.contextualMaterial || 'None provided'
+  ].join('\n');
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(PRESENTATION_GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(key)}`,{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body: JSON.stringify({
+      contents:[{role:'user',parts:[{text:prompt}]}],
+      generationConfig:{temperature:0.2,responseMimeType:'application/json'}
+    })
+  });
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok){
+    const msg=(data.error && data.error.message) || ('HTTP '+r.status);
+    throw new Error(msg);
+  }
+  const parts=((((data||{}).candidates||[])[0]||{}).content||{}).parts||[];
+  const text=parts.map(part=>part&&part.text?part.text:'').join('');
+  return JSON.parse(extractPresentationJson(text));
 }
 function presentationFileToBase64(file){
   return new Promise((resolve,reject)=>{
@@ -7674,6 +7758,7 @@ function openPresentationStudio(){
   populatePresentationForm({});
   _presentationFile=null;
   _presentationRequest=null;
+  renderPresentationKeyStatus();
   const fileInput=document.getElementById('pres-file');
   if(fileInput) fileInput.value='';
   const fileInfo=document.getElementById('pres-file-info');
@@ -7773,6 +7858,64 @@ async function generatePresentation(){
   }catch(err){
     status.style.color='#e53935';
     status.textContent='Generation failed â€” ' + err.message;
+  }finally{
+    btn.disabled=false;
+  }
+}
+async function generatePresentationNow(){
+  const payload = {
+    audience: document.getElementById('pres-audience').value.trim(),
+    purpose: document.getElementById('pres-purpose').value.trim(),
+    durationMinutes: Number(document.getElementById('pres-duration').value || 20),
+    slideCount: document.getElementById('pres-slide-count').value || null,
+    tone: document.getElementById('pres-tone').value.trim(),
+    livedExperienceFraming: document.getElementById('pres-lif').value.trim() || null,
+    dataInclusion: document.getElementById('pres-data').value.trim() || null,
+    callToAction: document.getElementById('pres-cta').value.trim() || null,
+    keyMessage: document.getElementById('pres-key').value.trim() || null,
+    requiredPoints: document.getElementById('pres-points').value.trim() || null,
+    contextualMaterial: document.getElementById('pres-context').value.trim() || null
+  };
+  if(!payload.audience || !payload.purpose){
+    alert('Please add an audience and a purpose first.');
+    return;
+  }
+  const btn=document.getElementById('pres-generate-btn');
+  const status=document.getElementById('pres-status');
+  btn.disabled=true;
+  status.style.color='#666';
+  status.textContent='Generating presentation...';
+  try{
+    let data = null;
+    let usedDirect = false;
+    const resp = await fetch(presentationBackendBase() + '/api/presentation/generate', {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const backendData = await resp.json().catch(()=>({}));
+    if(resp.ok){
+      data = backendData;
+    } else {
+      const backendMessage = (backendData.error && (backendData.error.message || backendData.error)) || ('HTTP '+resp.status);
+      const hasDirectKey = !!(localStorage.getItem('rg_gemini_key')||'').trim();
+      if(!hasDirectKey) throw new Error(backendMessage);
+      status.textContent='Backend generation failed. Trying direct Gemini generation on this device...';
+      data = await generatePresentationDirect(payload);
+      usedDirect = true;
+    }
+    _presentationRequest = payload;
+    renderPresentationOutput(data);
+    addPresentationHistoryEntry(payload, data);
+    renderPresentationHistory();
+    status.style.color='#15803d';
+    status.textContent = usedDirect
+      ? 'Presentation generated directly with your Gemini key and saved to history.'
+      : 'Presentation generated and saved to history.';
+  }catch(err){
+    status.style.color='#e53935';
+    status.textContent='Generation failed - ' + err.message;
+    renderPresentationKeyStatus(true);
   }finally{
     btn.disabled=false;
   }
@@ -8063,6 +8206,7 @@ Object.assign(window, {
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
+  renderPresentationKeyStatus, savePresentationKey, handlePresentationFile, generatePresentationNow, refreshPresentationHistory, clearPresentationHistory, loadPresentationFromHistory, openPresentationStudio,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient, fillClientId,
