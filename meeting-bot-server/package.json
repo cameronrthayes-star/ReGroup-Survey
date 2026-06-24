@@ -4,7 +4,10 @@
   "description": "Sends a Recall.ai bot into meetings, records + transcribes, summarizes with Anthropic, and writes the summary into the ReGroup app's Firestore inboxes.",
   "main": "index.js",
   "engines": { "node": ">=18" },
-  "scripts": { "start": "node index.js" },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
