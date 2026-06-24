@@ -1,6 +1,6 @@
 # One-click Render Blueprint for the ReGroup Meeting Agent backend.
 # In Render: New → Blueprint → pick this repo. It creates the web service with
-# the right build/start commands; you only paste the 3 secret values.
+# the right build/start commands; you only paste the secret values.
 services:
   - type: web
     name: regroup-meeting-agent-backend
@@ -11,14 +11,26 @@ services:
     startCommand: npm start
     healthCheckPath: /health
     envVars:
+      - key: MEETING_BOT_PROVIDER
+        value: recall
       - key: RECALL_API_KEY
         sync: false        # paste your Recall.ai API key
+      - key: RECALL_WEBHOOK_SECRET
+        sync: false        # paste the shared webhook secret you configure in Recall
       - key: RECALL_REGION
         value: us-west-2    # change to your Recall region if different
+      - key: APP_BASE_URL
+        sync: false        # set this to the public Render URL for this backend
+      - key: BOT_NAME
+        value: ReGroup Recording Bot
       - key: ANTHROPIC_API_KEY
         sync: false        # paste your sk-ant-... key
-      - key: OPENAI_API_KEY
-        sync: false        # optional fallback summarizer
+      - key: ANTHROPIC_MODEL
+        value: claude-3-5-sonnet-latest
+      - key: GEMINI_API_KEY
+        sync: false        # paste your Gemini auth key or API key for Presentation Studio
+      - key: GEMINI_MODEL
+        value: gemini-1.5-flash
       - key: FIREBASE_SERVICE_ACCOUNT
         sync: false        # paste the full Firebase service-account JSON
       - key: ALLOW_ORIGIN
