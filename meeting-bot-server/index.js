@@ -24,6 +24,15 @@ const ALLOW_ORIGIN = process.env.ALLOW_ORIGIN || process.env.FRONTEND_ORIGIN || 
 const DEFAULT_ADMIN_PIN = '12345678';
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
 const ACTIVE_BOT_STATUSES = new Set(['pending', 'joining', 'waiting_for_admission', 'recording', 'processing']);
+const ALLOWED_ICS_HOSTS = [
+  'calendar.google.com',
+  'apidata.googleusercontent.com',
+  'outlook.live.com',
+  'outlook.office365.com',
+  'outlook.office.com',
+  'icloud.com',
+  'caldav.icloud.com'
+];
 
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   admin.initializeApp({ credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
@@ -1495,6 +1504,10 @@ app.get('/api/ics', async (req, res, next) => {
   try {
     const url = String(req.query.url || '').trim();
     if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'Valid url query parameter is required' });
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.toLowerCase();
+    const allowed = ALLOWED_ICS_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`));
+    if (!allowed) return res.status(400).json({ error: 'Unsupported calendar host' });
     const r = await fetch(url);
     if (!r.ok) return res.status(r.status).json({ error: `Could not fetch iCal feed: HTTP ${r.status}` });
     const text = await r.text();
