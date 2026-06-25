@@ -21,7 +21,8 @@ import { renderClientDirectory, openClientModal, closeClientModal, saveClient, d
 import { renderFundraising, openContactModal, closeContactModal, saveFundContact,
   openContactDetail, closeContactDetail, renderContactDetail, addInteraction, deleteInteraction,
   addGift, deleteGift, editContactDetails, deleteFundContact,
-  updateFundCheckedCount, checkAllFund, clearFundChecks, emailCheckedFund } from './pages/fundraising.js';
+  updateFundCheckedCount, checkAllFund, clearFundChecks, emailCheckedFund,
+  _fundDetailId } from './pages/fundraising.js';
 import { getEBRecipients, renderEBCustomList, ebCustCheckAll, updateEBCount,
   updateEBPreview, copyEBAddresses, openEBGmail, openEBMailto } from './pages/email-blast.js';
 import { renderFormReports, deleteReport, renderNAList, printNA,
@@ -35,7 +36,8 @@ import { computeClientAlerts, refreshAlerts, renderAdminInbox, renderAdminTasks,
   openAssignModal, closeAssignModal, saveAssignedTask, adminRemoveTask,
   renderMyTasks, updateMyTaskStatus,
   renderMentorPanel, openMentorMessages, closeMentorMessages, sendMentorMessage, deleteMessage,
-  openMentorTasks, closeMentorTasks, sendMyMessage, renderAdminMessages, replyThread } from './pages/tasks.js';
+  openMentorTasks, closeMentorTasks, sendMyMessage, renderAdminMessages, replyThread,
+  renderMessageThread, _msgMentor } from './pages/tasks.js';
 import { renderProjects, openProjectModal, closeProjectModal, saveProject, deleteProject,
   openProjectDetail, closeProjectDetail, postProjectUpdate,
   openTaskModal, closeTaskModal, saveTaskModal,
@@ -54,7 +56,8 @@ import { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, s
   saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
-  meetingBotBaseUrl, loadMeetingBotSession, clearMeetingBotSession } from './pages/calendar.js';
+  meetingBotBaseUrl, loadMeetingBotSession, clearMeetingBotSession,
+  _calDetailId } from './pages/calendar.js';
 import { renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan,
   spAddGoal, spFillClientId } from './pages/service-plans.js';
 import { handlePresentationFile, generatePresentationNow, generatePresentation,

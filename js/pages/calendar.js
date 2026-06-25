@@ -8,7 +8,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
 let _calMonth = (()=>{ const d=new Date(); d.setDate(1); return d; })();
-let _calDetailId = null;
+export let _calDetailId = null;
 function calShiftMonth(n){ _calMonth.setMonth(_calMonth.getMonth()+n); renderCalendar(); }
 function calToday(){ _calMonth=new Date(); _calMonth.setDate(1); renderCalendar(); }
 function populateStaffNameList(){ const dl=document.getElementById('staff-name-list'); if(dl) dl.innerHTML=DB.staff().map(s=>`<option>${fEsc(s.name)}</option>`).join(''); }

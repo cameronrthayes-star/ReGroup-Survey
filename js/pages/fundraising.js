@@ -7,7 +7,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
-let _fundDetailId = null;
+export let _fundDetailId = null;
 let _fundEmailList = [];   // fundraising contact ids selected for an email blast
 const FUND_FOLLOWUP_DAYS = 90;  // remind to reach out after ~3 months
 const FUND_RELATIONSHIPS = ['Donor','Major Donor','Prospect','Board Member','Volunteer','Partner Org','Grantor','Community Member','Vendor','Other'];

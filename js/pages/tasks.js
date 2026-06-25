@@ -258,7 +258,7 @@ async function sendMyMessage(){
 }
 
 // MENTOR PANEL & DIRECT MESSAGING (admin portal)
-let _msgMentor = null;
+export let _msgMentor = null;
 let _mtaskMentor = null;
 
 function mentorNames(){
@@ -443,4 +443,5 @@ export { computeClientAlerts, refreshAlerts, renderAdminInbox, renderAdminTasks,
   openAssignModal, closeAssignModal, saveAssignedTask, adminRemoveTask,
   renderMyTasks, updateMyTaskStatus,
   renderMentorPanel, openMentorMessages, closeMentorMessages, sendMentorMessage, deleteMessage,
-  openMentorTasks, closeMentorTasks, sendMyMessage, renderAdminMessages, replyThread };
+  openMentorTasks, closeMentorTasks, sendMyMessage, renderAdminMessages, replyThread,
+  renderMessageThread };
