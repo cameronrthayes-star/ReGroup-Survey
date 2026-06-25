@@ -54,12 +54,12 @@ import { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, s
   saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
-  meetingBotBaseUrl } from './pages/calendar.js';
+  meetingBotBaseUrl, loadMeetingBotSession, clearMeetingBotSession } from './pages/calendar.js';
 import { renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan,
   spAddGoal, spFillClientId } from './pages/service-plans.js';
 import { handlePresentationFile, generatePresentationNow, generatePresentation,
   refreshPresentationHistory, clearPresentationHistory, loadPresentationFromHistory,
-  openPresentationStudio } from './pages/presentations.js';
+  openPresentationStudio, renderPresentations } from './pages/presentations.js';
 import { renderGrantsKey, saveGrantsKey, runGrantsAgent } from './pages/grants.js';
 import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
