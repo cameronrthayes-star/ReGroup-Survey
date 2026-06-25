@@ -244,4 +244,4 @@ function generateTimesheet() {
 }
 
 // ALERT ENGINE
-export { generateTimesheet, filterPayPeriod, tsUpdateFromStaff, populateTsMentors, populateTsCycles };
+export { generateTimesheet, tsUpdateFromStaff, populateTsMentors, populateTsCycles };

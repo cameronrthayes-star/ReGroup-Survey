@@ -221,4 +221,5 @@ function clearAllData() {
 
 // SHARED CALENDAR
 export { renderDataView, switchTab, renderTimesheetTable, renderSummaryTable,
-  renderSafetyTable, renderAllData, exportTableCSV, exportData, importDataJSON, importCSV, clearAllData };
+  renderSafetyTable, renderAllData, exportTableCSV, exportData, importDataJSON, importCSV, clearAllData,
+  filterPayPeriod };

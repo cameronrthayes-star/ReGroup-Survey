@@ -30,8 +30,9 @@ import { renderFormReports, deleteReport, renderNAList, printNA,
 import { renderProfile, saveProfile, savePassword, resetPassword,
   uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc } from './pages/profile.js';
 import { renderDataView, switchTab, renderTimesheetTable, renderSummaryTable,
-  renderSafetyTable, renderAllData, exportTableCSV, exportData, importDataJSON, importCSV, clearAllData } from './pages/reports.js';
-import { generateTimesheet, filterPayPeriod, tsUpdateFromStaff, populateTsMentors, populateTsCycles } from './pages/timesheets.js';
+  renderSafetyTable, renderAllData, exportTableCSV, exportData, importDataJSON, importCSV, clearAllData,
+  filterPayPeriod } from './pages/reports.js';
+import { generateTimesheet, tsUpdateFromStaff, populateTsMentors, populateTsCycles } from './pages/timesheets.js';
 import { computeClientAlerts, refreshAlerts, renderAdminInbox, renderAdminTasks,
   openAssignModal, closeAssignModal, saveAssignedTask, adminRemoveTask,
   renderMyTasks, updateMyTaskStatus,
