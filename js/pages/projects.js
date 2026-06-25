@@ -7,6 +7,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
+import { meetingBotBaseUrl, ensureMeetingBotSession } from './calendar.js';
 let _activeProjectId = null;
 
 function renderProjects() {
@@ -277,55 +278,14 @@ let _plannerSteps = [];
 
 function openAIPlanner(){
   _plannerDoc = null; _plannerSteps = [];
-  ['plan-name','plan-text','plan-file'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  document.getElementById('plan-file-info').textContent = '';
-  document.getElementById('plan-status').textContent = '';
-  document.getElementById('plan-steps').innerHTML = '';
-  document.getElementById('plan-create-btn').style.display = 'none';
-  renderPlannerKeyStatus();
-  document.getElementById('planner-modal').style.display = 'flex';
+  [‘plan-name’,’plan-text’,’plan-file’].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=’’; });
+  document.getElementById(‘plan-file-info’).textContent = ‘’;
+  document.getElementById(‘plan-status’).textContent = ‘’;
+  document.getElementById(‘plan-steps’).innerHTML = ‘’;
+  document.getElementById(‘plan-create-btn’).style.display = ‘none’;
+  document.getElementById(‘planner-modal’).style.display = ‘flex’;
 }
-function closeAIPlanner(){ document.getElementById('planner-modal').style.display='none'; }
-
-// Inline Anthropic API key setup, right inside the planner
-function renderPlannerKeyStatus(forceEdit){
-  const el = document.getElementById('plan-key-setup');
-  if (!el) return;
-  const key = (localStorage.getItem('rg_anthropic_key')||'').trim();
-  if (key && !forceEdit){
-    el.innerHTML = `<div style="background:#e7f6ec;border:1px solid #b7e1c4;border-radius:10px;padding:10px 14px;font-size:0.84em;color:#15803d;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-      <span>✓ Anthropic API key connected — AI planning is ready.</span>
-      <a onclick="renderPlannerKeyStatus(true)" style="color:#0e6e87;cursor:pointer;text-decoration:underline;white-space:nowrap;">Change key</a>
-    </div>`;
-  } else {
-    el.innerHTML = `<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:12px 14px;">
-      <div style="font-weight:600;font-size:0.85em;color:#9a3412;margin-bottom:6px;">⚙ Connect your Anthropic API key to use AI planning</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <input id="plan-key" type="password" placeholder="sk-ant-…" style="flex:1;min-width:200px;padding:9px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.88em;">
-        <button class="btn btn-accent" style="font-size:0.82em;" onclick="savePlannerKey()">Save Key</button>
-      </div>
-      <div id="plan-key-msg" style="font-size:0.78em;color:#43a047;margin-top:6px;"></div>
-      <ol style="font-size:0.78em;color:#777;margin:8px 0 0;padding-left:18px;line-height:1.55;">
-        <li>Open <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:#2f9bb5;">console.anthropic.com</a>, sign in, add billing.</li>
-        <li>Create an API key (starts with <code>sk-ant-</code>) and copy it.</li>
-        <li>Paste it above and click Save Key. It's stored only on this device and shared with the rest of the app's AI features.</li>
-      </ol>
-    </div>`;
-  }
-}
-function savePlannerKey(){
-  const inp = document.getElementById('plan-key');
-  const v = (inp?.value||'').trim();
-  const msg = document.getElementById('plan-key-msg');
-  if (!v){ if(msg){msg.style.color='#e53935'; msg.textContent='Paste your API key first.';} return; }
-  if (!/^sk-ant-/.test(v)){ if(msg){msg.style.color='#e53935'; msg.textContent='That doesn’t look like an Anthropic key (should start with sk-ant-).';} return; }
-  localStorage.setItem('rg_anthropic_key', v);
-  const settingsInput = document.getElementById('anthropic-key-input');
-  if (settingsInput) settingsInput.value = v;
-  renderPlannerKeyStatus();
-  const status = document.getElementById('plan-status');
-  if (status){ status.style.color='#43a047'; status.textContent='AI key saved — you can generate steps now.'; }
-}
+function closeAIPlanner(){ document.getElementById(‘planner-modal’).style.display=’none’; }
 
 function handlePlannerFile(input){
   const f = input.files && input.files[0];
@@ -349,11 +309,13 @@ function handlePlannerFile(input){
 }
 
 async function generatePlanAI(){
-  const key = (localStorage.getItem('rg_anthropic_key')||'').trim();
   const status = document.getElementById('plan-status');
-  if (!key){ status.style.color='#e53935'; status.textContent='Connect your Anthropic API key below to continue.'; renderPlannerKeyStatus(true); return; }
   const paste = document.getElementById('plan-text').value.trim();
   if (!_plannerDoc && !paste){ status.style.color='#e53935'; status.textContent='Upload a document or paste some text first.'; return; }
+  status.style.color='#666'; status.textContent='Authorizing…';
+  let token='';
+  try{ token = await ensureMeetingBotSession(); }
+  catch(err){ status.style.color='#e53935'; status.textContent='Could not authorize: '+err.message; return; }
   const btn = document.getElementById('plan-generate-btn');
   btn.disabled=true; status.style.color='#666'; status.textContent='Reading the document and drafting steps…';
   const instruction =
@@ -369,21 +331,20 @@ async function generatePlanAI(){
   if (_plannerDoc && _plannerDoc.kind==='text') textPart += '\n\nPROJECT DOCUMENT:\n' + _plannerDoc.text;
   if (paste) textPart += '\n\nADDITIONAL DETAILS:\n' + paste;
   content.push({type:'text', text:textPart});
-  const headers = {'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
-  if (_plannerDoc && _plannerDoc.kind==='pdf') headers['anthropic-beta'] = 'pdfs-2024-09-25';  // enable PDF document input
+  const beta = (_plannerDoc && _plannerDoc.kind==='pdf') ? 'pdfs-2024-09-25' : undefined;
   try{
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    const resp = await fetch(meetingBotBaseUrl()+'/api/ai/project-plan', {
       method:'POST',
-      headers,
-      body:JSON.stringify({model:'claude-opus-4-8', max_tokens:3072, messages:[{role:'user',content}]})
+      headers:{'content-type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({ messages:[{role:'user',content}], beta })
     });
     if (!resp.ok){
-      let detail=''; try{ const e=await resp.json(); detail = (e.error && e.error.message) || ''; }catch(_){}
-      throw new Error('Anthropic API '+resp.status+(detail?': '+detail:''));
+      let detail=''; try{ const e=await resp.json(); detail=(e.error&&(e.error.message||e.error))||''; }catch(_){}
+      throw new Error('AI error '+(detail||resp.status));
     }
     const j = await resp.json();
-    let txt = (j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
-    const s = txt.indexOf('['), e = txt.lastIndexOf(']');     // extract the JSON array from any surrounding text
+    let txt = (j.text||'').trim();
+    const s = txt.indexOf('['), e = txt.lastIndexOf(']');
     if (s>=0 && e>s) txt = txt.slice(s, e+1);
     const arr = JSON.parse(txt);
     _plannerSteps = (Array.isArray(arr)?arr:[]).filter(s=>s && (s.title||s.description));
@@ -752,4 +713,4 @@ export { renderProjects, openProjectModal, closeProjectModal, saveProject, delet
   kbDragStart, kbDrop,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   openAIPlanner, closeAIPlanner, handlePlannerFile, generatePlanAI, createPlannerTasks,
-  addPlannerStep, removePlannerStep, renderPlannerKeyStatus, savePlannerKey };
+  addPlannerStep, removePlannerStep };

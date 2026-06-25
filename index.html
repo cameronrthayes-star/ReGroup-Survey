@@ -298,7 +298,6 @@
 
     <!-- ===== GRANTS & FUNDING AGENT ===== -->
     <div id="view-grants" class="view">
-      <div id="grants-key-setup" style="margin-bottom:16px;"></div>
       <div class="card no-print" style="margin-bottom:18px;">
         <h3>🔎 Grants & Funding Agent</h3>
         <p style="color:#666;font-size:0.86em;margin-bottom:16px;">Answer a few questions. The AI agent casts a <b>wide net</b> — grants of any kind plus corporate giving, bank &amp; credit-union community funds, sponsorships, and more — matched to the <b>project idea</b> (not limited to reentry). It suggests other funding ideas and drafts a comprehensive funding plan. A summary is sent to your inbox and the admin inbox.</p>
@@ -932,26 +931,7 @@
           <button class="btn btn-accent" onclick="changeAdminPIN()">🔑 Change Admin PIN</button>
           <p style="font-size:0.78em;color:#aaa;margin-top:10px;">PIN changes are saved to the shared app database and apply for every admin device.</p>
         </div>
-        <div class="card">
-          <h3>AI — Social Media & Newsletter Writer</h3>
-          <p style="font-size:0.85em;color:#666;margin-bottom:12px;">Paste an Anthropic API key to turn mentor event details into polished, platform-tailored copy for Instagram, Facebook, X/Twitter, LinkedIn, and the newsletter automatically (model: Claude Opus 4.8). Leave blank to use the built-in templates instead.</p>
-          <details style="margin-bottom:14px;background:#f4f6fb;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;">
-            <summary style="cursor:pointer;font-weight:600;font-size:0.85em;color:var(--primary);">ℹ️ How to set up the API key</summary>
-            <ol style="font-size:0.82em;color:#555;margin:10px 0 4px;padding-left:18px;line-height:1.6;">
-              <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:#2f9bb5;">console.anthropic.com</a> and sign in (or create a free account).</li>
-              <li>Add a payment method under <b>Settings → Billing</b> (generating posts costs roughly a few cents each).</li>
-              <li>Open <b>API Keys → Create Key</b>, name it (e.g. “ReGroup App”), and copy the key — it starts with <code>sk-ant-</code>.</li>
-              <li>Paste it in the box below and click <b>Save AI Key</b>.</li>
-            </ol>
-            <p style="font-size:0.76em;color:#999;margin:6px 0 0;">Tip: copy the key right away — Anthropic only shows it once. You can delete/rotate it anytime in the console.</p>
-          </details>
-          <input id="anthropic-key-input" type="password" placeholder="sk-ant-…"
-            style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:0.9em;margin-bottom:10px;">
-          <button class="btn btn-accent" onclick="saveAnthropicKey()">💾 Save AI Key</button>
-          <div id="ai-key-msg" style="font-size:0.8em;color:#43a047;margin-top:8px;"></div>
-          <p style="font-size:0.75em;color:#aaa;margin-top:10px;">The key is stored only in this browser (localStorage) and is sent directly to Anthropic when generating a post. Use a key scoped for this purpose.</p>
-        </div>
-        <div class="card">
+        <div class=”card”>
           <h3>🤖 Meeting Bot</h3>
           <p style="font-size:0.85em;color:#666;margin-bottom:12px;">Paste the URL of your deployed Meeting Bot backend (see <code>meeting-bot-server/</code>). Once set, calendar events with a video link show a “Send Bot To This Meeting” button — the bot joins, records, summarizes, and messages attendees.</p>
           <input id="meetingbot-url-input" type="text" placeholder="https://your-meeting-bot.onrender.com"
@@ -1441,7 +1421,6 @@
       <div style="background:#fff;border-radius:16px;padding:28px 26px;width:680px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
         <h3 style="color:var(--primary);margin-bottom:4px;">🤖 AI Project Planner</h3>
         <p style="font-size:0.84em;color:#666;margin-bottom:14px;">Upload a project document (PDF, text, or image) — or paste text — and AI will break it into steps. Then assign each step to a mentor and create the tasks.</p>
-        <div id="plan-key-setup" style="margin-bottom:16px;"></div>
         <div class="form-group" style="margin-bottom:12px;">
           <label>Project Name *</label>
           <input type="text" id="plan-name" placeholder="e.g. Spring Reentry Job Fair" style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:0.92em;">

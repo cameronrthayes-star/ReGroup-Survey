@@ -46,10 +46,10 @@ import { renderProjects, openProjectModal, closeProjectModal, saveProject, delet
   kbDragStart, kbDrop,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   openAIPlanner, closeAIPlanner, handlePlannerFile, generatePlanAI, createPlannerTasks,
-  addPlannerStep, removePlannerStep, renderPlannerKeyStatus, savePlannerKey } from './pages/projects.js';
+  addPlannerStep, removePlannerStep } from './pages/projects.js';
 import { generateSocialPost, generateAllPostsAI, renderEvents, switchEvTab, copyEvText, copyText } from './pages/events.js';
 import { renderMeetingsList } from './pages/meetings.js';
-import { saveAnthropicKey, renderSettings, showAddStaff, addStaff, removeStaff,
+import { renderSettings, showAddStaff, addStaff, removeStaff,
   openStaffModal, closeStaffModal, saveStaffModal, deleteStaffFromModal } from './pages/settings.js';
 import { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent,
   openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent,
@@ -57,11 +57,11 @@ import { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, s
   saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, saveProfileIcs, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
-  meetingBotBaseUrl, loadMeetingBotSession, clearMeetingBotSession,
-  _calDetailId } from './pages/calendar.js';
+  meetingBotBaseUrl, ensureMeetingBotSession, loadMeetingBotSession, clearMeetingBotSession,
+  DEFAULT_MEETING_BACKEND, _calDetailId } from './pages/calendar.js';
 import { renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan,
   spAddGoal, spFillClientId } from './pages/service-plans.js';
-import { renderGrantsKey, saveGrantsKey, runGrantsAgent } from './pages/grants.js';
+import { runGrantsAgent } from './pages/grants.js';
 import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
 
@@ -249,7 +249,6 @@ function navigate(v, isBack) {
   if (v==='calendar') renderCalendar();
   if (v==='rj') renderRJ();
   if (v==='service-plans') renderServicePlans();
-  if (v==='grants') renderGrantsKey();
   if (v==='progress-note' || v==='activity-log') populateClientNameList();
   closeNav();
 }
@@ -996,7 +995,7 @@ Object.assign(window, {
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
-  renderGrantsKey, saveGrantsKey, runGrantsAgent,
+  runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
@@ -1008,10 +1007,8 @@ Object.assign(window, {
   openTaskModal, closeTaskModal, saveTaskModal, toggleProjectsView, toggleGanttView, setProjectsView, renderKanban, renderGantt, kbDragStart, kbDrop,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   openAIPlanner, closeAIPlanner, handlePlannerFile, generatePlanAI, createPlannerTasks, addPlannerStep, removePlannerStep,
-  renderPlannerKeyStatus, savePlannerKey,
   renderEvents, switchEvTab, copyEvText, copyText,
   renderMeetingsList,
-  saveAnthropicKey,
   renderFundraising, openContactModal, closeContactModal, saveFundContact,
   checkAllFund, clearFundChecks, emailCheckedFund, updateFundCheckedCount,
   openContactDetail, closeContactDetail, editContactDetails, deleteFundContact,
@@ -1042,7 +1039,7 @@ Object.assign(window, {
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
-  renderGrantsKey, saveGrantsKey, runGrantsAgent,
+  runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
@@ -1054,10 +1051,8 @@ Object.assign(window, {
   openTaskModal, closeTaskModal, saveTaskModal, toggleProjectsView, toggleGanttView, setProjectsView, renderKanban, renderGantt, kbDragStart, kbDrop,
   openPMIWizard, closePMIWizard, pmiCompletePhase, pmiNextPhase, pmiBack, pmiFinish, pmiAssignTask,
   openAIPlanner, closeAIPlanner, handlePlannerFile, generatePlanAI, createPlannerTasks, addPlannerStep, removePlannerStep,
-  renderPlannerKeyStatus, savePlannerKey,
   renderEvents, switchEvTab, copyEvText, copyText,
   renderMeetingsList,
-  saveAnthropicKey,
   renderFundraising, openContactModal, closeContactModal, saveFundContact,
   checkAllFund, clearFundChecks, emailCheckedFund, updateFundCheckedCount,
   openContactDetail, closeContactDetail, editContactDetails, deleteFundContact,

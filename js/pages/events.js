@@ -7,6 +7,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
+import { meetingBotBaseUrl, ensureMeetingBotSession } from './calendar.js';
 function generateSocialPost(data) {
   const rawTags = (data.hashtags||'').split(',').map(h=>h.trim()).filter(Boolean)
     .map(h=>'#'+h.replace(/\s+/g,'').replace(/^#+/,'')).join(' ');
@@ -45,14 +46,10 @@ function generateSocialPost(data) {
   return {instagram, facebook, twitter, newsletter, linkedin};
 }
 
-// Backend AI: if an Anthropic API key is saved in Settings, generate polished
-// copy for EVERY channel (Instagram, Facebook, X/Twitter, LinkedIn) plus the
-// newsletter blurb in a single call. Returns a {instagram,facebook,twitter,
-// linkedin,newsletter} object, or null if no key. Throws on API/parse errors so
-// the caller can fall back to the built-in templates per channel.
 async function generateAllPostsAI(data) {
-  const key = (localStorage.getItem('rg_anthropic_key') || '').trim();
-  if (!key) return null;
+  let token = '';
+  try { token = await ensureMeetingBotSession({ silent: true }); } catch (_) {}
+  if (!token) return null;
   const details =
     'Title: ' + (data.title||'') + '\n' +
     'Date: ' + (data.eventDate||'n/a') + '\n' +
@@ -74,27 +71,15 @@ async function generateAllPostsAI(data) {
     '- newsletter: a Markdown blurb starting with "## ' + (data.title||'Event') + '", an italic date/location line if available, 1–2 short paragraphs, and a bold "Impact:" line if outcomes are given. End with "---".\n\n' +
     'Return ONLY a JSON object with exactly these string keys: instagram, facebook, twitter, linkedin, newsletter. ' +
     'No commentary, no code fences.\n\nEVENT DETAILS:\n' + details;
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+  const resp = await fetch(meetingBotBaseUrl() + '/api/ai/social-post', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-opus-4-8',
-      max_tokens: 2048,
-      messages: [
-        { role: 'user', content: prompt },
-      ],
-    }),
+    headers: { 'content-type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ prompt }),
   });
-  if (!resp.ok) { let detail=''; try{ const e=await resp.json(); detail=(e.error&&e.error.message)||''; }catch(_){} throw new Error('Anthropic API ' + resp.status + (detail?': '+detail:'')); }
+  if (!resp.ok) { let detail=''; try{ const e=await resp.json(); detail=(e.error&&(e.error.message||e.error))||''; }catch(_){} throw new Error('AI error ' + (detail||resp.status)); }
   const j = await resp.json();
-  let txt = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+  let txt = (j.text || '').trim();
   if (!txt) return null;
-  // Extract the JSON object from any surrounding text/code fences.
   const s = txt.indexOf('{'), e = txt.lastIndexOf('}');
   if (s>=0 && e>s) txt = txt.slice(s, e+1);
   const parsed = JSON.parse(txt);

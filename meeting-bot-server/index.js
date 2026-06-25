@@ -1396,6 +1396,143 @@ app.post('/webhook', async (req, res, next) => {
   }
 });
 
+// ── AI Proxy ──────────────────────────────────────────────────────────────────
+
+async function callAnthropicApi({ messages, model = 'claude-opus-4-8', max_tokens = 2048, tools, betaHeader }) {
+  const apiKey = String(process.env.ANTHROPIC_API_KEY || '').trim();
+  if (!apiKey) {
+    const err = new Error('ANTHROPIC_API_KEY is not configured on this server');
+    err.status = 503;
+    throw err;
+  }
+  const headers = {
+    'content-type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01'
+  };
+  if (betaHeader) headers['anthropic-beta'] = betaHeader;
+  const body = { model, max_tokens, messages };
+  if (tools && tools.length) body.tools = tools;
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body)
+  });
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const detail = (data.error && data.error.message) || `HTTP ${resp.status}`;
+    const err = new Error(`Anthropic API error: ${detail}`);
+    err.status = resp.status >= 500 ? 502 : resp.status;
+    throw err;
+  }
+  return data;
+}
+
+async function writeAiAuditLog(targetDb, entry) {
+  if (!targetDb) return;
+  try {
+    await targetDb.collection('aiAuditLog').add({
+      userName: entry.userName || null,
+      isAdmin: entry.isAdmin || false,
+      feature: entry.feature || null,
+      promptType: entry.promptType || null,
+      success: entry.success !== false,
+      errorMessage: entry.errorMessage || null,
+      tokenEstimate: entry.tokenEstimate || null,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (_) {}
+}
+
+app.post('/api/ai/grants', async (req, res, next) => {
+  try {
+    const session = await requireSession(req, { db });
+    const { prompt, use_web_search } = req.body || {};
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 10) {
+      return res.status(400).json({ error: 'prompt is required' });
+    }
+    const tools = use_web_search ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }] : undefined;
+    let data, searched = !!use_web_search;
+    try {
+      data = await callAnthropicApi({ messages: [{ role: 'user', content: prompt.trim() }], model: 'claude-opus-4-8', max_tokens: 4096, tools });
+    } catch (aiErr) {
+      if (use_web_search) {
+        data = await callAnthropicApi({ messages: [{ role: 'user', content: prompt.trim() }], model: 'claude-opus-4-8', max_tokens: 4096 });
+        searched = false;
+      } else {
+        throw aiErr;
+      }
+    }
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    await writeAiAuditLog(db, {
+      userName: session.user_name, isAdmin: session.is_admin,
+      feature: 'grants', promptType: 'grant_research',
+      success: !!text, tokenEstimate: data.usage ? (data.usage.input_tokens + data.usage.output_tokens) : null
+    });
+    logInfo('ai proxy grants completed', { user: session.user_name, searched, chars: text.length });
+    res.json({ text, searched });
+  } catch (e) { next(e); }
+});
+
+app.post('/api/ai/social-post', async (req, res, next) => {
+  try {
+    const session = await requireSession(req, { db });
+    const { prompt } = req.body || {};
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 10) {
+      return res.status(400).json({ error: 'prompt is required' });
+    }
+    const data = await callAnthropicApi({ messages: [{ role: 'user', content: prompt.trim() }], model: 'claude-opus-4-8', max_tokens: 2048 });
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    await writeAiAuditLog(db, {
+      userName: session.user_name, isAdmin: session.is_admin,
+      feature: 'social-post', promptType: 'social_media_generation',
+      success: !!text, tokenEstimate: data.usage ? (data.usage.input_tokens + data.usage.output_tokens) : null
+    });
+    logInfo('ai proxy social-post completed', { user: session.user_name, chars: text.length });
+    res.json({ text });
+  } catch (e) { next(e); }
+});
+
+app.post('/api/ai/project-plan', async (req, res, next) => {
+  try {
+    const session = await requireSession(req, { db });
+    const { messages, beta } = req.body || {};
+    if (!Array.isArray(messages) || !messages.length) {
+      return res.status(400).json({ error: 'messages array is required' });
+    }
+    const betaHeader = beta === 'pdfs-2024-09-25' ? 'pdfs-2024-09-25' : undefined;
+    const data = await callAnthropicApi({ messages, model: 'claude-opus-4-8', max_tokens: 3072, betaHeader });
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    await writeAiAuditLog(db, {
+      userName: session.user_name, isAdmin: session.is_admin,
+      feature: 'project-plan', promptType: 'project_planning',
+      success: !!text, tokenEstimate: data.usage ? (data.usage.input_tokens + data.usage.output_tokens) : null
+    });
+    logInfo('ai proxy project-plan completed', { user: session.user_name, chars: text.length });
+    res.json({ text });
+  } catch (e) { next(e); }
+});
+
+app.post('/api/ai/meeting-summary', async (req, res, next) => {
+  try {
+    const session = await requireSession(req, { db });
+    const { prompt, max_tokens } = req.body || {};
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 10) {
+      return res.status(400).json({ error: 'prompt is required' });
+    }
+    const tokens = (typeof max_tokens === 'number' && max_tokens > 0 && max_tokens <= 4096) ? max_tokens : 1600;
+    const data = await callAnthropicApi({ messages: [{ role: 'user', content: prompt.trim() }], model: 'claude-opus-4-8', max_tokens: tokens });
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    await writeAiAuditLog(db, {
+      userName: session.user_name, isAdmin: session.is_admin,
+      feature: 'meeting-summary', promptType: 'transcript_summarization',
+      success: !!text, tokenEstimate: data.usage ? (data.usage.input_tokens + data.usage.output_tokens) : null
+    });
+    logInfo('ai proxy meeting-summary completed', { user: session.user_name, chars: text.length });
+    res.json({ text });
+  } catch (e) { next(e); }
+});
+
 app.use((err, _req, res, _next) => {
   res.status(err.status || 500).json({ error: err.message || 'Server error', details: err.details || undefined });
 });

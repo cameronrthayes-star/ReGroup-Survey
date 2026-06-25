@@ -1,6 +1,6 @@
 import { db, DB, _sessions, _activities, _staff, _needsAssessments, _expenseReports,
          _clients, _tasks, _projects, _events, _meetings, _fundContacts,
-         _dashboardConfig, _securityConfig, _messages, _calendar, _rjCases, _servicePlans,
+         _dashboardConfig, _securityConfig, _messages, _calendar, _rjCases, _servicePlans, _currentUser,
          collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, orderBy, serverTimestamp
        } from '../state.js';
 import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDate,
@@ -636,16 +636,16 @@ async function autoDispatchBots(){
   try{ for(const e of due){ await dispatchMeetingBot(e, {silent:true}); } } finally { _autoBotBusy=false; }
 }
 
-// Summarize a transcript with the app's Anthropic key (so summaries are good even if the backend's summarizer is unavailable)
 async function aiSummarizeTranscript(title, date, transcript, attendees){
-  const key=(localStorage.getItem('rg_anthropic_key')||'').trim();
-  if(!key || !transcript || transcript.trim().length<20) return '';
+  if(!transcript || transcript.trim().length<20) return '';
   const prompt='You are a meeting-notes assistant for ReGroup / TJC Oregon. Summarize the meeting "'+(title||'')+'" ('+(date||'')+'). Return Markdown with sections: **Summary** (2-4 concise sentences), **Attendees**, **Key Decisions**, **Action Items** (each "owner - task - due date" when available), and **Open Questions**. Be faithful; do not invent. Known attendees: '+(attendees||'Not provided')+'.\n\nTRANSCRIPT:\n'+transcript.slice(0,40000);
   try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:1600,messages:[{role:'user',content:prompt}]})});
+    const token=await ensureMeetingBotSession({silent:true});
+    if(!token) return '';
+    const r=await fetch(meetingBotBaseUrl()+'/api/ai/meeting-summary',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({prompt,max_tokens:1600})});
     if(!r.ok) return '';
     const j=await r.json();
-    return (j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+    return j.text||'';
   }catch(_){ return ''; }
 }
 // Poll the meeting backend so the UI can mirror bot status even if the calendar snapshot lags.
@@ -683,19 +683,21 @@ async function deliverMeetingSummary(calId, summary){
 async function summarizeMeeting(id){
   const e=DB.calendar().find(x=>x._id===id); if(!e) return;
   const status=document.getElementById('mtg-sum-status');
-  const key=(localStorage.getItem('rg_anthropic_key')||'').trim();
-  if(!key){ status.style.color='#e53935'; status.textContent='No AI key set — add one in Settings → AI.'; return; }
   const transcript=(document.getElementById('mtg-transcript').value||'').trim();
   if(!transcript){ status.style.color='#e53935'; status.textContent='Paste the meeting transcript or notes first.'; return; }
+  status.style.color='#666'; status.textContent='Authorizing…';
+  let token='';
+  try{ token=await ensureMeetingBotSession(); }
+  catch(err){ status.style.color='#e53935'; status.textContent='Could not authorize: '+err.message; return; }
   status.style.color='#666'; status.textContent='Summarizing…';
   const knownAttendees=[e.invited,e.external].filter(Boolean).join(', ')||'Not provided';
   const prompt='You are a meeting-notes assistant for ReGroup / TJC Oregon. Summarize the meeting transcript/notes below in Markdown with sections: **Summary** (2-4 concise sentences), **Attendees**, **Key Decisions**, **Action Items** (each as "owner - task - due date" when available), and **Open Questions**. Be faithful; do not invent. Meeting: "'+(e.title||'')+'" on '+fmtDate(e.date)+'. Known attendees: '+knownAttendees+'.\n\nTRANSCRIPT/NOTES:\n'+transcript;
   let text='';
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-opus-4-8',max_tokens:1500,messages:[{role:'user',content:prompt}]})});
-    if(!resp.ok){ let d=''; try{const j=await resp.json(); d=(j.error&&j.error.message)||'';}catch(_){} throw new Error('Anthropic API '+resp.status+(d?': '+d:'')); }
+    const resp=await fetch(meetingBotBaseUrl()+'/api/ai/meeting-summary',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({prompt,max_tokens:1500})});
+    if(!resp.ok){ let d=''; try{const j=await resp.json(); d=(j.error&&(j.error.message||j.error))||'';}catch(_){} throw new Error('AI error '+(d||resp.status)); }
     const j=await resp.json();
-    text=(j.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+    text=j.text||'';
   }catch(err){ status.style.color='#e53935'; status.textContent='AI error — '+err.message; return; }
   if(!text){ status.style.color='#e53935'; status.textContent='No summary returned — try again.'; return; }
   await DB.updateCalEvent(id, {summary:text, summarizedBy:currentUserName(), summarizedAt:new Date().toISOString()});
@@ -717,4 +719,5 @@ export { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, s
   saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, saveProfileIcs, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
-  meetingBotBaseUrl, loadMeetingBotSession, clearMeetingBotSession };
+  meetingBotBaseUrl, ensureMeetingBotSession, loadMeetingBotSession, clearMeetingBotSession,
+  DEFAULT_MEETING_BACKEND };

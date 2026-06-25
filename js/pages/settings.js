@@ -7,19 +7,10 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
-function saveAnthropicKey() {
-  const el = document.getElementById('anthropic-key-input');
-  const key = (el?.value || '').trim();
-  if (key) localStorage.setItem('rg_anthropic_key', key);
-  else localStorage.removeItem('rg_anthropic_key');
-  const msg = document.getElementById('ai-key-msg');
-  if (msg) { msg.textContent = key ? '✅ AI key saved on this device.' : 'Key cleared — using template posts.'; setTimeout(()=>{ if(msg) msg.textContent=''; }, 4000); }
-}
+import { DEFAULT_MEETING_BACKEND } from './calendar.js';
 
 function renderSettings() {
   refreshStaffDatalist();
-  const keyInput = document.getElementById('anthropic-key-input');
-  if (keyInput) keyInput.value = localStorage.getItem('rg_anthropic_key') || '';
   const mbInput = document.getElementById('meetingbot-url-input');
   if (mbInput) mbInput.value = localStorage.getItem('rg_meetingbot_url') || DEFAULT_MEETING_BACKEND;
   const gcInput = document.getElementById('gcal-clientid-input');
@@ -111,5 +102,5 @@ function deleteStaffFromModal(){
   });
 }
 
-export { saveAnthropicKey, renderSettings, showAddStaff, addStaff, removeStaff,
+export { renderSettings, showAddStaff, addStaff, removeStaff,
   openStaffModal, closeStaffModal, saveStaffModal, deleteStaffFromModal };
