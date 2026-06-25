@@ -715,5 +715,5 @@ export { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, s
   summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots,
   saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
-  openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
+  openIcsSetup, syncIcsCalendar, saveProfileIcs, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
   meetingBotBaseUrl, loadMeetingBotSession, clearMeetingBotSession };

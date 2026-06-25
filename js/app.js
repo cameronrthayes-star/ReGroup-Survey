@@ -28,7 +28,7 @@ import { getEBRecipients, renderEBCustomList, ebCustCheckAll, updateEBCount,
 import { renderFormReports, deleteReport, renderNAList, printNA,
   renderERList, printER, addERRow, updateERTotal, compressImage, readImagesCompressed, printTimesheet } from './pages/forms.js';
 import { renderProfile, saveProfile, savePassword, resetPassword,
-  uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc, saveProfileIcs } from './pages/profile.js';
+  uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc } from './pages/profile.js';
 import { renderDataView, switchTab, renderTimesheetTable, renderSummaryTable,
   renderSafetyTable, renderAllData, exportTableCSV, exportData, importDataJSON, importCSV, clearAllData } from './pages/reports.js';
 import { generateTimesheet, filterPayPeriod, tsUpdateFromStaff, populateTsMentors, populateTsCycles } from './pages/timesheets.js';
@@ -55,7 +55,7 @@ import { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, s
   summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots,
   saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
-  openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
+  openIcsSetup, syncIcsCalendar, saveProfileIcs, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
   meetingBotBaseUrl, loadMeetingBotSession, clearMeetingBotSession,
   _calDetailId } from './pages/calendar.js';
 import { renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan,

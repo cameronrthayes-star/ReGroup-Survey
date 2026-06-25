@@ -158,4 +158,4 @@ function deleteProfileDoc(staffId, idx){
 }
 
 export { renderProfile, saveProfile, savePassword, resetPassword,
-  uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc, saveProfileIcs };
+  uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc };
