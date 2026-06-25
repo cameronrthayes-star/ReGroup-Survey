@@ -1,45 +1,45 @@
 import { _currentUser, _securityConfig } from './state.js';
 
 // Pure utilities
-function uuid() {
+export function uuid() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
     const r=Math.random()*16|0; return(c==='x'?r:(r&0x3|0x8)).toString(16);
   });
 }
 
-function getDate(e) {
+export function getDate(e) {
   return e.dateOfService || e.dateOfActivity || e.dateOfAttempt || '';
 }
 
-function calcHours(start, end) {
+export function calcHours(start, end) {
   if (!start || !end) return 0;
   const [sh,sm] = start.split(':').map(Number);
   const [eh,em] = end.split(':').map(Number);
   return Math.round(((eh*60+em)-(sh*60+sm)) / 60 * 100) / 100;
 }
 
-function fmtDate(d) {
+export function fmtDate(d) {
   if (!d) return '';
   const dt = new Date(d + 'T12:00:00');
   if (isNaN(dt)) return d;
   return dt.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
 }
 
-function fmtDateSlash(d) {
+export function fmtDateSlash(d) {
   if (!d) return '';
   const dt = new Date(d + 'T12:00:00');
   if (isNaN(dt)) return d;
   return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
 }
 
-function fmtTime(t) {
+export function fmtTime(t) {
   if (!t) return '';
   const [h,m] = t.split(':').map(Number);
   const ap = h>=12?'PM':'AM'; const hr=h%12||12;
   return `${hr}:${String(m).padStart(2,'0')} ${ap}`;
 }
 
-function getActivityLabel(e) {
+export function getActivityLabel(e) {
   if (e._type==='client' || e.type==='client') {
     const types = Array.isArray(e.supportTypes) ? e.supportTypes : (e.supportTypes ? [e.supportTypes] : []);
     return types.filter(Boolean).join(', ') || e.serviceOutcome || '';
@@ -47,7 +47,7 @@ function getActivityLabel(e) {
   return e.activityType || '';
 }
 
-function safeConcernBadge(val) {
+export function safeConcernBadge(val) {
   if (!val || val==='No concerns' || val==='no') return '';
   const cls = (val.includes('Immediate')||val.includes('Elevated')) ? 'badge-danger' : 'badge-warn';
   return `<span class="badge ${cls}">${val}</span>`;
