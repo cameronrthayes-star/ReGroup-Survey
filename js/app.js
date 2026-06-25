@@ -25,7 +25,7 @@ import { renderFundraising, openContactModal, closeContactModal, saveFundContact
 import { getEBRecipients, renderEBCustomList, ebCustCheckAll, updateEBCount,
   updateEBPreview, copyEBAddresses, openEBGmail, openEBMailto } from './pages/email-blast.js';
 import { renderFormReports, deleteReport, renderNAList, printNA,
-  renderERList, printER, addERRow, updateERTotal, compressImage, readImagesCompressed } from './pages/forms.js';
+  renderERList, printER, addERRow, updateERTotal, compressImage, readImagesCompressed, printTimesheet } from './pages/forms.js';
 import { renderProfile, saveProfile, savePassword, resetPassword,
   uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc, saveProfileIcs } from './pages/profile.js';
 import { renderDataView, switchTab, renderTimesheetTable, renderSummaryTable,

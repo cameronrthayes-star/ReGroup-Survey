@@ -322,4 +322,4 @@ function printTimesheet(){
 
 
 export { renderFormReports, deleteReport, renderNAList, printNA,
-  renderERList, printER, addERRow, updateERTotal, compressImage, readImagesCompressed };
+  renderERList, printER, addERRow, updateERTotal, compressImage, readImagesCompressed, printTimesheet };
