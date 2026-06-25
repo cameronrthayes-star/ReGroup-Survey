@@ -7,6 +7,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
+import { myStaffRecord } from './profile.js';
 // --- Dashboard metric catalog: every available metric in the app ---
 function dashWeekStats(){
   const now=new Date(); const mon=new Date(now); mon.setDate(now.getDate()-((now.getDay()+6)%7));

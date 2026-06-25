@@ -7,6 +7,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
+import { myStaffRecord } from './profile.js';
 function getEBRecipients() {
   const filter = document.getElementById('eb-filter')?.value || 'all';
   // Fundraiser sources draw from the fundraising CRM instead of clients

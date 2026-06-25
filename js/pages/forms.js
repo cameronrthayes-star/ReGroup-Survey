@@ -130,6 +130,12 @@ function printNA(id) {
 }
 
 // EXPENSE REPORT — row management, handlers, list/print renderers
+const ER_CATEGORIES = [
+  'Business Cards','Business Meals','Dues','Legal Fees','License Fees','Mileage',
+  'Office Supplies','Passport fee','Postage','Printer Cartridges','Printer Paper',
+  'Software','Stationery','Subscriptions','Telephones','Tools','Training Fees',
+  'Travel','Work Clothing','Other'
+];
 
 // Expense Report row management, list, print
 function addERRow() {

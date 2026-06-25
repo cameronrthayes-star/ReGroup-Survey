@@ -7,6 +7,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
+import { myStaffRecord } from './profile.js';
 let _calMonth = (()=>{ const d=new Date(); d.setDate(1); return d; })();
 export let _calDetailId = null;
 function calShiftMonth(n){ _calMonth.setMonth(_calMonth.getMonth()+n); renderCalendar(); }

@@ -471,12 +471,6 @@ const ASSISTANCE_TYPES = [
   'Phone/Internet Access','Employment Clothing/Tools','Mental Health Support','Legal Fees/Expungement'
 ];
 
-const ER_CATEGORIES = [
-  'Business Cards','Business Meals','Dues','Legal Fees','License Fees','Mileage',
-  'Office Supplies','Passport fee','Postage','Printer Cartridges','Printer Paper',
-  'Software','Stationery','Subscriptions','Telephones','Tools','Training Fees',
-  'Travel','Work Clothing','Other'
-];
 
 function initForms() {
   buildCheckboxes('support-types-check', SUPPORT_TYPES, 'supportTypes');
