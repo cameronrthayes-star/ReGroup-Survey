@@ -1,5 +1,5 @@
-// ================================================================
-// app.js — entry point: Firestore listeners, navigation, auth,
+﻿// ================================================================
+// app.js â€” entry point: Firestore listeners, navigation, auth,
 // form framework, and wiring all page modules to window.
 // ================================================================
 import { db, DB,
@@ -67,12 +67,12 @@ import { renderGrantsKey, saveGrantsKey, runGrantsAgent } from './pages/grants.j
 import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
 
-// ─── Local app-level state ─────────────────────────────────────────────────
+// â”€â”€â”€ Local app-level state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _navHistory = [];
 let _postLoginView = null;
 let _listenersReady = 0;
 
-// ─── _onReady — fires once per listener; renders dashboard when all 16 land ─
+// â”€â”€â”€ _onReady â€” fires once per listener; renders dashboard when all 16 land â”€
 function _onReady() {
   _listenersReady++;
   if (_listenersReady === 16) {
@@ -82,21 +82,21 @@ function _onReady() {
   }
 }
 
-// ─── Firestore real-time listeners ────────────────────────────────────────
+// â”€â”€â”€ Firestore real-time listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 onSnapshot(query(collection(db,'sessions'),   orderBy('dateOfService','asc')),   snap => {
-  setSessions(snap.docs.map(d => ({...d.data(), _id:d.id, _type:'client'})););
+  setSessions(snap.docs.map(d => ({...d.data(), _id:d.id, _type:'client'})));
   _onReady();
   if (document.getElementById('view-dashboard')?.classList.contains('active'))   renderDashboard();
   if (document.getElementById('view-data-view')?.classList.contains('active'))  renderDataView();
 });
 onSnapshot(query(collection(db,'activities'), orderBy('dateOfActivity','asc')),  snap => {
-  setActivities(snap.docs.map(d => ({...d.data(), _id:d.id, _type:'activity'}));
+  setActivities(snap.docs.map(d => ({...d.data(), _id:d.id, _type:'activity'})));
   _onReady();
   if (document.getElementById('view-dashboard')?.classList.contains('active'))   renderDashboard();
   if (document.getElementById('view-data-view')?.classList.contains('active'))  renderDataView();
 });
 onSnapshot(collection(db,'staff'), snap => {
-  setStaff(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setStaff(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   refreshStaffDatalist();
   if (document.getElementById('view-settings')?.classList.contains('active')) renderSettings();
@@ -106,55 +106,44 @@ onSnapshot(collection(db,'staff'), snap => {
   if (document.getElementById('view-profile')?.classList.contains('active')) renderProfile();
 });
 onSnapshot(query(collection(db,'needsAssessments'), orderBy('_createdAt','asc')), snap => {
-  setNeedsAssessments(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setNeedsAssessments(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-needs-assessment')?.classList.contains('active')) renderNAList();
   if (document.getElementById('view-form-reports')?.classList.contains('active')) renderFormReports();
 });
 onSnapshot(query(collection(db,'expenseReports'), orderBy('_createdAt','asc')), snap => {
-  setExpenseReports(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setExpenseReports(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-expense-report')?.classList.contains('active')) renderERList();
   if (document.getElementById('view-form-reports')?.classList.contains('active')) renderFormReports();
 });
 
-let setClients([];);
-let setTasks([];);
-let setProjects([];);
-let setEvents([];);
-let setMeetings([];);
-let setFundContacts([];);
-let _dashboardConfig = null;
-let _securityConfig = {};
-let setMessages([];);
-let setCalendar([];);
-let setRjCases([];);
-let setServicePlans([];);
+
 
 onSnapshot(collection(db,'calendar'), snap => {
-  setCalendar(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setCalendar(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-calendar')?.classList.contains('active')) renderCalendar();
   if (_calDetailId && document.getElementById('cal-detail')?.style.display === 'flex') openCalDetail(_calDetailId);
 });
 onSnapshot(collection(db,'rjCases'), snap => {
-  setRjCases(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setRjCases(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-rj')?.classList.contains('active')) renderRJ();
 });
 onSnapshot(collection(db,'servicePlans'), snap => {
-  setServicePlans(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setServicePlans(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-service-plans')?.classList.contains('active')) renderServicePlans();
 });
 onSnapshot(query(collection(db,'clients'), orderBy('clientId','asc')), snap => {
-  setClients(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setClients(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-clients')?.classList.contains('active')) renderClientDirectory();
   populateClientNameList();
 });
 onSnapshot(query(collection(db,'tasks'),    orderBy('_createdAt','asc')), snap => {
-  setTasks(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setTasks(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-admin-inbox')?.classList.contains('active')) renderAdminTasks();
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
@@ -162,22 +151,22 @@ onSnapshot(query(collection(db,'tasks'),    orderBy('_createdAt','asc')), snap =
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
 });
 onSnapshot(query(collection(db,'projects'), orderBy('_createdAt','asc')), snap => {
-  setProjects(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setProjects(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-projects')?.classList.contains('active')) renderProjects();
 });
 onSnapshot(query(collection(db,'events'),   orderBy('_createdAt','asc')), snap => {
-  setEvents(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setEvents(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-events')?.classList.contains('active')) renderEvents();
 });
 onSnapshot(query(collection(db,'meetings'), orderBy('_createdAt','asc')), snap => {
-  setMeetings(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setMeetings(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-meetings')?.classList.contains('active')) renderMeetingsList();
 });
 onSnapshot(query(collection(db,'fundContacts'), orderBy('_createdAt','asc')), snap => {
-  setFundContacts(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setFundContacts(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('view-fundraising')?.classList.contains('active')) renderFundraising();
   if (_fundDetailId && document.getElementById('fund-detail')?.style.display === 'flex') renderContactDetail(_fundDetailId);
@@ -191,7 +180,7 @@ onSnapshot(collection(db,'config'), snap => {
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
 });
 onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap => {
-  setMessages(snap.docs.map(d => ({...d.data(), _id:d.id}));
+  setMessages(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
   if (document.getElementById('ai-tab-mentors')?.classList.contains('active')) renderMentorPanel();
   if (document.getElementById('ai-tab-amsgs')?.classList.contains('active')) renderAdminMessages();
@@ -201,14 +190,14 @@ onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap =
   if (_msgMentor && document.getElementById('msg-modal')?.style.display === 'flex') renderMessageThread();
 });
 
-// ─── VIEW_TITLES ──────────────────────────────────────────────────────────
+// â”€â”€â”€ VIEW_TITLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const VIEW_TITLES = {
   'dashboard':'Dashboard',
-  'progress-note':'Progress Note — DAP Format',
-  'activity-log':'Activity Log — Non-Client Services',
+  'progress-note':'Progress Note â€” DAP Format',
+  'activity-log':'Activity Log â€” Non-Client Services',
   'data-view':'Data View',
   'timesheets':'Timesheets',
-  'form-reports':'Reports — All Submitted Forms',
+  'form-reports':'Reports â€” All Submitted Forms',
   'profile':'My Profile',
   'calendar':'Shared Calendar',
   'rj':'Restorative Justice',
@@ -220,7 +209,7 @@ const VIEW_TITLES = {
   'service-plans':'Client Goals & Service Plans',
   'presentations':'Presentation Studio',
   'email-blast':'Email Blast',
-  'my-tasks':'Mentor Inbox — Messages & Tasks',
+  'my-tasks':'Mentor Inbox â€” Messages & Tasks',
   'projects':'Projects',
   'events':'Events & Social Media',
   'meetings':'Meeting Log',
@@ -229,7 +218,7 @@ const VIEW_TITLES = {
 
 // ===================================================================
 
-// ─── navigate ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ navigate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _navHistory = [];
 function navigate(v, isBack) {
   if (v === 'settings' && !isAdmin()) {
@@ -270,7 +259,7 @@ function navigate(v, isBack) {
   closeNav();
 }
 
-// Back button — return to the previously viewed page
+// Back button â€” return to the previously viewed page
 function goBack(){
   const prev = _navHistory.pop();
   updateBackBtn();
@@ -292,7 +281,7 @@ function requireAdmin(cb) {
   else alert('Only an administrator can do this. Log in as an admin to continue.');
 }
 
-// ─── AUTH ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ AUTH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DEFAULT_ADMIN_PIN = '12345678';
 
 function getAdminPIN() {
@@ -317,7 +306,7 @@ function submitPIN() {
     if (window._pinCallback) window._pinCallback();
     window._pinCallback = null;
   } else {
-    document.getElementById('pin-error').textContent = '❌ Incorrect PIN. Try again.';
+    document.getElementById('pin-error').textContent = 'âŒ Incorrect PIN. Try again.';
     document.getElementById('pin-input').value = '';
     document.getElementById('pin-input').focus();
   }
@@ -331,7 +320,7 @@ function cancelPIN() {
 // ===================================================================
 // APP LOGIN / CURRENT USER (per-staff profiles)
 
-// ─── APP LOGIN / CURRENT USER ─────────────────────────────────────────────
+// â”€â”€â”€ APP LOGIN / CURRENT USER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _storeCurrentUser(null);          // {name, firstName, isAdmin}
 let _postLoginView = null;
 
@@ -362,7 +351,7 @@ function logout(){
 }
 function updateUserChrome(){
   const el = document.getElementById('current-user-label');
-  if (el) el.textContent = _currentUser ? ((_currentUser.isAdmin?'👑 ':'👤 ')+_currentUser.name) : '';
+  if (el) el.textContent = _currentUser ? ((_currentUser.isAdmin?'ðŸ‘‘ ':'ðŸ‘¤ ')+_currentUser.name) : '';
   updateMentorInboxNav();
 }
 // Turn the Mentor Inbox nav green + show a dot when the current user has unread messages
@@ -401,8 +390,8 @@ function submitAppLogin() {
     document.getElementById('app-password-input').value=''; return;
   }
   if (err) err.style.color = '#ef5350';
-  if (!DB.staff().length){ err.textContent='⏳ Still loading staff — wait a moment and try again.'; return; }
-  err.textContent='❌ Incorrect. Your password is your first name + 1234 (e.g. Cameron1234).';
+  if (!DB.staff().length){ err.textContent='â³ Still loading staff â€” wait a moment and try again.'; return; }
+  err.textContent='âŒ Incorrect. Your password is your first name + 1234 (e.g. Cameron1234).';
   document.getElementById('app-password-input').value='';
   document.getElementById('app-password-input').focus();
 }
@@ -410,13 +399,13 @@ function submitAppLogin() {
 async function changeAdminPIN() {
   const current = prompt('Enter current PIN:');
   if (current !== getAdminPIN()) { alert('Incorrect current PIN.'); return; }
-  const next = prompt('Enter new PIN (4–8 digits):');
-  if (!next || !/^\d{4,8}$/.test(next)) { alert('PIN must be 4–8 digits.'); return; }
+  const next = prompt('Enter new PIN (4â€“8 digits):');
+  if (!next || !/^\d{4,8}$/.test(next)) { alert('PIN must be 4â€“8 digits.'); return; }
   const confirm2 = prompt('Confirm new PIN:');
   if (next !== confirm2) { alert('PINs do not match.'); return; }
   try {
     await DB.setAdminPIN(next);
-    alert('✅ PIN changed successfully for all devices.');
+    alert('âœ… PIN changed successfully for all devices.');
   } catch (error) {
     alert('Could not save the admin PIN. Check your connection and try again.');
   }
@@ -437,7 +426,7 @@ function showAdminPasswordPage() {
 
 let _navHistory = [];
 
-// ─── FORM INIT ────────────────────────────────────────────────────────────
+// â”€â”€â”€ FORM INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ===================================================================
 const SUPPORT_TYPES = ['Violence Prevention Mentoring','Conflict Mediation','Crisis Intervention',
   'Safety Planning','Hospital/Post-Injury Intervention','Retaliation Prevention',
@@ -462,10 +451,10 @@ const SERVICE_AREAS = ['Violence Prevention','Restorative Justice','Community Ou
   'Partnership Development','Behavioral Health Support','Housing / Stabilization',
   'Employment Pathways','Youth Engagement','Crisis Response','Organizational Capacity','Training','Other'];
 
-const OUTCOMES = ['Service Successfully Delivered','Mentor Attempted Contact — Client Unreachable',
+const OUTCOMES = ['Service Successfully Delivered','Mentor Attempted Contact â€” Client Unreachable',
   'Client Cancelled','Client No-Show','Rescheduled','Other'];
 
-const SAFETY_PN = ['No concerns','Yes — Immediate Risk','Yes — Emerging Concern'];
+const SAFETY_PN = ['No concerns','Yes â€” Immediate Risk','Yes â€” Emerging Concern'];
 
 const GRANTS = ['BeBlac','Collins Foundation','CJC','CVI','General Fund','RISE','WHC','Vital Project Funds'];
 
@@ -528,7 +517,7 @@ function initForms() {
   document.querySelector('#activity-log-form [name="startTime"]')?.addEventListener('change', updateALHours);
   document.querySelector('#activity-log-form [name="endTime"]')?.addEventListener('change', updateALHours);
 
-  // Expense Report — seed first row and wire total update
+  // Expense Report â€” seed first row and wire total update
   addERRow();
   document.querySelector('#er-form [name="cashAdvance"]')?.addEventListener('input', updateERTotal);
 }
@@ -550,18 +539,18 @@ function refreshStaffDatalist() {
   const mtSel = document.getElementById('my-tasks-mentor');
   if (mtSel) {
     const current = mtSel.value;
-    mtSel.innerHTML = '<option value="">— Select your name —</option>' +
+    mtSel.innerHTML = '<option value="">â€” Select your name â€”</option>' +
       names.map(n=>'<option value="' + n + '"' + (n===current?' selected':'') + '>' + n + '</option>').join('');
   }
 }
 
 
-// ─── FORM SUBMIT (progress-note + activity-log) ───────────────────────────
+// â”€â”€â”€ FORM SUBMIT (progress-note + activity-log) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ===================================================================
 document.getElementById('progress-note-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
-  btn.textContent = 'Saving…'; btn.disabled = true;
+  btn.textContent = 'Savingâ€¦'; btn.disabled = true;
   const fd = new FormData(this);
   const data = {id:uuid(), type:'client', submittedAt:new Date().toISOString()};
   for (const [k,v] of fd.entries()) { data[k] = v; }
@@ -582,7 +571,7 @@ document.getElementById('progress-note-form').addEventListener('submit', async f
 document.getElementById('activity-log-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
-  btn.textContent = 'Saving…'; btn.disabled = true;
+  btn.textContent = 'Savingâ€¦'; btn.disabled = true;
   const fd = new FormData(this);
   const data = {id:uuid(), type:'activity', submittedAt:new Date().toISOString()};
   for (const [k,v] of fd.entries()) { data[k]=v; }
@@ -597,11 +586,11 @@ document.getElementById('activity-log-form').addEventListener('submit', async fu
 });
 
 
-// ─── NEEDS ASSESSMENT form submit ─────────────────────────────────────────
+// â”€â”€â”€ NEEDS ASSESSMENT form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('na-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
-  btn.textContent = 'Saving…'; btn.disabled = true;
+  btn.textContent = 'Savingâ€¦'; btn.disabled = true;
   const fd = new FormData(this);
   const data = {id:uuid(), submittedAt:new Date().toISOString()};
   for (const [k,v] of fd.entries()) { data[k] = v; }
@@ -613,11 +602,11 @@ document.getElementById('na-form').addEventListener('submit', async function(e) 
   showFormSuccess('needs-assessment', _sid, data);
 });
 
-// ─── EXPENSE REPORT form submit ───────────────────────────────────────────
+// â”€â”€â”€ EXPENSE REPORT form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('er-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
-  btn.textContent = 'Saving…'; btn.disabled = true;
+  btn.textContent = 'Savingâ€¦'; btn.disabled = true;
   const fd = new FormData(this);
   const dates = fd.getAll('er_date[]');
   const descs = fd.getAll('er_desc[]');
@@ -660,11 +649,11 @@ document.getElementById('er-form').addEventListener('submit', async function(e) 
   showFormSuccess('expense-report', _sid, data);
 });
 
-// ─── EVENT form submit ────────────────────────────────────────────────────
+// â”€â”€â”€ EVENT form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('event-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
-  btn.textContent = 'Generating…'; btn.disabled = true;
+  btn.textContent = 'Generatingâ€¦'; btn.disabled = true;
   const fd = new FormData(this);
   const data = {id: uuid(), submittedAt: new Date().toISOString()};
   for (const [k,v] of fd.entries()) data[k] = v;
@@ -674,7 +663,7 @@ document.getElementById('event-form').addEventListener('submit', async function(
     try { data.photos = await readImagesCompressed(photoInput.files, {maxDim:1280, quality:0.7, maxCount:4, maxTotalKB:850}); }
     catch(err){ alert(err.message); btn.textContent='Generate Posts & Save'; btn.disabled=false; return; }
   } else if (_formEditId['events'] && _evEditPhotos && _evEditPhotos.length){
-    data.photos = _evEditPhotos;   // editing with no new photos — keep existing
+    data.photos = _evEditPhotos;   // editing with no new photos â€” keep existing
   }
   data.generatedPosts = generateSocialPost(data);
   // Backend AI polish for every channel + newsletter (falls back to the
@@ -690,14 +679,14 @@ document.getElementById('event-form').addEventListener('submit', async function(
   showFormSuccess('events', _sid, data);
 });
 
-// ─── MEETING form submit ──────────────────────────────────────────────────
+// â”€â”€â”€ MEETING form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('DOMContentLoaded', () => {
   const mf = document.getElementById('meetings-form');
   if (mf) mf.addEventListener('submit', async e => {
     e.preventDefault();
     const fd = new FormData(mf);
     const btn = mf.querySelector('button[type=submit]');
-    btn.disabled = true; btn.textContent = 'Saving…';
+    btn.disabled = true; btn.textContent = 'Savingâ€¦';
     try {
       const data = {
         location:    fd.get('location')?.trim()||'',
@@ -715,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ─── FORM FRAMEWORK ───────────────────────────────────────────────────────
+// â”€â”€â”€ FORM FRAMEWORK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ===================================================================
 const FORM_DEF = {
   'progress-note':   {coll:'sessions',         formId:'progress-note-form', submitter:'mentorName',   view:'progress-note',    label:'Progress Note'},
@@ -759,7 +748,7 @@ function fspEdit(){ const k=_fspKey,id=_fspId,rec=_fspRecord; fspClose(); editFo
 function editForm(key, id, skipNameCheck, rec){
   const def=FORM_DEF[key];
   rec = rec || recordById(def.coll,id);
-  if(!rec){ alert('Record not found — it may still be saving. Try again in a moment.'); return; }
+  if(!rec){ alert('Record not found â€” it may still be saving. Try again in a moment.'); return; }
   if(!skipNameCheck){
     const owner=(rec._owner||rec[def.submitter]||'').trim();
     if(!(isAdmin() || owner===currentUserName())){ alert('You can only edit forms you submitted.'); return; }
@@ -808,7 +797,7 @@ function prefillER(rec){
 
 // ===================================================================
 
-// ─── injectExamplePanels ─────────────────────────────────────────────────
+// â”€â”€â”€ injectExamplePanels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function injectExamplePanels(){
   const panels = {
     'view-progress-note': `
@@ -816,7 +805,7 @@ function injectExamplePanels(){
         <h3>Example: completed progress note</h3>
         <p>Use the real client, mentor, service date, and default grant. A strong DAP note is specific, factual, and ends with the next step.</p>
         <div class="example-grid">
-          <div class="example-mini"><strong>Mentor / client</strong>Cameron Hayes · Client #1241 · ReGroup Office</div>
+          <div class="example-mini"><strong>Mentor / client</strong>Cameron Hayes Â· Client #1241 Â· ReGroup Office</div>
           <div class="example-mini"><strong>Data</strong>Client arrived on time, brought two job leads, and reviewed ID replacement status.</div>
           <div class="example-mini"><strong>Assessment</strong>Client is making progress on employment goal; barrier is transportation to interviews.</div>
           <div class="example-mini"><strong>Plan</strong>Mentor will text bus-pass resource today and meet again on 06/25/2026.</div>
@@ -829,7 +818,7 @@ function injectExamplePanels(){
         <div class="example-grid">
           <div class="example-mini"><strong>Activity</strong>Community partner outreach call</div>
           <div class="example-mini"><strong>Purpose</strong>Discussed warm referral path for housing support.</div>
-          <div class="example-mini"><strong>Time</strong>9:30 AM - 10:15 AM · 0.75 hours</div>
+          <div class="example-mini"><strong>Time</strong>9:30 AM - 10:15 AM Â· 0.75 hours</div>
           <div class="example-mini"><strong>Outcome</strong>Partner agreed to send eligibility checklist by email.</div>
         </div>
       </div>`,
@@ -862,9 +851,9 @@ function injectExamplePanels(){
         <h3>Example: service plan filled out</h3>
         <p>Build one plan per client, then add goals that mentors can connect to progress notes.</p>
         <div class="example-grid">
-          <div class="example-mini"><strong>Client</strong>Jordan R. · #1241 · Primary mentor: Steven Chambers</div>
+          <div class="example-mini"><strong>Client</strong>Jordan R. Â· #1241 Â· Primary mentor: Steven Chambers</div>
           <div class="example-mini"><strong>Need areas</strong>Housing, Employment, ID documents, Transportation</div>
-          <div class="example-mini"><strong>Goal</strong>Secure two job interviews by 07/15/2026 · In progress</div>
+          <div class="example-mini"><strong>Goal</strong>Secure two job interviews by 07/15/2026 Â· In progress</div>
           <div class="example-mini"><strong>Next step</strong>Mentor helps client upload resume and apply to two warehouse roles.</div>
         </div>
       </div>`,
@@ -873,7 +862,7 @@ function injectExamplePanels(){
         <h3>How the grants agent works</h3>
         <p>Give the agent the project idea, population, geography, amount, timeline, and funding types. It searches broadly beyond reentry grants, then sends the matching opportunities and a funding strategy to your inbox and the admin inbox.</p>
         <div class="example-grid">
-          <div class="example-mini"><strong>Input example</strong>Mobile reentry resource fair · $35,000 · Portland metro · 6-month launch.</div>
+          <div class="example-mini"><strong>Input example</strong>Mobile reentry resource fair Â· $35,000 Â· Portland metro Â· 6-month launch.</div>
           <div class="example-mini"><strong>Search scope</strong>Foundations, city/county grants, corporate giving, banks, credit unions, sponsorships.</div>
           <div class="example-mini"><strong>Inbox result</strong>Top funders, deadline notes, links, fit explanation, and recommended next action.</div>
           <div class="example-mini"><strong>Strategy</strong>60-day plan mixing grant asks, sponsor packets, individual donors, and in-kind support.</div>
@@ -884,9 +873,9 @@ function injectExamplePanels(){
         <h3>Example: directory contact</h3>
         <p>The Edit Fields button opens every editable contact field: ID, name, email, phone, address, relationship, home meeting, confirmation status, and notes.</p>
         <div class="example-grid">
-          <div class="example-mini"><strong>ID / name</strong>#1241 · Jordan Reed</div>
-          <div class="example-mini"><strong>Relationship</strong>Client · Home meeting: Monday Night Group</div>
-          <div class="example-mini"><strong>Contact</strong>jordan@example.org · 503-555-0141</div>
+          <div class="example-mini"><strong>ID / name</strong>#1241 Â· Jordan Reed</div>
+          <div class="example-mini"><strong>Relationship</strong>Client Â· Home meeting: Monday Night Group</div>
+          <div class="example-mini"><strong>Contact</strong>jordan@example.org Â· 503-555-0141</div>
           <div class="example-mini"><strong>Notes</strong>Release 06/20/2026; prefers text; needs ID follow-up.</div>
         </div>
       </div>`,
@@ -895,7 +884,7 @@ function injectExamplePanels(){
         <h3>Example: fundraising CRM contact</h3>
         <p>Use fundraising contacts separately from the general directory. Log giving history, relationship category, shared contacts, notes, and the last meaningful call/email/meeting.</p>
         <div class="example-grid">
-          <div class="example-mini"><strong>Contact</strong>Maria Lopez · Prospect · Credit union community fund</div>
+          <div class="example-mini"><strong>Contact</strong>Maria Lopez Â· Prospect Â· Credit union community fund</div>
           <div class="example-mini"><strong>Giving history</strong>$2,500 sponsorship pledged for summer event</div>
           <div class="example-mini"><strong>Common contacts</strong>TJC board member, workforce partner</div>
           <div class="example-mini"><strong>Reminder</strong>Follow up if no call/email/meeting has happened for 3+ months.</div>
@@ -917,7 +906,7 @@ function injectExamplePanels(){
         <h3>Example: whole project view</h3>
         <p>A complete project can be created through PMI steps or the AI Planner, then tracked as a list, Kanban board, and Gantt chart.</p>
         <div class="example-grid">
-          <div class="example-mini"><strong>Project</strong>Spring Reentry Job Fair · Active · Owner: Program Manager</div>
+          <div class="example-mini"><strong>Project</strong>Spring Reentry Job Fair Â· Active Â· Owner: Program Manager</div>
           <div class="example-mini"><strong>PMI</strong>Initiation done, Planning done, Execution active, Monitoring scheduled, Closing pending.</div>
           <div class="example-mini"><strong>Tasks</strong>Confirm venue, recruit employers, build flyer, assign intake table, collect outcomes.</div>
           <div class="example-mini"><strong>Outcome</strong>Dashboard shows open tasks; inbox tells owners what is assigned.</div>
@@ -972,8 +961,8 @@ function injectExamplePanels(){
         <h3>Example: expense report</h3>
         <p>Attach receipt photos directly to the expense report and list each expense line separately.</p>
         <div class="example-grid">
-          <div class="example-mini"><strong>Staff</strong>Steven Chambers · CVI grant</div>
-          <div class="example-mini"><strong>Expense line</strong>06/21/2026 · bus passes · $48.00 · client transportation</div>
+          <div class="example-mini"><strong>Staff</strong>Steven Chambers Â· CVI grant</div>
+          <div class="example-mini"><strong>Expense line</strong>06/21/2026 Â· bus passes Â· $48.00 Â· client transportation</div>
           <div class="example-mini"><strong>Receipt</strong>Upload clear photo or PDF of the receipt.</div>
           <div class="example-mini"><strong>Review</strong>Admin downloads the report from Reports and deletes only when appropriate.</div>
         </div>
@@ -998,7 +987,7 @@ function injectExamplePanels(){
 }
 
 
-// ─── INIT ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 injectExamplePanels();
 initForms();
@@ -1054,7 +1043,7 @@ Object.assign(window, {
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
 
-// ─── window assignments (required for inline onclick= handlers) ───────────
+// â”€â”€â”€ window assignments (required for inline onclick= handlers) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Object.assign(window, {
   navigate, goBack, switchTab, filterPayPeriod, exportTableCSV,
   generateTimesheet, tsUpdateFromStaff, populateTsMentors,
