@@ -1398,6 +1398,23 @@ app.post('/webhook', async (req, res, next) => {
 
 // ── AI Proxy ──────────────────────────────────────────────────────────────────
 
+// Per-user rate limit: 20 AI calls per hour (in-memory, resets on restart)
+const _aiRateLimits = new Map();
+const AI_RATE_LIMIT_PER_HOUR = 20;
+const AI_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+function checkAiRateLimit(userName) {
+  const now = Date.now();
+  const entry = _aiRateLimits.get(userName) || { count: 0, windowStart: now };
+  if (now - entry.windowStart > AI_RATE_WINDOW_MS) {
+    _aiRateLimits.set(userName, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= AI_RATE_LIMIT_PER_HOUR) return false;
+  _aiRateLimits.set(userName, { ...entry, count: entry.count + 1 });
+  return true;
+}
+
 async function callAnthropicApi({ messages, model = 'claude-opus-4-8', max_tokens = 2048, tools, betaHeader }) {
   const apiKey = String(process.env.ANTHROPIC_API_KEY || '').trim();
   if (!apiKey) {
@@ -1447,9 +1464,15 @@ async function writeAiAuditLog(targetDb, entry) {
 app.post('/api/ai/grants', async (req, res, next) => {
   try {
     const session = await requireSession(req, { db });
+    if (!checkAiRateLimit(session.user_name)) {
+      return res.status(429).json({ error: 'Too many AI requests — try again later' });
+    }
     const { prompt, use_web_search } = req.body || {};
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 10) {
       return res.status(400).json({ error: 'prompt is required' });
+    }
+    if (prompt.length > 12000) {
+      return res.status(400).json({ error: 'prompt exceeds maximum length' });
     }
     const tools = use_web_search ? [{ type: 'web_search_20250305', name: 'web_search', max_uses: 6 }] : undefined;
     let data, searched = !!use_web_search;
@@ -1477,9 +1500,15 @@ app.post('/api/ai/grants', async (req, res, next) => {
 app.post('/api/ai/social-post', async (req, res, next) => {
   try {
     const session = await requireSession(req, { db });
+    if (!checkAiRateLimit(session.user_name)) {
+      return res.status(429).json({ error: 'Too many AI requests — try again later' });
+    }
     const { prompt } = req.body || {};
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 10) {
       return res.status(400).json({ error: 'prompt is required' });
+    }
+    if (prompt.length > 6000) {
+      return res.status(400).json({ error: 'prompt exceeds maximum length' });
     }
     const data = await callAnthropicApi({ messages: [{ role: 'user', content: prompt.trim() }], model: 'claude-opus-4-8', max_tokens: 2048 });
     const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
@@ -1496,6 +1525,9 @@ app.post('/api/ai/social-post', async (req, res, next) => {
 app.post('/api/ai/project-plan', async (req, res, next) => {
   try {
     const session = await requireSession(req, { db });
+    if (!checkAiRateLimit(session.user_name)) {
+      return res.status(429).json({ error: 'Too many AI requests — try again later' });
+    }
     const { messages, beta } = req.body || {};
     if (!Array.isArray(messages) || !messages.length) {
       return res.status(400).json({ error: 'messages array is required' });
@@ -1516,9 +1548,15 @@ app.post('/api/ai/project-plan', async (req, res, next) => {
 app.post('/api/ai/meeting-summary', async (req, res, next) => {
   try {
     const session = await requireSession(req, { db });
+    if (!checkAiRateLimit(session.user_name)) {
+      return res.status(429).json({ error: 'Too many AI requests — try again later' });
+    }
     const { prompt, max_tokens } = req.body || {};
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 10) {
       return res.status(400).json({ error: 'prompt is required' });
+    }
+    if (prompt.length > 80000) {
+      return res.status(400).json({ error: 'prompt exceeds maximum length' });
     }
     const tokens = (typeof max_tokens === 'number' && max_tokens > 0 && max_tokens <= 4096) ? max_tokens : 1600;
     const data = await callAnthropicApi({ messages: [{ role: 'user', content: prompt.trim() }], model: 'claude-opus-4-8', max_tokens: tokens });

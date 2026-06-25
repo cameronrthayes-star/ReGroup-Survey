@@ -57,8 +57,8 @@ import { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, s
   saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, saveProfileIcs, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
-  meetingBotBaseUrl, ensureMeetingBotSession, loadMeetingBotSession, clearMeetingBotSession,
-  DEFAULT_MEETING_BACKEND, _calDetailId } from './pages/calendar.js';
+  meetingBotBaseUrl, loadMeetingBotSession, clearMeetingBotSession,
+  _calDetailId } from './pages/calendar.js';
 import { renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan,
   spAddGoal, spFillClientId } from './pages/service-plans.js';
 import { runGrantsAgent } from './pages/grants.js';
@@ -648,17 +648,20 @@ document.getElementById('event-form').addEventListener('submit', async function(
     data.photos = _evEditPhotos;   // editing with no new photos â€” keep existing
   }
   data.generatedPosts = generateSocialPost(data);
-  // Backend AI polish for every channel + newsletter (falls back to the
-  // built-in template per channel on any error or missing key).
+  let _aiPostsEnhanced = false;
   try {
     const ai = await generateAllPostsAI(data);
-    if (ai) Object.assign(data.generatedPosts, ai);
+    if (ai) { Object.assign(data.generatedPosts, ai); _aiPostsEnhanced = true; }
   } catch (err) { console.warn('AI post generation failed, using templates:', err); }
   const _sid = await saveForm('events', data);
   _evEditPhotos = null;
   btn.textContent = 'Generate Posts & Save'; btn.disabled = false;
   this.reset();
   showFormSuccess('events', _sid, data);
+  if (!_aiPostsEnhanced) {
+    const msg = document.getElementById('fsp-msg');
+    if (msg) msg.textContent += ' (Posts used built-in templates — sign into Meeting Bot to enable AI-enhanced copy.)';
+  }
 });
 
 // â”€â”€â”€ MEETING form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
