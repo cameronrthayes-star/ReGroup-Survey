@@ -5,7 +5,7 @@ import { db, DB, _sessions, _activities, _staff, _needsAssessments, _expenseRepo
        } from '../state.js';
 import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDate,
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
-         requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
+         requireAdmin, firstNameOf, fileToDataURL, profileEmails, primaryProfileEmail
        } from '../utils.js';
 
 // Form infrastructure accessed via window (defined in app.js)

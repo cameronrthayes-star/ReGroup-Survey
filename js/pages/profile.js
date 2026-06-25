@@ -5,7 +5,7 @@ import { db, DB, _sessions, _activities, _staff, _needsAssessments, _expenseRepo
        } from '../state.js';
 import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDate,
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
-         requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
+         requireAdmin, firstNameOf, printDoc
        } from '../utils.js';
 function fileToDataURL(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('Could not read file')); r.readAsDataURL(f); }); }
 function myStaffRecord(){ return DB.staff().find(s => s.name === currentUserName()); }

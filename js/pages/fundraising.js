@@ -1,4 +1,4 @@
-import { db, DB, _sessions, _activities, _staff, _needsAssessments, _expenseReports,
+﻿import { db, DB, _sessions, _activities, _staff, _needsAssessments, _expenseReports,
          _clients, _tasks, _projects, _events, _meetings, _fundContacts,
          _dashboardConfig, _securityConfig, _messages, _calendar, _rjCases, _servicePlans,
          collection, addDoc, getDocs, doc, setDoc, deleteDoc, query, orderBy, serverTimestamp
@@ -12,8 +12,6 @@ let _fundEmailList = [];   // fundraising contact ids selected for an email blas
 const FUND_FOLLOWUP_DAYS = 90;  // remind to reach out after ~3 months
 const FUND_RELATIONSHIPS = ['Donor','Major Donor','Prospect','Board Member','Volunteer','Partner Org','Grantor','Community Member','Vendor','Other'];
 
-function fEsc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function fmtMoney(n){ const v=Number(n)||0; return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 function injectExamplePanels(){
   const panels = {
