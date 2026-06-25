@@ -61,9 +61,6 @@ import { renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, s
   _calDetailId } from './pages/calendar.js';
 import { renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan,
   spAddGoal, spFillClientId } from './pages/service-plans.js';
-import { handlePresentationFile, generatePresentationNow, generatePresentation,
-  refreshPresentationHistory, clearPresentationHistory, loadPresentationFromHistory,
-  openPresentationStudio, renderPresentations } from './pages/presentations.js';
 import { renderGrantsKey, saveGrantsKey, runGrantsAgent } from './pages/grants.js';
 import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
@@ -193,28 +190,27 @@ onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap =
 
 // â”€â”€â”€ VIEW_TITLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const VIEW_TITLES = {
-  'dashboard':'Dashboard',
-  'progress-note':'Progress Note â€” DAP Format',
-  'activity-log':'Activity Log â€” Non-Client Services',
+  'dashboard':'Home',
+  'progress-note':'Progress Notes',
+  'activity-log':'Activity Log',
   'data-view':'Data View',
   'timesheets':'Timesheets',
-  'form-reports':'Reports â€” All Submitted Forms',
-  'profile':'My Profile',
-  'calendar':'Shared Calendar',
+  'form-reports':'Reports',
+  'profile':'Profile',
+  'calendar':'Meeting Bot',
   'rj':'Restorative Justice',
-  'grants':'Grants & Funding Agent',
+  'grants':'Grants',
   'settings':'Settings',
-  'needs-assessment':'Reentry Needs Assessment',
-  'expense-report':'Expense Reimbursement',
+  'needs-assessment':'Needs',
+  'expense-report':'Expenses',
   'clients':'Directory',
-  'service-plans':'Client Goals & Service Plans',
-  'presentations':'Presentation Studio',
+  'service-plans':'Service Plans',
   'email-blast':'Email Blast',
-  'my-tasks':'Mentor Inbox â€” Messages & Tasks',
+  'my-tasks':'Messaging',
   'projects':'Projects',
-  'events':'Events & Social Media',
-  'meetings':'Meeting Log',
-  'fundraising':'Fundraising CRM',
+  'events':'Socials',
+  'meetings':'Meetings',
+  'fundraising':'Funders',
 };
 
 // ===================================================================
@@ -253,7 +249,6 @@ function navigate(v, isBack) {
   if (v==='calendar') renderCalendar();
   if (v==='rj') renderRJ();
   if (v==='service-plans') renderServicePlans();
-  if (v==='presentations') renderPresentations();
   if (v==='grants') renderGrantsKey();
   if (v==='progress-note' || v==='activity-log') populateClientNameList();
   closeNav();
@@ -1003,7 +998,6 @@ Object.assign(window, {
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
-  handlePresentationFile, generatePresentationNow, refreshPresentationHistory, clearPresentationHistory, loadPresentationFromHistory, openPresentationStudio,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient, fillClientId,
@@ -1050,7 +1044,6 @@ Object.assign(window, {
   renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep, rjAddCheckin, deleteRJCase,
   renderGrantsKey, saveGrantsKey, runGrantsAgent,
   renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan, deleteServicePlan, spAddGoal, spFillClientId,
-  handlePresentationFile, generatePresentationNow, refreshPresentationHistory, clearPresentationHistory, loadPresentationFromHistory, openPresentationStudio,
   submitPIN, cancelPIN, changeAdminPIN,
   submitAppLogin, logout,
   renderClientDirectory, openClientModal, closeClientModal, saveClient, deleteClient, fillClientId,

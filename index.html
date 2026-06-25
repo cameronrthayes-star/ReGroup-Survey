@@ -21,39 +21,32 @@
     <div class="sidebar-logo-platform">Operations Platform</div>
   </div>
   <nav>
-    <div class="nav-section">Analytics</div>
-    <a onclick="navigate('dashboard')" data-view="dashboard"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg></span> Dashboard</a>
-    <a onclick="navigate('profile')" data-view="profile"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span> My Profile</a>
-    <a onclick="navigate('my-tasks')" data-view="my-tasks" id="nav-mentor-inbox"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Mentor Inbox <span id="nav-inbox-dot" style="display:none;margin-left:auto;width:8px;height:8px;border-radius:50%;background:#22c55e;"></span></a>
+    <a onclick="navigate('dashboard')" data-view="dashboard"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg></span> Home</a>
+    <a onclick="navigate('profile')" data-view="profile"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></span> Profile</a>
+    <a onclick="navigate('my-tasks')" data-view="my-tasks" id="nav-mentor-inbox"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span> Messaging <span id="nav-inbox-dot" style="display:none;margin-left:auto;width:8px;height:8px;border-radius:50%;background:#22c55e;"></span></a>
 
-    <div class="nav-section">Log Entry</div>
-    <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span> Progress Note</a>
+    <div class="nav-section">WORK</div>
+    <a onclick="navigate('progress-note')" data-view="progress-note"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg></span> Progress Notes</a>
     <a onclick="navigate('activity-log')" data-view="activity-log"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span> Activity Log</a>
+    <a onclick="navigate('rj')" data-view="rj"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg></span> Restorative Justice</a>
     <a onclick="navigate('meetings')" data-view="meetings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Meetings</a>
-    <a onclick="navigate('calendar')" data-view="calendar"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Calendar</a>
+    <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Directory</a>
 
-    <div class="nav-section">Reports</div>
-    <a onclick="navigate('timesheets')" data-view="timesheets"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span> Timesheet PDF</a>
+    <div class="nav-section">WORK FLOW</div>
+    <a onclick="navigate('calendar')" data-view="calendar"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Meeting Bot</a>
+    <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Projects</a>
+    <a onclick="navigate('events')" data-view="events"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> Socials</a>
+
+    <div class="nav-section">FUNDRAISING</div>
+    <a onclick="navigate('fundraising')" data-view="fundraising"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> Funders</a>
+    <a onclick="navigate('grants')" data-view="grants"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/></svg></span> Grants</a>
+
+    <div class="nav-section">FORMS</div>
+    <a onclick="navigate('needs-assessment')" data-view="needs-assessment"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Needs</a>
+    <a onclick="navigate('expense-report')" data-view="expense-report"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Expenses</a>
     <a onclick="navigate('form-reports')" data-view="form-reports"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg></span> Reports</a>
 
-    <div class="nav-section">Directory</div>
-    <a onclick="navigate('clients')" data-view="clients"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span> Directory</a>
-    <a onclick="navigate('service-plans')" data-view="service-plans"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Service Plans</a>
-    <a onclick="navigate('presentations')" data-view="presentations"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v10H4z"/><path d="M8 19l4-4 4 4"/><path d="M12 9v6"/></svg></span> Presentation Studio</a>
-    <a onclick="navigate('email-blast')" data-view="email-blast"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span> Email Blast</a>
-    <a onclick="navigate('fundraising')" data-view="fundraising"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> Fundraising</a>
-
-    <div class="nav-section">Forms</div>
-    <a onclick="navigate('needs-assessment')" data-view="needs-assessment"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span> Needs Assessment</a>
-    <a onclick="navigate('expense-report')" data-view="expense-report"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></span> Expense Report</a>
-
-    <div class="nav-section">Work</div>
-    <a onclick="navigate('projects')" data-view="projects"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span> Projects</a>
-    <a onclick="navigate('grants')" data-view="grants"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.5 13.5 17 22l-5-3-5 3 1.5-8.5"/></svg></span> Grants</a>
-    <a onclick="navigate('events')" data-view="events"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span> Events & Social</a>
-    <a onclick="navigate('rj')" data-view="rj"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg></span> Restorative Justice</a>
-
-    <div class="nav-section">Admin</div>
+    <div class="nav-section">SETTINGS</div>
     <a onclick="navigate('settings')" data-view="settings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> Settings</a>
   </nav>
 </div>
@@ -272,46 +265,6 @@
     </div>
 
     <!-- ===== PRESENTATION STUDIO ===== -->
-    <div id="view-presentations" class="view">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
-        <div>
-          <h2 style="color:var(--primary);font-size:1.1em;font-weight:700;margin-bottom:4px;">Presentation Studio</h2>
-          <p style="color:#666;font-size:0.86em;max-width:860px;margin:0;">Generate a ReGroup presentation from a short brief, uploaded document, or pasted notes. The backend shapes the deck, keeps the response in structured JSON, and saves the latest versions in your local history.</p>
-        </div>
-        <button class="btn btn-accent" onclick="openPresentationStudio()">＋ New Presentation</button>
-      </div>
-      <div class="card no-print" style="margin-bottom:14px;">
-        <div class="form-grid">
-          <div class="form-group"><label>Audience *</label><input type="text" id="pres-audience" placeholder="e.g. Funders, county partners, board members"></div>
-          <div class="form-group"><label>Purpose *</label><input type="text" id="pres-purpose" placeholder="e.g. Introduce the new restorative justice model"></div>
-          <div class="form-group"><label>Duration (minutes)</label><input type="number" id="pres-duration" min="1" value="20"></div>
-          <div class="form-group"><label>Slide count</label><select id="pres-slide-count"><option value="auto">Auto</option><option value="6">6</option><option value="8">8</option><option value="10">10</option><option value="12">12</option></select></div>
-          <div class="form-group full"><label>Tone</label><input type="text" id="pres-tone" value="clear and practical"></div>
-          <div class="form-group full"><label>Lived experience framing</label><textarea id="pres-lif" rows="2" placeholder="How should the deck include lived experience?"></textarea></div>
-          <div class="form-group full"><label>Data / evidence</label><textarea id="pres-data" rows="2" placeholder="What data or outcomes must be included?"></textarea></div>
-          <div class="form-group full"><label>Call to action</label><textarea id="pres-cta" rows="2" placeholder="What should the audience do next?"></textarea></div>
-          <div class="form-group full"><label>Key message</label><textarea id="pres-key" rows="2" placeholder="The one thing the audience should remember."></textarea></div>
-          <div class="form-group full"><label>Required points</label><textarea id="pres-points" rows="2" placeholder="People, programs, constraints, or facts that must appear."></textarea></div>
-          <div class="form-group full"><label>Document upload</label><input type="file" id="pres-file" accept=".txt,.md,.markdown,.csv,.json,.pdf,image/*" onchange="handlePresentationFile(this)"><div id="pres-file-info" style="font-size:0.76em;color:#777;margin-top:4px;">Optional: upload a brief or notes file.</div></div>
-          <div class="form-group full"><label>Contextual material</label><textarea id="pres-context" rows="4" placeholder="Paste source notes, a project brief, or text from an uploaded document."></textarea></div>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-          <button class="btn btn-primary" id="pres-generate-btn" onclick="generatePresentationNow()">✨ Generate Presentation</button>
-          <span id="pres-status" style="font-size:0.85em;color:#666;"></span>
-        </div>
-      </div>
-      <div class="card no-print" style="margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-          <strong style="color:var(--primary);">Recent generation history</strong>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-outline" onclick="refreshPresentationHistory()">Refresh</button>
-            <button class="btn btn-outline" onclick="clearPresentationHistory()">Clear History</button>
-          </div>
-        </div>
-        <div id="presentation-history-list"></div>
-      </div>
-      <div id="presentation-output"></div>
-    </div>
 
     <!-- Service Plan Modal -->
     <div id="sp-modal" style="display:none;position:fixed;inset:0;z-index:8500;background:rgba(10,20,60,0.6);align-items:center;justify-content:center;">
