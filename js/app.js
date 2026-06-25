@@ -219,7 +219,6 @@ const VIEW_TITLES = {
 // ===================================================================
 
 // â”€â”€â”€ navigate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-let _navHistory = [];
 function navigate(v, isBack) {
   if (v === 'settings' && !isAdmin()) {
     showAdminPasswordPage();
@@ -321,12 +320,7 @@ function cancelPIN() {
 // APP LOGIN / CURRENT USER (per-staff profiles)
 
 // â”€â”€â”€ APP LOGIN / CURRENT USER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-let _storeCurrentUser(null);          // {name, firstName, isAdmin}
-let _postLoginView = null;
 
-function firstNameOf(name){ return (name||'').trim().split(/\s+/)[0] || ''; }
-function currentUserName(){ return _currentUser ? _currentUser.name : ''; }
-function isAdmin(){ return !!(_currentUser && _currentUser.isAdmin); }
 function isOwnerOrAdmin(ownerName){ return isAdmin() || (!!ownerName && ownerName === currentUserName()); }
 
 function setCurrentUser(u){
@@ -424,7 +418,6 @@ function showAdminPasswordPage() {
   closeNav();
 }
 
-let _navHistory = [];
 
 // â”€â”€â”€ FORM INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // ===================================================================
