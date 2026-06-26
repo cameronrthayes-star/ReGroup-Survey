@@ -201,7 +201,7 @@ function openIcsSetup(){
 async function syncIcsCalendar(){
   const status=document.getElementById('gcal-status');
   const icsUrl=getMyIcsUrl();
-  if(!icsUrl){ if(status){status.style.color='#9a3412';status.textContent='No iCal link saved yet — click "📎 Sync via iCal link" and paste your calendar's secret iCal URL.';} return; }
+  if(!icsUrl){ if(status){status.style.color='#9a3412';status.textContent='No iCal link saved yet — click "📎 Sync via iCal link" and paste your calendar\'s secret iCal URL.';} return; }
   // The /api/ics proxy lives on the known-good backend; don't rely on a possibly-misconfigured Meeting Bot URL.
   const base=DEFAULT_MEETING_BACKEND.replace(/\/+$/,'');
   const reqUrl=base+'/api/ics?url='+encodeURIComponent(icsUrl);
