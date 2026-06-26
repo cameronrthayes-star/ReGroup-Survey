@@ -262,29 +262,61 @@ function renderFundraising(){
 
   const wrap = document.getElementById('fund-table-wrap');
   if (!wrap) return;
-  if (!all.length) { wrap.innerHTML = '<p style="color:#bbb;font-size:0.875em;">No contacts yet. Click “+ Add Contact” to start your fundraising list.</p>'; return; }
-  if (!list.length) { wrap.innerHTML = '<p style="color:#bbb;font-size:0.875em;">No contacts match your search/filter.</p>'; return; }
+  if (!all.length) { wrap.innerHTML = '<p style=”color:#bbb;font-size:0.875em;”>No contacts yet. Click “+ Add Contact” to start your fundraising list.</p>'; return; }
+  if (!list.length) { wrap.innerHTML = '<p style=”color:#bbb;font-size:0.875em;”>No contacts match your search/filter.</p>'; return; }
+
+  if (window.innerWidth < 600) {
+    wrap.innerHTML = `<div class=”mobile-card-list”>${list.map(c => {
+      const name = [c.firstName,c.lastName].filter(Boolean).join(' ') || '—';
+      const total = fundGiftTotal(c);
+      const follow = fundNeedsFollowup(c);
+      const checked = _fundEmailList.includes(c._id) ? 'checked' : '';
+      return `<div class=”m-card” onclick=”openContactDetail('${c._id}')”>
+        <div class=”m-card-row”>
+          <div style=”flex:1;min-width:0;”>
+            <div class=”m-card-title”>${fEsc(name)}</div>
+            ${c.org ? `<div class=”m-card-meta”>${fEsc(c.org)}</div>` : ''}
+          </div>
+          <label onclick=”event.stopPropagation()” style=”display:flex;align-items:center;gap:6px;font-size:0.8em;cursor:pointer;flex-shrink:0;”>
+            <input type=”checkbox” class=”fund-cb” value=”${c._id}” ${checked} onchange=”updateFundCheckedCount()”>
+            <span style=”color:#888;”>Select</span>
+          </label>
+        </div>
+        <div class=”m-card-badges”>
+          ${c.type ? `<span class=”badge badge-info”>${fEsc(c.type)}</span>` : ''}
+          ${c.relationship ? `<span class=”badge badge-purple”>${fEsc(c.relationship)}</span>` : ''}
+          ${follow ? '<span class=”badge badge-warn”>⚠ Follow up</span>' : '<span class=”badge badge-success”>✓ Recent</span>'}
+          ${total > 0 ? `<span class=”badge badge-success”>💰 ${fmtMoney(total)}</span>` : ''}
+        </div>
+        <div class=”m-card-meta” style=”margin-top:6px;color:${follow?'#c2410c':'#888'};”>
+          Last contact: ${fundRelative(fundLastContact(c))}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+    updateFundCheckedCount();
+    return;
+  }
 
   wrap.innerHTML = `<table>
     <thead><tr>
-      <th style="width:30px"></th>
-      <th>Name</th><th>Organization</th><th style="width:90px">Type</th><th style="width:120px">Relationship</th>
-      <th style="width:110px">Last contact</th><th style="width:90px">Giving</th><th style="width:130px">Status</th>
+      <th style=”width:30px”></th>
+      <th>Name</th><th>Organization</th><th style=”width:90px”>Type</th><th style=”width:120px”>Relationship</th>
+      <th style=”width:110px”>Last contact</th><th style=”width:90px”>Giving</th><th style=”width:130px”>Status</th>
     </tr></thead>
     <tbody>${list.map(c=>{
-      const name = [c.firstName,c.lastName].filter(Boolean).join(' ') || '<span style="color:#bbb">—</span>';
+      const name = [c.firstName,c.lastName].filter(Boolean).join(' ') || '<span style=”color:#bbb”>—</span>';
       const total = fundGiftTotal(c);
       const follow = fundNeedsFollowup(c);
-      const status = follow ? '<span class="badge badge-warn">⚠ Follow up</span>' : '<span class="badge badge-success">✓ Recent</span>';
+      const status = follow ? '<span class=”badge badge-warn”>⚠ Follow up</span>' : '<span class=”badge badge-success”>✓ Recent</span>';
       const checked = _fundEmailList.includes(c._id) ? 'checked' : '';
-      return `<tr style="cursor:pointer;" onclick="openContactDetail('${c._id}')">
-        <td onclick="event.stopPropagation()" style="text-align:center;"><input type="checkbox" class="fund-cb" value="${c._id}" ${checked} onchange="updateFundCheckedCount()"></td>
-        <td style="font-weight:600;color:var(--primary);">${fEsc(name)}</td>
-        <td style="font-size:0.85em;color:#555;">${fEsc(c.org)||'—'}</td>
-        <td>${c.type?`<span class="badge badge-info">${fEsc(c.type)}</span>`:'—'}</td>
-        <td style="font-size:0.82em;">${c.relationship?fEsc(c.relationship):'—'}</td>
-        <td style="font-size:0.82em;color:${follow?'#c2410c':'#555'};">${fundRelative(fundLastContact(c))}</td>
-        <td style="font-size:0.85em;font-weight:600;color:${total>0?'#43a047':'#bbb'};">${total>0?fmtMoney(total):'—'}</td>
+      return `<tr style=”cursor:pointer;” onclick=”openContactDetail('${c._id}')”>
+        <td onclick=”event.stopPropagation()” style=”text-align:center;”><input type=”checkbox” class=”fund-cb” value=”${c._id}” ${checked} onchange=”updateFundCheckedCount()”></td>
+        <td style=”font-weight:600;color:var(--primary);”>${fEsc(name)}</td>
+        <td style=”font-size:0.85em;color:#555;”>${fEsc(c.org)||'—'}</td>
+        <td>${c.type?`<span class=”badge badge-info”>${fEsc(c.type)}</span>`:'—'}</td>
+        <td style=”font-size:0.82em;”>${c.relationship?fEsc(c.relationship):'—'}</td>
+        <td style=”font-size:0.82em;color:${follow?'#c2410c':'#555'};”>${fundRelative(fundLastContact(c))}</td>
+        <td style=”font-size:0.85em;font-weight:600;color:${total>0?'#43a047':'#bbb'};”>${total>0?fmtMoney(total):'—'}</td>
         <td>${status}</td>
       </tr>`;
     }).join('')}</tbody>

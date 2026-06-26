@@ -205,6 +205,32 @@ function renderClientDirectory() {
     wrap.innerHTML = '<p style="color:#bbb;font-size:0.875em;">No clients found.</p>';
     return;
   }
+  if (window.innerWidth < 600) {
+    wrap.innerHTML = `<div class="mobile-card-list">${list.map(c => {
+      const name = [c.firstName, c.lastName].filter(Boolean).join(' ') || '—';
+      const badge = c.confirmation === 'Accurate' ? '<span class="badge badge-success">Accurate</span>' :
+                    c.confirmation === 'ION' ? '<span class="badge badge-warn">ION</span>' :
+                    c.confirmation === 'Accurate ION' ? '<span class="badge badge-info">Acc+ION</span>' :
+                    c.confirmation ? `<span class="badge badge-info">${fEsc(c.confirmation)}</span>` : '';
+      return `<div class="m-card">
+        <div class="m-card-id">${c.clientId ? 'ID ' + fEsc(c.clientId) : ''}</div>
+        <div class="m-card-title">${fEsc(name)}</div>
+        ${c.notes ? `<div class="m-card-meta" style="color:#888;">${fEsc(c.notes)}</div>` : ''}
+        <div class="m-card-badges">
+          <span class="badge badge-info">${fEsc(c.relationship||'Client')}</span>
+          ${badge}
+          ${c.homeMeeting ? `<span class="badge badge-info">🏠 ${fEsc(c.homeMeeting)}</span>` : ''}
+        </div>
+        <div class="m-card-meta" style="margin-top:6px;">
+          ${c.email ? `📧 ${fEsc(c.email)}` : ''}${c.email && c.phone ? ' · ' : ''}${c.phone ? `📞 ${fEsc(c.phone)}` : ''}
+        </div>
+        <div class="m-card-actions">
+          <button class="btn btn-outline" onclick="openClientModal('${c._id}')">Edit Fields</button>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+    return;
+  }
   wrap.innerHTML = `<table>
     <thead><tr>
       <th style="width:60px">ID</th>
