@@ -45,7 +45,7 @@ const RJ_STEPS = [
   ]},
   { key:'closure', title:'Closure', focus:'Formal RJ Team closing decision. A case counts as complete only after formal closure.', fields:[
     {id:'twoFacilitators', label:'Two facilitators present for final case work', type:'check'},
-    {id:'summary', label:'Facilitators' summary of process & immediate outcomes', type:'textarea'},
+    {id:'summary', label:"Facilitators' summary of process & immediate outcomes", type:'textarea'},
     {id:'nextSteps', label:'Next-step goals / support contacts', type:'textarea'},
     {id:'rjTeamApproved', label:'RJ Team agrees no further active casework is needed (marks case Closed)', type:'check'},
   ]},
