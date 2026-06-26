@@ -65,12 +65,13 @@ import { runGrantsAgent } from './pages/grants.js';
 import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
 import { setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
-  resetOrientationProgress, submitModuleQuiz, retryModuleQuiz } from './pages/orientation.js';
+  isOrientationComplete, resetOrientationProgress, submitModuleQuiz, retryModuleQuiz } from './pages/orientation.js';
 
 // â"€â"€â"€ Local app-level state â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 let _navHistory = [];
 let _postLoginView = null;
 let _listenersReady = 0;
+let _orientationLocked = false;
 
 // â"€â"€â"€ _onReady â€" fires once per listener; renders dashboard when all 16 land â"€
 function _onReady() {
@@ -79,6 +80,39 @@ function _onReady() {
     renderDashboard();
     refreshStaffDatalist();
     seedClientsIfEmpty();
+  }
+}
+
+function _applyNavLock(locked) {
+  window._orientationLocked = locked;
+  document.querySelectorAll('#sidebar nav a[data-view]').forEach(a => {
+    a.style.display = (locked && a.getAttribute('data-view') !== 'profile') ? 'none' : '';
+  });
+  document.querySelectorAll('#sidebar .nav-section').forEach(el => {
+    el.style.display = locked ? 'none' : '';
+  });
+}
+
+function _checkOrientationLock() {
+  if (!_currentUser || _currentUser.isAdmin) {
+    if (_orientationLocked) { _orientationLocked = false; _applyNavLock(false); }
+    return;
+  }
+  const s = DB.staff().find(st => st.name === _currentUser.name);
+  if (!s) return;
+  const complete = isOrientationComplete(s);
+  const wasLocked = _orientationLocked;
+  _orientationLocked = !complete;
+  _applyNavLock(_orientationLocked);
+  if (wasLocked !== _orientationLocked) {
+    if (_orientationLocked) {
+      _navHistory = [];
+      navigate('profile');
+    } else {
+      const ov = document.getElementById('orientation-module-overlay');
+      if (ov) ov.remove();
+      navigate('dashboard');
+    }
   }
 }
 
@@ -99,6 +133,7 @@ onSnapshot(query(collection(db,'activities'), orderBy('dateOfActivity','asc')), 
 onSnapshot(collection(db,'staff'), snap => {
   setStaff(snap.docs.map(d => ({...d.data(), _id:d.id})));
   _onReady();
+  _checkOrientationLock();
   refreshStaffDatalist();
   if (document.getElementById('view-settings')?.classList.contains('active')) renderSettings();
   if (document.getElementById('view-my-tasks')?.classList.contains('active')) renderMyTasks();
@@ -220,6 +255,7 @@ const VIEW_TITLES = {
 
 // â"€â"€â"€ navigate â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function navigate(v, isBack) {
+  if (_orientationLocked && !isAdmin() && v !== 'profile') { navigate('profile'); return; }
   if (v === 'settings' && !isAdmin()) {
     showAdminPasswordPage();
     return;
@@ -331,9 +367,15 @@ function setCurrentUser(u){
   updateUserChrome();
   const target = (u.isAdmin && _postLoginView) ? _postLoginView : 'dashboard';
   _postLoginView = null;
-  navigate(target);
+  if (!u.isAdmin) {
+    _checkOrientationLock();
+    if (!_orientationLocked) navigate(target);
+  } else {
+    navigate(target);
+  }
 }
 function logout(){
+  _orientationLocked = false; _applyNavLock(false);
   _storeCurrentUser(null); _storeAdminUnlocked(false);
   clearMeetingBotSession();
   try { localStorage.removeItem('rg_current_user'); } catch(e){}

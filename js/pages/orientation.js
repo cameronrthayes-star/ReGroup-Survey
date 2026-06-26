@@ -230,6 +230,10 @@ export function orientationPct(s) {
   return mods.length ? Math.round(done.length / mods.length * 100) : 0;
 }
 
+export function isOrientationComplete(s) {
+  return !!(s && s.orientationCompletedAt);
+}
+
 function myStaff() {
   return DB.staff().find(s => s.name === currentUserName()) || null;
 }
@@ -241,6 +245,13 @@ export function renderOrientationCard(s) {
   const pct = s ? orientationPct(s) : 0;
   const allDone = type && pct >= 100;
   const typeLabel = type ? (type.charAt(0).toUpperCase() + type.slice(1)) : '';
+  const locked = !!(window._orientationLocked);
+  const lockBanner = locked
+    ? '<div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;padding:14px 16px;margin-bottom:16px;">' +
+      '<div style="font-weight:700;color:#92400e;font-size:0.9em;margin-bottom:3px;">Orientation required</div>' +
+      '<div style="font-size:0.82em;color:#78350f;">Please complete orientation before using the rest of the app.</div>' +
+      '</div>'
+    : '';
 
   const typeBtns =
     '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">' +
@@ -251,6 +262,7 @@ export function renderOrientationCard(s) {
   if (!type) {
     return '<div class="card" style="margin-bottom:18px;">' +
       '<h3>Orientation</h3>' +
+      lockBanner +
       '<p style="font-size:0.84em;color:#888;margin-bottom:14px;">Select your orientation track to begin.</p>' +
       typeBtns +
       '</div>';
@@ -287,6 +299,7 @@ export function renderOrientationCard(s) {
 
   return '<div class="card" style="margin-bottom:18px;">' +
     '<h3>Orientation <span style="font-size:0.7em;font-weight:400;color:#9ca3af;margin-left:6px;">' + fEsc(typeLabel) + ' track</span></h3>' +
+    lockBanner +
     typeBtns +
     progressBar +
     '<div>' + moduleRows + '</div>' +
