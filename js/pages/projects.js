@@ -131,25 +131,29 @@ function renderGantt(){
 function renderKanban(){
   const kb=document.getElementById('projects-kanban'); if(!kb) return;
   const projects=DB.projects();
+  const isMobile=window.innerWidth < 600;
+  const colW=isMobile?'100%':'210px';
   const col=(status)=>{
     const items=projects.filter(p=>(p.status||'Active')===status);
     const cards=items.map(p=>{
       const isPMI=p.type==='pmi';
       const canEdit=isOwnerOrAdmin(p.assignedTo);
-      return `<div draggable="${canEdit}" ondragstart="kbDragStart(event,'${p._id}')"
+      return `<div draggable="${canEdit && !isMobile}" ondragstart="kbDragStart(event,'${p._id}')"
         onclick="openProjectDetail('${p._id}')"
-        style="background:#fff;border:1px solid #e5e9f0;border-left:4px solid ${isPMI?'var(--purple)':'var(--accent)'};border-radius:10px;padding:11px 12px;margin-bottom:10px;cursor:${canEdit?'grab':'pointer'};box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+        style="background:#fff;border:1px solid #e5e9f0;border-left:4px solid ${isPMI?'var(--purple)':'var(--accent)'};border-radius:10px;padding:11px 12px;margin-bottom:10px;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
         <div style="font-weight:700;font-size:0.9em;color:var(--primary);">${isPMI?'<span style="font-size:0.7em;background:var(--purple);color:#fff;border-radius:4px;padding:1px 5px;margin-right:5px;">PMI</span>':''}${fEsc(p.name||'Untitled')}</div>
         ${p.assignedTo?`<div style="font-size:0.74em;color:#777;margin-top:4px;">👤 ${fEsc(p.assignedTo)}</div>`:''}
       </div>`;
-    }).join('') || '<div style="color:#cbd5e1;font-size:0.8em;text-align:center;padding:14px 0;">Drop here</div>';
+    }).join('') || `<div style="color:#cbd5e1;font-size:0.8em;text-align:center;padding:14px 0;">${isMobile?'None':'Drop here'}</div>`;
     return `<div ondragover="event.preventDefault()" ondrop="kbDrop(event,'${status}')"
-      style="flex:1;min-width:210px;background:#f4f6fb;border-radius:12px;padding:12px;">
+      style="flex:1;min-width:${colW};background:#f4f6fb;border-radius:12px;padding:12px;">
       <div style="font-weight:700;font-size:0.82em;text-transform:uppercase;letter-spacing:.4px;color:#64748b;margin-bottom:10px;">${status} <span style="color:#cbd5e1;">(${items.length})</span></div>
       ${cards}</div>`;
   };
-  kb.innerHTML = `<p style="font-size:0.78em;color:#999;margin-bottom:10px;">Drag a project card between columns to change its status (owner/admin only).</p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">${KANBAN_COLS.map(col).join('')}</div>`;
+  const hint=isMobile
+    ? '<p style="font-size:0.78em;color:#999;margin-bottom:10px;">Tap a project card to open details and change its status.</p>'
+    : '<p style="font-size:0.78em;color:#999;margin-bottom:10px;">Drag a project card between columns to change its status (owner/admin only).</p>';
+  kb.innerHTML = hint + `<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;">${KANBAN_COLS.map(col).join('')}</div>`;
 }
 function kbDragStart(e,id){ e.dataTransfer.setData('text/plain', id); }
 async function kbDrop(e,status){
