@@ -319,8 +319,14 @@ function renderCalendar(){
   DB.calendar().forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
   (_gcalEvents[currentProfileEmail()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
   (_icsEvents[calendarSyncOwnerKey()]||[]).forEach(e=>{ if(e.date){(byDate[e.date]=byDate[e.date]||[]).push(e);} });
-  const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   _syncedIndex={}; _calSidN=0;
+
+  if(window.innerWidth < 600){
+    grid.innerHTML = _buildAgendaHtml(byDate, year, month, daysInMonth, todayStr);
+    return;
+  }
+
+  const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let cells='';
   for(let i=0;i<startDow;i++) cells+='<div style="background:#fafbfd;border-radius:8px;min-height:82px;"></div>';
   for(let d=1; d<=daysInMonth; d++){
@@ -335,6 +341,41 @@ function renderCalendar(){
   grid.innerHTML=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">
     ${dows.map(d=>`<div style="text-align:center;font-size:0.7em;font-weight:700;color:#94a3b8;text-transform:uppercase;padding-bottom:4px;">${d}</div>`).join('')}
     ${cells}</div>`;
+}
+
+function _buildAgendaHtml(byDate, year, month, daysInMonth, todayStr){
+  const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  let html='<div style="display:flex;flex-direction:column;">';
+  let hasEvents=false;
+  for(let d=1; d<=daysInMonth; d++){
+    const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const evs=(byDate[ds]||[]).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    if(!evs.length) continue;
+    hasEvents=true;
+    const isToday=ds===todayStr;
+    const dateObj=new Date(year,month,d);
+    const dayLabel=`${DOW[dateObj.getDay()].slice(0,3)}, ${dateObj.toLocaleDateString('en-US',{month:'short',day:'numeric'})}${isToday?' — Today':''}`;
+    html+=`<div style="margin-bottom:14px;">
+      <div style="font-size:0.72em;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:${isToday?'var(--accent)':'#94a3b8'};margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid #eef;">${dayLabel}</div>
+      ${evs.map(e=>{
+        const isGcal=!!e._gcal;
+        let onclick;
+        if(isGcal){ const sid='s'+(_calSidN++); _syncedIndex[sid]=e; onclick=`openSyncedDetail('${sid}')`; }
+        else { onclick=`openCalDetail('${e._id}')`; }
+        const accentColor=isGcal?'#4285F4':'var(--primary)';
+        return `<div onclick="${onclick}" style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:#fff;border-radius:8px;border:1px solid ${isToday?'var(--accent)':'#eef'};margin-bottom:6px;cursor:pointer;active:background:#f5f8ff;">
+          <div style="width:3px;align-self:stretch;min-height:18px;border-radius:2px;background:${accentColor};flex-shrink:0;margin-top:2px;"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:0.9em;color:${accentColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${isGcal?'<span style="opacity:0.6;font-size:0.82em;">G </span>':''}${fEsc(e.title||'Untitled')}</div>
+            ${e.time?`<div style="font-size:0.77em;color:#777;margin-top:2px;">🕐 ${fEsc(e.time)}</div>`:''}
+            ${e.video?'<div style="font-size:0.77em;color:#2f9bb5;margin-top:2px;">🎥 Video call</div>':''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+  if(!hasEvents) html+='<div style="text-align:center;padding:40px 20px;color:#bbb;"><div style="font-size:2.5em;margin-bottom:8px;">📅</div><div style="font-weight:600;">No events this month</div><div style="font-size:0.84em;margin-top:8px;">Tap + Add Event to create one</div></div>';
+  return html+'</div>';
 }
 function openCalEvent(id, presetDate){
   populateStaffNameList();
