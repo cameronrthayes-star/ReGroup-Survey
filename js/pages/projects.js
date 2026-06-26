@@ -111,6 +111,8 @@ function renderGantt(){
   const minD=new Date(min+'T00:00:00'), maxD=new Date(max+'T00:00:00');
   const span=Math.max(1,(maxD-minD)/86400000);
   const pct=ds=>{ const d=new Date(ds+'T00:00:00'); return ((d-minD)/86400000)/span*100; };
+  const isMobile = window.innerWidth < 600;
+  const labelW = isMobile ? '90px' : '160px';
   gt.innerHTML = '<div class="card"><p style="font-size:0.8em;color:#999;margin-bottom:12px;">'+fmtDate(min)+' → '+fmtDate(max)+'</p>' +
     blocks.map(b=>`<div style="margin-bottom:18px;">
       <div style="font-weight:700;color:var(--primary);margin-bottom:8px;">${b.p.type==='pmi'?'🏗 ':''}${fEsc(b.p.name)}</div>
@@ -119,11 +121,11 @@ function renderGantt(){
         const wpct=Math.max(3, right-left || 3);
         const done=x.t.status==='Done';
         return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-          <div style="width:160px;flex-shrink:0;font-size:0.78em;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${fEsc(x.t.description||'')}">${fEsc((x.t.description||'Task').slice(0,40))}</div>
+          <div style="width:${labelW};flex-shrink:0;font-size:0.78em;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${fEsc(x.t.description||'')}">${fEsc((x.t.description||'Task').slice(0,40))}</div>
           <div style="flex:1;position:relative;height:18px;background:#f1f5f9;border-radius:9px;">
             <div title="${fmtDate(x.s)} – ${fmtDate(x.e||x.s)}" style="position:absolute;left:${left}%;width:${wpct}%;height:18px;border-radius:9px;background:${done?'var(--success)':'var(--accent)'};min-width:10px;"></div>
           </div>
-          <div style="width:80px;flex-shrink:0;font-size:0.7em;color:#999;text-align:right;">${fmtDate(x.s)}</div>
+          ${isMobile?'':`<div style="width:80px;flex-shrink:0;font-size:0.7em;color:#999;text-align:right;">${fmtDate(x.s)}</div>`}
         </div>`;
       }).join('')}
     </div>`).join('') + '</div>';
