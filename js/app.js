@@ -340,7 +340,7 @@ function logout(){
 }
 function updateUserChrome(){
   const el = document.getElementById('current-user-label');
-  if (el) el.textContent = _currentUser ? ((_currentUser.isAdmin?'ðŸ'' ':'ðŸ'¤ ')+_currentUser.name) : '';
+  if (el) el.textContent = _currentUser ? ((_currentUser.isAdmin ? '🔑 ' : '👤 ')+_currentUser.name) : '';
   updateMentorInboxNav();
 }
 // Turn the Mentor Inbox nav green + show a dot when the current user has unread messages
