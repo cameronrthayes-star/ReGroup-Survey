@@ -249,3 +249,69 @@ table tr:hover td{background:#fafbff;}
   .stats-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;}
   .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  /* tap-friendly baseline + no leak */
+  .btn{min-height:44px;}
+  #sidebar nav a{min-height:44px;}
+  .tab-btn{min-height:44px;}
+  #main{overflow-x:hidden;}
+}
+
+/* ===== MOBILE CARD LIST (used by JS renderers on phones) ===== */
+.mobile-card-list{display:flex;flex-direction:column;gap:10px;}
+.m-card{background:#fff;border-radius:var(--radius-sm);padding:14px 15px;box-shadow:0 1px 8px rgba(0,0,0,0.07);border:1px solid rgba(0,0,0,0.06);cursor:pointer;}
+.m-card:active{background:#f5f8ff;}
+.m-card-id{font-size:0.72em;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;}
+.m-card-title{font-weight:700;color:var(--primary);font-size:0.98em;margin-bottom:5px;}
+.m-card-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-top:4px;}
+.m-card-meta{font-size:0.8em;color:#555;flex:1;min-width:0;}
+.m-card-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.m-card-actions{display:flex;gap:8px;margin-top:10px;}
+.m-card-actions .btn{flex:1;justify-content:center;font-size:0.83em;min-height:40px;}
+
+/* ===== PHONE (≤ 600px) ===== */
+@media(max-width:600px){
+  /* topbar: hide date + username */
+  #topbar-date{display:none;}
+  #current-user-label{display:none;}
+  #logout-btn{font-size:0.72em!important;padding:5px 8px!important;min-height:36px;}
+  /* tighter topbar + content */
+  #topbar{padding:10px 12px;}
+  #content{padding:12px 10px;}
+  /* card padding */
+  .card{padding:18px 13px;}
+  /* stats: 2-col on phone */
+  .stats-grid{grid-template-columns:1fr 1fr!important;gap:10px;}
+  /* tabs: no wrap, scroll */
+  .tabs{flex-wrap:nowrap;}
+  .tab-btn{flex-shrink:0;padding:10px 14px;font-size:0.8em;}
+  /* settings config tab: 1 col */
+  #ai-tab-config > div{grid-template-columns:1fr!important;}
+  /* example panels */
+  .example-grid{grid-template-columns:1fr;}
+  .example-process{grid-template-columns:1fr 1fr;}
+  .example-kanban{grid-template-columns:1fr;}
+  /* prevent iOS auto-zoom on inputs */
+  .form-group input,.form-group select,.form-group textarea{font-size:16px;}
+  /* form-section tighter */
+  .form-section{padding:12px;}
+  /* projects action buttons: wrap cleanly */
+  #view-projects > div:first-child > div:last-child{flex-wrap:wrap;}
+  #view-projects > div:first-child > div:last-child .btn{flex:1;min-width:140px;}
+  /* messaging compose: stack vertically */
+  #my-compose > div:first-child{flex-direction:column;}
+  /* PMI wizard header */
+  #pmi-wizard > div > div:first-child{padding:14px 18px 12px!important;}
+  /* modal inner padding — target the immediate child div of each modal/detail overlay */
+  [id$="-modal"] > div,[id$="-detail"] > div,#planner-modal > div,#pmi-wizard > div{padding-left:16px!important;padding-right:16px!important;}
+  /* ensure nothing overflows horizontally */
+  #content,#main,.card,#topbar{max-width:100vw;}
+}
+
+/* ===== NARROW (≤ 400px) ===== */
+@media(max-width:400px){
+  #topbar-title{font-size:1em;}
+  .stats-grid{grid-template-columns:1fr!important;}
+  .card{padding:14px 10px;}
+  .example-process{grid-template-columns:1fr;}
+  .btn{font-size:0.83em;}
+}
