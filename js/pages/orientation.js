@@ -138,7 +138,9 @@ export function orientationPct(s) {
   const type = s && s.orientationType;
   if (!type) return 0;
   const mods = MODULES[type] || MODULES.staff;
-  const done = s.completedSections || [];
+  const all = s.completedSections || [];
+  const prefix = type + ':';
+  const done = all.filter(id => id.startsWith(prefix));
   return mods.length ? Math.round(done.length / mods.length * 100) : 0;
 }
 
@@ -180,7 +182,7 @@ export function renderOrientationCard(s) {
     '<div style="font-size:0.78em;color:#6b7280;margin-bottom:16px;">' + pct + '% complete' + completedLabel + '</div>';
 
   const moduleRows = mods.map(m => {
-    const done = completed.includes(m.id);
+    const done = completed.includes(type + ':' + m.id);
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6;">' +
       '<span style="font-size:1em;color:' + (done ? '#43a047' : '#9ca3af') + ';flex-shrink:0;width:20px;text-align:center;">' + (done ? '&#10003;' : '&#9675;') + '</span>' +
       '<div style="flex:1;min-width:0;">' +
@@ -214,7 +216,7 @@ export function openOrientationModule(moduleId) {
   if (!mod) { alert('Module not found.'); return; }
 
   const completed = s ? (s.completedSections || []) : [];
-  const done = completed.includes(moduleId);
+  const done = completed.includes(type + ':' + moduleId);
 
   const existing = document.getElementById('orientation-module-overlay');
   if (existing) existing.remove();
@@ -235,7 +237,7 @@ export function openOrientationModule(moduleId) {
     '<div style="background:#fff;border-radius:16px;width:100%;max-width:560px;padding:24px;box-sizing:border-box;margin:auto;">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px;">' +
         '<h2 style="font-size:1.05em;font-weight:700;color:var(--primary);margin:0;flex:1;">' + fEsc(mod.title) + '</h2>' +
-        '<button onclick="closeOrientationModule()" style="background:none;border:none;font-size:1.3em;color:#9ca3af;cursor:pointer;padding:0;line-height:1;flex-shrink:0;" aria-label="Close">&#10005;</button>' +
+        '<button onclick="closeOrientationModule()" style="background:none;border:none;font-size:1.3em;color:#9ca3af;cursor:pointer;padding:10px;margin:-10px;line-height:1;flex-shrink:0;" aria-label="Close">&#10005;</button>' +
       '</div>' +
       '<p style="font-size:0.85em;color:#6b7280;margin-bottom:16px;">~' + mod.mins + ' min</p>' +
       '<p style="font-size:0.87em;color:#374151;margin-bottom:16px;">' + fEsc(mod.summary) + '</p>' +
@@ -285,9 +287,10 @@ export async function markSectionComplete(moduleId) {
   const mods = MODULES[type] || MODULES.staff;
   const allIds = mods.map(m => m.id);
   if (!allIds.includes(moduleId)) return;
+  const typedId = type + ':' + moduleId;
   const existing = s.completedSections || [];
-  if (existing.includes(moduleId)) { closeOrientationModule(); return; }
-  const completedSections = [...existing, moduleId];
+  if (existing.includes(typedId)) { closeOrientationModule(); return; }
+  const completedSections = [...existing, typedId];
   const now = new Date().toISOString();
   const update = { completedSections, orientationLastUpdated: now };
   if (completedSections.length === allIds.length) {
