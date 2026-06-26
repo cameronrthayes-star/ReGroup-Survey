@@ -1918,15 +1918,25 @@
     <p style="color:#8899b0;font-size:0.78em;text-transform:uppercase;letter-spacing:0.12em;margin-bottom:28px;font-weight:600;">Operations Platform</p>
     <input id="app-password-input" type="password" placeholder="Password — e.g. Cameron1234"
       style="width:100%;padding:13px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:1.05em;text-align:center;letter-spacing:0.15em;margin-bottom:10px;font-family:inherit;transition:all 0.2s;color:#1e2a3a;"
-      onkeydown="if(event.key==='Enter')submitAppLogin()"
+      onkeydown="if(event.key==='Enter'&&!document.getElementById('app-login-btn')?.disabled)submitAppLogin()"
       onfocus="this.style.borderColor='#29b6cf';this.style.boxShadow='0 0 0 3px rgba(41,182,207,0.15)'"
       onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='none'"
       oninput="document.getElementById('app-login-error').textContent=''">
     <div id="app-login-error" style="color:#ef5350;font-size:0.82em;min-height:18px;margin-bottom:12px;font-weight:500;"></div>
-    <button onclick="submitAppLogin()" style="width:100%;padding:14px;background:linear-gradient(135deg,#1a237e,#283593);color:#fff;border:none;border-radius:12px;font-size:0.97em;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;letter-spacing:0.02em;box-shadow:0 4px 14px rgba(26,35,126,0.3);" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(26,35,126,0.38)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(26,35,126,0.3)'">Sign In →</button>
+    <button id="app-login-btn" onclick="submitAppLogin()" disabled style="width:100%;padding:14px;background:linear-gradient(135deg,#1a237e,#283593);color:#fff;border:none;border-radius:12px;font-size:0.97em;font-weight:700;cursor:not-allowed;opacity:0.6;font-family:inherit;transition:all 0.2s;letter-spacing:0.02em;box-shadow:0 4px 14px rgba(26,35,126,0.3);" onmouseover="if(!this.disabled){this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(26,35,126,0.38)'}" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(26,35,126,0.3)'">Preparing login…</button>
+    <p id="app-login-status" style="color:#8899b0;font-size:0.75em;margin-top:10px;min-height:16px;text-align:center;">Loading app…</p>
   </div>
 </div>
 
+<script>
+  window._loginReadyTimeout = setTimeout(function() {
+    var btn = document.getElementById('app-login-btn');
+    var status = document.getElementById('app-login-status');
+    if (btn && btn.disabled) {
+      if (status) { status.textContent = 'Load error — please refresh the page.'; status.style.color = '#ef5350'; }
+    }
+  }, 15000);
+</script>
 <script type="module" src="js/app.js"></script>
 
 </body>

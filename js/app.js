@@ -973,12 +973,17 @@ function injectExamplePanels(){
 
 
 // â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-injectExamplePanels();
-initForms();
-restoreSession();
-// Poll the meeting backend so finished summaries reach attendee inboxes even when off the Calendar tab
-setInterval(()=>{ if(_currentUser){ try{ checkMeetingSummaries(); autoDispatchBots(); }catch(e){} } }, 120000);
+try {
+  document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  injectExamplePanels();
+  initForms();
+  restoreSession();
+  // Poll the meeting backend so finished summaries reach attendee inboxes even when off the Calendar tab
+  setInterval(()=>{ if(_currentUser){ try{ checkMeetingSummaries(); autoDispatchBots(); }catch(e){} } }, 120000);
+} catch(e) {
+  const s = document.getElementById('app-login-status');
+  if (s) { s.textContent = 'Initialization error — please refresh the page.'; s.style.color = '#ef5350'; }
+}
 
 // Expose all functions used by inline onclick/onchange handlers to global scope
 // (required because <script type="module"> does not share scope with HTML attributes)
@@ -1072,3 +1077,12 @@ Object.assign(window, {
 // Also expose mutable state references for page modules
 window._formEditId = _formEditId;
 window.readImagesCompressed = readImagesCompressed;
+
+// Enable the Sign In button once all global functions are wired
+(function() {
+  clearTimeout(window._loginReadyTimeout);
+  const btn = document.getElementById('app-login-btn');
+  const status = document.getElementById('app-login-status');
+  if (btn) { btn.disabled = false; btn.textContent = 'Sign In →'; btn.style.cursor = 'pointer'; btn.style.opacity = '1'; }
+  if (status) status.style.display = 'none';
+})();
