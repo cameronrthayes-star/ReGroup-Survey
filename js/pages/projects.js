@@ -284,14 +284,14 @@ let _plannerSteps = [];
 
 function openAIPlanner(){
   _plannerDoc = null; _plannerSteps = [];
-  [‘plan-name’,’plan-text’,’plan-file’].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=’’; });
-  document.getElementById(‘plan-file-info’).textContent = ‘’;
-  document.getElementById(‘plan-status’).textContent = ‘’;
-  document.getElementById(‘plan-steps’).innerHTML = ‘’;
-  document.getElementById(‘plan-create-btn’).style.display = ‘none’;
-  document.getElementById(‘planner-modal’).style.display = ‘flex’;
+  ['plan-name','plan-text','plan-file'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('plan-file-info').textContent = '';
+  document.getElementById('plan-status').textContent = '';
+  document.getElementById('plan-steps').innerHTML = '';
+  document.getElementById('plan-create-btn').style.display = 'none';
+  document.getElementById('planner-modal').style.display = 'flex';
 }
-function closeAIPlanner(){ document.getElementById(‘planner-modal’).style.display=’none’; }
+function closeAIPlanner(){ document.getElementById('planner-modal').style.display='none'; }
 
 function handlePlannerFile(input){
   const f = input.files && input.files[0];

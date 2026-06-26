@@ -162,7 +162,7 @@ function updateERTotal() {
 // Compress an image File to a JPEG data URL via canvas, capped to maxDim px.
 function compressImage(file, maxDim=1280, quality=0.7){
   return new Promise((resolve,reject)=>{
-    if (!file.type || !file.type.startsWith('image/')) { reject(new Error('“'+file.name+'” is not an image.')); return; }
+    if (!file.type || !file.type.startsWith('image/')) { reject(new Error('"'+file.name+'" is not an image.')); return; }
     const reader=new FileReader();
     reader.onerror=()=>reject(new Error('Could not read '+file.name));
     reader.onload=()=>{

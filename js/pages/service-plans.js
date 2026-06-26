@@ -31,7 +31,7 @@ function renderServicePlans(){
   const q=(document.getElementById('sp-search')?.value||'').toLowerCase();
   let list=all.slice().reverse();
   if(q) list=list.filter(p=>JSON.stringify(p).toLowerCase().includes(q));
-  if(!all.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:40px;">No service plans yet. Click “＋ New Service Plan” to build one (linked to clients, mentors, and progress notes).</div>'; return; }
+  if(!all.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:40px;">No service plans yet. Click "＋ New Service Plan" to build one (linked to clients, mentors, and progress notes).</div>'; return; }
   if(!list.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:30px;">No plans match your search.</div>'; return; }
   el.innerHTML=list.map(p=>{
     const goals=p.goals||[]; const open=goals.filter(g=>g.status!=='Completed').length;
@@ -49,7 +49,7 @@ function openServicePlan(id){
   document.getElementById('sp-goals').innerHTML='';
   if(id){
     const p=DB.servicePlans().find(x=>x._id===id); if(!p) return;
-    if(!isOwnerOrAdmin(p.mentor)){ alert('Only the plan’s mentor or an admin can edit this plan.'); return; }
+    if(!isOwnerOrAdmin(p.mentor)){ alert('Only the plan's mentor or an admin can edit this plan.'); return; }
     _spId=id;
     document.getElementById('sp-modal-title').textContent='Edit Service Plan';
     set('sp-id',id); set('sp-clientName',p.clientName); set('sp-clientId',p.clientId); set('sp-mentor',p.mentor);

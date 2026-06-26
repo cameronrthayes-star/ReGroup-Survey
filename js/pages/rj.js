@@ -45,7 +45,7 @@ const RJ_STEPS = [
   ]},
   { key:'closure', title:'Closure', focus:'Formal RJ Team closing decision. A case counts as complete only after formal closure.', fields:[
     {id:'twoFacilitators', label:'Two facilitators present for final case work', type:'check'},
-    {id:'summary', label:'Facilitators’ summary of process & immediate outcomes', type:'textarea'},
+    {id:'summary', label:'Facilitators' summary of process & immediate outcomes', type:'textarea'},
     {id:'nextSteps', label:'Next-step goals / support contacts', type:'textarea'},
     {id:'rjTeamApproved', label:'RJ Team agrees no further active casework is needed (marks case Closed)', type:'check'},
   ]},
@@ -58,7 +58,7 @@ function rjStatusBadge(c){ const s=c.status||'Open'; const cls=s==='Closed'?'bad
 function renderRJ(){
   const el=document.getElementById('rj-list'); if(!el) return;
   const cases=DB.rjCases().slice().sort((a,b)=>(b.caseNumber||0)-(a.caseNumber||0));
-  if(!cases.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:40px;">No cases yet. Click “＋ New Case” to begin a guided restorative-justice case.</div>'; return; }
+  if(!cases.length){ el.innerHTML='<div class="card" style="color:#bbb;text-align:center;padding:40px;">No cases yet. Click "＋ New Case" to begin a guided restorative-justice case.</div>'; return; }
   el.innerHTML=cases.map(c=>{
     const done=c.currentStep||0;
     return `<div class="card" style="margin-bottom:12px;cursor:pointer;" onclick="openRJCase('${c._id}')">

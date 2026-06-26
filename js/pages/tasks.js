@@ -409,7 +409,7 @@ function closeMentorTasks(){ document.getElementById('mtask-modal').style.displa
 function _msgTs(m){ return (m._createdAt && m._createdAt.seconds) || (m._createdAt && typeof m._createdAt.toMillis==='function' ? m._createdAt.toMillis()/1000 : 0) || 0; }
 // Group all messages involving `me` into per-person threads, with an inline reply box on each.
 function renderMyThreads(me, msgs){
-  if (!msgs.length) return '<div class="card" style="color:#bbb;text-align:center;padding:20px;margin-bottom:18px;">No messages yet. Use “✉ Send a Message” below to start one — replies appear here as a thread.</div>';
+  if (!msgs.length) return '<div class="card" style="color:#bbb;text-align:center;padding:20px;margin-bottom:18px;">No messages yet. Use "✉ Send a Message" below to start one — replies appear here as a thread.</div>';
   const threads={};
   msgs.forEach(m=>{ const partner=(m.from===me ? m.mentorName : m.from)||'Unknown'; (threads[partner]=threads[partner]||[]).push(m); });
   const partners=Object.keys(threads).sort((a,b)=>_msgTs(threads[b][threads[b].length-1])-_msgTs(threads[a][threads[a].length-1]));

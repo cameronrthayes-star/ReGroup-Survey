@@ -1,5 +1,5 @@
 ﻿// ================================================================
-// app.js â€” entry point: Firestore listeners, navigation, auth,
+// app.js â€" entry point: Firestore listeners, navigation, auth,
 // form framework, and wiring all page modules to window.
 // ================================================================
 import { db, DB,
@@ -65,12 +65,12 @@ import { runGrantsAgent } from './pages/grants.js';
 import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
 
-// â”€â”€â”€ Local app-level state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ Local app-level state â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 let _navHistory = [];
 let _postLoginView = null;
 let _listenersReady = 0;
 
-// â”€â”€â”€ _onReady â€” fires once per listener; renders dashboard when all 16 land â”€
+// â"€â"€â"€ _onReady â€" fires once per listener; renders dashboard when all 16 land â"€
 function _onReady() {
   _listenersReady++;
   if (_listenersReady === 16) {
@@ -80,7 +80,7 @@ function _onReady() {
   }
 }
 
-// â”€â”€â”€ Firestore real-time listeners â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ Firestore real-time listeners â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 onSnapshot(query(collection(db,'sessions'),   orderBy('dateOfService','asc')),   snap => {
   setSessions(snap.docs.map(d => ({...d.data(), _id:d.id, _type:'client'})));
   _onReady();
@@ -188,7 +188,7 @@ onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap =
   if (_msgMentor && document.getElementById('msg-modal')?.style.display === 'flex') renderMessageThread();
 });
 
-// â”€â”€â”€ VIEW_TITLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ VIEW_TITLES â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const VIEW_TITLES = {
   'dashboard':'Home',
   'progress-note':'Progress Notes',
@@ -215,7 +215,7 @@ const VIEW_TITLES = {
 
 // ===================================================================
 
-// â”€â”€â”€ navigate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ navigate â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function navigate(v, isBack) {
   if (v === 'settings' && !isAdmin()) {
     showAdminPasswordPage();
@@ -253,7 +253,7 @@ function navigate(v, isBack) {
   closeNav();
 }
 
-// Back button â€” return to the previously viewed page
+// Back button â€" return to the previously viewed page
 function goBack(){
   const prev = _navHistory.pop();
   updateBackBtn();
@@ -275,7 +275,7 @@ function requireAdmin(cb) {
   else alert('Only an administrator can do this. Log in as an admin to continue.');
 }
 
-// â”€â”€â”€ AUTH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ AUTH â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const DEFAULT_ADMIN_PIN = '12345678';
 
 function getAdminPIN() {
@@ -314,7 +314,7 @@ function cancelPIN() {
 // ===================================================================
 // APP LOGIN / CURRENT USER (per-staff profiles)
 
-// â”€â”€â”€ APP LOGIN / CURRENT USER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ APP LOGIN / CURRENT USER â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 function isOwnerOrAdmin(ownerName){ return isAdmin() || (!!ownerName && ownerName === currentUserName()); }
 
@@ -340,7 +340,7 @@ function logout(){
 }
 function updateUserChrome(){
   const el = document.getElementById('current-user-label');
-  if (el) el.textContent = _currentUser ? ((_currentUser.isAdmin?'ðŸ‘‘ ':'ðŸ‘¤ ')+_currentUser.name) : '';
+  if (el) el.textContent = _currentUser ? ((_currentUser.isAdmin?'ðŸ'' ':'ðŸ'¤ ')+_currentUser.name) : '';
   updateMentorInboxNav();
 }
 // Turn the Mentor Inbox nav green + show a dot when the current user has unread messages
@@ -379,7 +379,7 @@ function submitAppLogin() {
     document.getElementById('app-password-input').value=''; return;
   }
   if (err) err.style.color = '#ef5350';
-  if (!DB.staff().length){ err.textContent='â³ Still loading staff â€” wait a moment and try again.'; return; }
+  if (!DB.staff().length){ err.textContent='â³ Still loading staff â€" wait a moment and try again.'; return; }
   err.textContent='âŒ Incorrect. Your password is your first name + 1234 (e.g. Cameron1234).';
   document.getElementById('app-password-input').value='';
   document.getElementById('app-password-input').focus();
@@ -388,8 +388,8 @@ function submitAppLogin() {
 async function changeAdminPIN() {
   const current = prompt('Enter current PIN:');
   if (current !== getAdminPIN()) { alert('Incorrect current PIN.'); return; }
-  const next = prompt('Enter new PIN (4â€“8 digits):');
-  if (!next || !/^\d{4,8}$/.test(next)) { alert('PIN must be 4â€“8 digits.'); return; }
+  const next = prompt('Enter new PIN (4â€"8 digits):');
+  if (!next || !/^\d{4,8}$/.test(next)) { alert('PIN must be 4â€"8 digits.'); return; }
   const confirm2 = prompt('Confirm new PIN:');
   if (next !== confirm2) { alert('PINs do not match.'); return; }
   try {
@@ -414,7 +414,7 @@ function showAdminPasswordPage() {
 }
 
 
-// â”€â”€â”€ FORM INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ FORM INIT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 // ===================================================================
 const SUPPORT_TYPES = ['Violence Prevention Mentoring','Conflict Mediation','Crisis Intervention',
   'Safety Planning','Hospital/Post-Injury Intervention','Retaliation Prevention',
@@ -439,10 +439,10 @@ const SERVICE_AREAS = ['Violence Prevention','Restorative Justice','Community Ou
   'Partnership Development','Behavioral Health Support','Housing / Stabilization',
   'Employment Pathways','Youth Engagement','Crisis Response','Organizational Capacity','Training','Other'];
 
-const OUTCOMES = ['Service Successfully Delivered','Mentor Attempted Contact â€” Client Unreachable',
+const OUTCOMES = ['Service Successfully Delivered','Mentor Attempted Contact â€" Client Unreachable',
   'Client Cancelled','Client No-Show','Rescheduled','Other'];
 
-const SAFETY_PN = ['No concerns','Yes â€” Immediate Risk','Yes â€” Emerging Concern'];
+const SAFETY_PN = ['No concerns','Yes â€" Immediate Risk','Yes â€" Emerging Concern'];
 
 const GRANTS = ['BeBlac','Collins Foundation','CJC','CVI','General Fund','RISE','WHC','Vital Project Funds'];
 
@@ -499,7 +499,7 @@ function initForms() {
   document.querySelector('#activity-log-form [name="startTime"]')?.addEventListener('change', updateALHours);
   document.querySelector('#activity-log-form [name="endTime"]')?.addEventListener('change', updateALHours);
 
-  // Expense Report â€” seed first row and wire total update
+  // Expense Report â€" seed first row and wire total update
   addERRow();
   document.querySelector('#er-form [name="cashAdvance"]')?.addEventListener('input', updateERTotal);
 }
@@ -521,13 +521,13 @@ function refreshStaffDatalist() {
   const mtSel = document.getElementById('my-tasks-mentor');
   if (mtSel) {
     const current = mtSel.value;
-    mtSel.innerHTML = '<option value="">â€” Select your name â€”</option>' +
+    mtSel.innerHTML = '<option value="">â€" Select your name â€"</option>' +
       names.map(n=>'<option value="' + n + '"' + (n===current?' selected':'') + '>' + n + '</option>').join('');
   }
 }
 
 
-// â”€â”€â”€ FORM SUBMIT (progress-note + activity-log) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ FORM SUBMIT (progress-note + activity-log) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 // ===================================================================
 document.getElementById('progress-note-form').addEventListener('submit', async function(e) {
   e.preventDefault();
@@ -568,7 +568,7 @@ document.getElementById('activity-log-form').addEventListener('submit', async fu
 });
 
 
-// â”€â”€â”€ NEEDS ASSESSMENT form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ NEEDS ASSESSMENT form submit â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 document.getElementById('na-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
@@ -584,7 +584,7 @@ document.getElementById('na-form').addEventListener('submit', async function(e) 
   showFormSuccess('needs-assessment', _sid, data);
 });
 
-// â”€â”€â”€ EXPENSE REPORT form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ EXPENSE REPORT form submit â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 document.getElementById('er-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
@@ -631,7 +631,7 @@ document.getElementById('er-form').addEventListener('submit', async function(e) 
   showFormSuccess('expense-report', _sid, data);
 });
 
-// â”€â”€â”€ EVENT form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ EVENT form submit â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 document.getElementById('event-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = this.querySelector('[type="submit"]');
@@ -645,7 +645,7 @@ document.getElementById('event-form').addEventListener('submit', async function(
     try { data.photos = await readImagesCompressed(photoInput.files, {maxDim:1280, quality:0.7, maxCount:4, maxTotalKB:850}); }
     catch(err){ alert(err.message); btn.textContent='Generate Posts & Save'; btn.disabled=false; return; }
   } else if (_formEditId['events'] && _evEditPhotos && _evEditPhotos.length){
-    data.photos = _evEditPhotos;   // editing with no new photos â€” keep existing
+    data.photos = _evEditPhotos;   // editing with no new photos â€" keep existing
   }
   data.generatedPosts = generateSocialPost(data);
   let _aiPostsEnhanced = false;
@@ -664,7 +664,7 @@ document.getElementById('event-form').addEventListener('submit', async function(
   }
 });
 
-// â”€â”€â”€ MEETING form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ MEETING form submit â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 document.addEventListener('DOMContentLoaded', () => {
   const mf = document.getElementById('meetings-form');
   if (mf) mf.addEventListener('submit', async e => {
@@ -689,7 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// â”€â”€â”€ FORM FRAMEWORK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ FORM FRAMEWORK â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 // ===================================================================
 const FORM_DEF = {
   'progress-note':   {coll:'sessions',         formId:'progress-note-form', submitter:'mentorName',   view:'progress-note',    label:'Progress Note'},
@@ -733,7 +733,7 @@ function fspEdit(){ const k=_fspKey,id=_fspId,rec=_fspRecord; fspClose(); editFo
 function editForm(key, id, skipNameCheck, rec){
   const def=FORM_DEF[key];
   rec = rec || recordById(def.coll,id);
-  if(!rec){ alert('Record not found â€” it may still be saving. Try again in a moment.'); return; }
+  if(!rec){ alert('Record not found â€" it may still be saving. Try again in a moment.'); return; }
   if(!skipNameCheck){
     const owner=(rec._owner||rec[def.submitter]||'').trim();
     if(!(isAdmin() || owner===currentUserName())){ alert('You can only edit forms you submitted.'); return; }
@@ -782,7 +782,7 @@ function prefillER(rec){
 
 // ===================================================================
 
-// â”€â”€â”€ injectExamplePanels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ injectExamplePanels â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function injectExamplePanels(){
   const panels = {
     'view-progress-note': `
@@ -972,7 +972,7 @@ function injectExamplePanels(){
 }
 
 
-// â”€â”€â”€ INIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ INIT â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 try {
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   injectExamplePanels();
@@ -1030,7 +1030,7 @@ Object.assign(window, {
 
 // Dashboard and staff datalist are rendered once Firestore listeners fire (_onReady)
 
-// â”€â”€â”€ window assignments (required for inline onclick= handlers) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â"€â"€â"€ window assignments (required for inline onclick= handlers) â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 Object.assign(window, {
   navigate, goBack, switchTab, filterPayPeriod, exportTableCSV,
   generateTimesheet, tsUpdateFromStaff, populateTsMentors,

@@ -126,7 +126,7 @@ async function sendBotForSyncedLegacy(){
     const d=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error((d.error&&(d.error.message||JSON.stringify(d.error)))||('HTTP '+r.status));
     const ev=d.event||d; const botId=ev.provider_bot_id||ev.bot_id||'';
-    status.style.color='#15803d'; status.textContent='✓ Bot dispatched'+(botId?(' (id '+botId+')'):'')+'. Admit “ReGroup Summary Agent” in the meeting; the summary goes to attendee inboxes when it ends.';
+    status.style.color='#15803d'; status.textContent='✓ Bot dispatched'+(botId?(' (id '+botId+')'):'')+'. Admit "ReGroup Summary Agent" in the meeting; the summary goes to attendee inboxes when it ends.';
   }catch(err){ status.style.color='#e53935'; status.textContent='Bot error — '+err.message; }
 }
 async function ensureSyncedCalEvent(e){
@@ -201,7 +201,7 @@ function openIcsSetup(){
 async function syncIcsCalendar(){
   const status=document.getElementById('gcal-status');
   const icsUrl=getMyIcsUrl();
-  if(!icsUrl){ if(status){status.style.color='#9a3412';status.textContent='No iCal link saved yet — click “📎 Sync via iCal link” and paste your calendar’s secret iCal URL.';} return; }
+  if(!icsUrl){ if(status){status.style.color='#9a3412';status.textContent='No iCal link saved yet — click "📎 Sync via iCal link" and paste your calendar's secret iCal URL.';} return; }
   // The /api/ics proxy lives on the known-good backend; don't rely on a possibly-misconfigured Meeting Bot URL.
   const base=DEFAULT_MEETING_BACKEND.replace(/\/+$/,'');
   const reqUrl=base+'/api/ics?url='+encodeURIComponent(icsUrl);
@@ -520,11 +520,11 @@ function toggleMeetingRecording(id){
   const status=document.getElementById('mtg-rec-status');
   const btn=document.getElementById('mtg-rec-btn');
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ if(status){status.style.color='#e53935'; status.textContent='Live transcription needs Chrome or Edge. Use “paste transcript” instead.';} return; }
+  if(!SR){ if(status){status.style.color='#e53935'; status.textContent='Live transcription needs Chrome or Edge. Use "paste transcript" instead.';} return; }
   if(_mtgRecOn){ // stop
     _mtgRecOn=false; try{ _mtgRec && _mtgRec.stop(); }catch(e){}
     btn.textContent='🔴 Start recording'; btn.classList.remove('btn-outline'); btn.classList.add('btn-danger');
-    if(status){ status.style.color='#43a047'; status.textContent='Stopped. Review the transcript, then “Summarize & message attendees”.'; }
+    if(status){ status.style.color='#43a047'; status.textContent='Stopped. Review the transcript, then "Summarize & message attendees".'; }
     return;
   }
   // start
