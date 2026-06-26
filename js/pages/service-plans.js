@@ -49,7 +49,7 @@ function openServicePlan(id){
   document.getElementById('sp-goals').innerHTML='';
   if(id){
     const p=DB.servicePlans().find(x=>x._id===id); if(!p) return;
-    if(!isOwnerOrAdmin(p.mentor)){ alert('Only the plan's mentor or an admin can edit this plan.'); return; }
+    if(!isOwnerOrAdmin(p.mentor)){ alert('Only the plan\'s mentor or an admin can edit this plan.'); return; }
     _spId=id;
     document.getElementById('sp-modal-title').textContent='Edit Service Plan';
     set('sp-id',id); set('sp-clientName',p.clientName); set('sp-clientId',p.clientId); set('sp-mentor',p.mentor);
