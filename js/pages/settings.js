@@ -26,7 +26,7 @@ function renderSettings() {
         <div class="name">${s.name}</div>
         <div class="meta">${s.role} · $${s.rate}/hr · ${s.regularHrs}h/pay period · ${s.defaultGrant}</div>
         ${s.startDate?`<div class="meta">Start: ${fmtDate(s.startDate)}</div>`:''}
-        <div class="meta" style="margin-top:2px;">Orientation: ${s.orientationType ? orientationPct(s)+'% ('+s.orientationType+' track)' : 'not started'}</div>
+        <div class="meta" style="margin-top:2px;">Orientation: ${s.orientationType ? orientationPct(s)+'% ('+s.orientationType+' track)' : 'not started'}${(s.orientationType||(s.completedSections&&s.completedSections.length)) ? ' <button class="btn btn-outline" onclick="resetOrientationProgress(\''+s._id+'\')" style="padding:2px 7px;font-size:0.7em;margin-left:6px;">Reset</button>' : ''}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
         <button class="btn btn-outline" onclick="openStaffModal('${s._id}')" style="padding:6px 12px;font-size:0.78em;">Edit</button>
