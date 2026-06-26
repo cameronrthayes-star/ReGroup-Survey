@@ -7,6 +7,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          getActivityLabel, safeConcernBadge, currentUserName, isAdmin, isOwnerOrAdmin,
          requireAdmin, firstNameOf, printDoc
        } from '../utils.js';
+import { renderOrientationCard } from './orientation.js';
 function fileToDataURL(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('Could not read file')); r.readAsDataURL(f); }); }
 function myStaffRecord(){ return DB.staff().find(s => s.name === currentUserName()); }
 function profileEmails(raw){
@@ -87,7 +88,8 @@ function renderProfile(){
         </div>`).join(''):'<p style="color:#bbb;font-size:0.85em;">No documents yet.</p>'}</div>
       <label class="btn btn-accent" style="margin-top:12px;cursor:pointer;font-size:0.82em;">+ Add Document<input type="file" accept="image/*,.pdf" style="display:none;" onchange="uploadProfileDoc(this,'${s._id}')"></label>
       <span id="pf-doc-status" style="font-size:0.82em;color:#888;margin-left:10px;"></span>
-    </div>`;
+    </div>
+    ${renderOrientationCard(s)}`;
 }
 async function saveProfile(){
   const s=myStaffRecord(); if(!s) return;

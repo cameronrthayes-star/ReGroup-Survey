@@ -8,6 +8,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          requireAdmin, firstNameOf, fileToDataURL, printDoc, profileEmails, primaryProfileEmail
        } from '../utils.js';
 import { DEFAULT_MEETING_BACKEND } from './calendar.js';
+import { orientationPct } from './orientation.js';
 
 function renderSettings() {
   refreshStaffDatalist();
@@ -25,6 +26,7 @@ function renderSettings() {
         <div class="name">${s.name}</div>
         <div class="meta">${s.role} · $${s.rate}/hr · ${s.regularHrs}h/pay period · ${s.defaultGrant}</div>
         ${s.startDate?`<div class="meta">Start: ${fmtDate(s.startDate)}</div>`:''}
+        <div class="meta" style="margin-top:2px;">Orientation: ${s.orientationType ? orientationPct(s)+'% ('+s.orientationType+' track)' : 'not started'}</div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;">
         <button class="btn btn-outline" onclick="openStaffModal('${s._id}')" style="padding:6px 12px;font-size:0.78em;">Edit</button>

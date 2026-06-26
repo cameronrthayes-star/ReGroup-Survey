@@ -64,6 +64,7 @@ import { renderServicePlans, openServicePlan, closeServicePlan, saveServicePlan,
 import { runGrantsAgent } from './pages/grants.js';
 import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
+import { setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete } from './pages/orientation.js';
 
 // â"€â"€â"€ Local app-level state â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 let _navHistory = [];
@@ -999,6 +1000,7 @@ Object.assign(window, {
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc, saveProfileIcs,
+  setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
@@ -1043,6 +1045,7 @@ Object.assign(window, {
   renderFormReports, printTimesheet,
   fspSubmitAnother, fspEdit, fspDashboard, editForm, deleteReport,
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc, saveProfileIcs,
+  setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
   openIcsSetup, syncIcsCalendar, openSyncedDetail, closeSyncedDetail, sendBotForSynced,
