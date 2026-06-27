@@ -1,0 +1,16 @@
+# Local environment — API keys, service account
+.env.local
+.env.*.local
+
+# Local extraction outputs — handbook JSON drafts (may contain internal policy)
+local-output/
+
+# Handbook PDFs (never commit)
+*.pdf
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

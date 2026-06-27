@@ -2,7 +2,15 @@
   "name": "regroup-survey",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "check": "node scripts/check-js.mjs"
+    "check": "node scripts/check-js.mjs",
+    "extract:staff": "node --env-file=.env.local scripts/extract-handbooks.js --type=staff",
+    "extract:volunteer": "node --env-file=.env.local scripts/extract-handbooks.js --type=volunteer",
+    "approve-chunks": "node --env-file=.env.local scripts/approve-handbook-chunks.js"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
+    "firebase-admin": "^12.3.1"
   }
 }
