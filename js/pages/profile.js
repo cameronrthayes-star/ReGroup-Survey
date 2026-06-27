@@ -8,6 +8,7 @@ import { fEsc, fmtMoney, fmtDate, fmtDateSlash, fmtTime, calcHours, uuid, getDat
          requireAdmin, firstNameOf, printDoc
        } from '../utils.js';
 import { renderOrientationCard } from './orientation.js';
+import { renderHandbookChatCard } from './handbook-chat.js';
 function fileToDataURL(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('Could not read file')); r.readAsDataURL(f); }); }
 function myStaffRecord(){ return DB.staff().find(s => s.name === currentUserName()); }
 function profileEmails(raw){
@@ -89,7 +90,8 @@ function renderProfile(){
       <label class="btn btn-accent" style="margin-top:12px;cursor:pointer;font-size:0.82em;">+ Add Document<input type="file" accept="image/*,.pdf" style="display:none;" onchange="uploadProfileDoc(this,'${s._id}')"></label>
       <span id="pf-doc-status" style="font-size:0.82em;color:#888;margin-left:10px;"></span>
     </div>
-    ${renderOrientationCard(s)}`;
+    ${renderOrientationCard(s)}
+    ${renderHandbookChatCard(s)}`;
 }
 async function saveProfile(){
   const s=myStaffRecord(); if(!s) return;
