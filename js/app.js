@@ -67,7 +67,8 @@ import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
 import { setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   isOrientationComplete, resetOrientationProgress, submitModuleQuiz, retryModuleQuiz,
   openHandbookReader, closeHandbookReader, hbPrev, hbNext,
-  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone } from './pages/orientation.js';
+  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone,
+  hbCompleteOrientation } from './pages/orientation.js';
 import { sendHandbookQuestion } from './pages/handbook-chat.js';
 
 // â"€â"€â"€ Local app-level state â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
@@ -1052,7 +1053,7 @@ Object.assign(window, {
   setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   submitModuleQuiz, retryModuleQuiz, resetOrientationProgress,
   openHandbookReader, closeHandbookReader, hbPrev, hbNext,
-  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone,
+  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone, hbCompleteOrientation,
   sendHandbookQuestion,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
@@ -1101,7 +1102,7 @@ Object.assign(window, {
   setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   submitModuleQuiz, retryModuleQuiz, resetOrientationProgress,
   openHandbookReader, closeHandbookReader, hbPrev, hbNext,
-  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone,
+  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone, hbCompleteOrientation,
   sendHandbookQuestion,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,

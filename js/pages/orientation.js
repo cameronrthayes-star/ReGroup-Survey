@@ -12,6 +12,11 @@ const QUIZ_CHECKPOINTS = {
   volunteer: [6, 15],
 };
 
+const REQUIRED_CHECKPOINTS = {
+  staff:     ['staff:q_after_6','staff:q_after_13','staff:q_after_19','staff:q_after_26','staff:q_after_34','staff:q_after_43'],
+  volunteer: ['volunteer:q_after_6','volunteer:q_after_15'],
+};
+
 const QUIZ_DATA = {
   'staff:q_after_6': {
     label: 'Mission, At-Will Employment & Harassment Policy',
@@ -556,9 +561,10 @@ let _hbMaxViewed      = 0;
 let _hbIsAdminPreview = false;
 let _hbStaffId        = null;
 let _hbQueryToken     = 0;
-let _hbHandbookType   = 'staff';
-let _hbQuizzesPassed  = [];
-let _hbQuizOpen       = false;
+let _hbHandbookType    = 'staff';
+let _hbQuizzesPassed   = [];
+let _hbQuizOpen        = false;
+let _hbAlreadyComplete = false;
 
 export function orientationPct(s) {
   const type = s && s.orientationType;
@@ -676,9 +682,10 @@ export async function openHandbookReader(type) {
 
   _hbIsAdminPreview = adminPreview;
   _hbStaffId        = s ? s._id : null;
-  _hbHandbookType   = handbookType;
-  _hbQuizzesPassed  = (!adminPreview && s && Array.isArray(s.hbQuizzesPassed)) ? [...s.hbQuizzesPassed] : [];
-  _hbQuizOpen       = false;
+  _hbHandbookType    = handbookType;
+  _hbQuizzesPassed   = (!adminPreview && s && Array.isArray(s.hbQuizzesPassed)) ? [...s.hbQuizzesPassed] : [];
+  _hbQuizOpen        = false;
+  _hbAlreadyComplete = !adminPreview && !!(s && s.orientationCompletedAt);
 
   // Saved progress (ignored for admin preview)
   const savedCurrent   = (!adminPreview && s && typeof s.hbCurrentChunk === 'number') ? s.hbCurrentChunk : 0;
@@ -776,6 +783,11 @@ function _hbRenderChunk(existingOverlay) {
     ? '<div style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:3px 10px;font-size:0.72em;color:#15803d;font-weight:600;margin-bottom:12px;">&#10003; Quiz passed</div>'
     : '';
 
+  // Completion section — shown only on final chunk when all checkpoints passed and not already complete
+  const reqCps         = REQUIRED_CHECKPOINTS[handbookType] || [];
+  const allCpsPassed   = reqCps.every(function(id) { return _hbQuizzesPassed.includes(id); });
+  const showCompletion = isLast && !_hbIsAdminPreview && !_hbAlreadyComplete && allCpsPassed;
+
   overlay.innerHTML =
     '<div style="background:#fff;flex:1;display:flex;flex-direction:column;overflow:hidden;">' +
       adminBanner +
@@ -806,13 +818,27 @@ function _hbRenderChunk(existingOverlay) {
           fEsc(chunk.sourceCitation || '') +
         '</div>' +
         (quizBadge ? '<div style="margin-top:14px;">' + quizBadge + '</div>' : '') +
+        (showCompletion
+          ? '<div style="margin-top:20px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:14px 16px;">' +
+            '<div style="font-weight:700;font-size:0.85em;color:#15803d;margin-bottom:3px;">&#10003; Orientation ready to complete</div>' +
+            '<div style="font-size:0.78em;color:#16a34a;">You\'ve read the full handbook and passed all checkpoints.</div>' +
+            '</div>'
+          : '') +
       '</div>' +
       // Footer
-      '<div style="padding:12px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;display:flex;gap:8px;">' +
-        '<button onclick="hbPrev()" ' + (isFirst ? 'disabled' : '') + ' style="' + prevStyle + '">← Previous</button>' +
-        '<button onclick="closeHandbookReader()" style="flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;cursor:pointer;">Close</button>' +
-        '<button onclick="hbNext()" ' + (nextDisabled ? 'disabled' : '') + ' style="' + nextStyle + '">' + nextLabel + '</button>' +
-      '</div>' +
+      (showCompletion
+        ? '<div style="padding:12px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;">' +
+          '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+            '<button onclick="hbPrev()" ' + (isFirst ? 'disabled' : '') + ' style="' + prevStyle + '">← Previous</button>' +
+            '<button onclick="closeHandbookReader()" style="flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;cursor:pointer;">Close</button>' +
+          '</div>' +
+          '<button onclick="hbCompleteOrientation()" style="width:100%;min-height:48px;padding:13px;font-size:0.95em;font-weight:600;background:#16a34a;color:#fff;border:none;border-radius:10px;cursor:pointer;word-break:break-word;">Complete Orientation</button>' +
+          '</div>'
+        : '<div style="padding:12px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;display:flex;gap:8px;">' +
+          '<button onclick="hbPrev()" ' + (isFirst ? 'disabled' : '') + ' style="' + prevStyle + '">← Previous</button>' +
+          '<button onclick="closeHandbookReader()" style="flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;cursor:pointer;">Close</button>' +
+          '<button onclick="hbNext()" ' + (nextDisabled ? 'disabled' : '') + ' style="' + nextStyle + '">' + nextLabel + '</button>' +
+          '</div>') +
     '</div>';
 }
 
@@ -1054,8 +1080,37 @@ export function hbCloseQuizDone() {
   _hbQuizOpen = false;
   const quizOv = document.getElementById('hb-quiz-overlay');
   if (quizOv) quizOv.remove();
-  // Re-render the reader to show the "Quiz passed" badge on the final chunk
+  // Re-render the reader to show the "Quiz passed" badge / completion section on the final chunk
   _hbRenderChunk();
+}
+
+export async function hbCompleteOrientation() {
+  if (_hbIsAdminPreview || !_hbStaffId) return;
+  const handbookType = _hbHandbookType;
+  const reqCps = REQUIRED_CHECKPOINTS[handbookType] || [];
+  if (!reqCps.every(function(id) { return _hbQuizzesPassed.includes(id); })) return;
+  if (_hbMaxViewed < _hbChunks.length - 1) return;
+
+  const now = new Date().toISOString();
+  try {
+    await DB.updateRecord('staff', _hbStaffId, {
+      orientationCompletedAt: now,
+      orientationLastUpdated: now,
+      hbCurrentChunk:         _hbCurrent,
+      hbMaxViewed:            _hbMaxViewed,
+      hbQuizzesPassed:        _hbQuizzesPassed,
+    });
+  } catch (_) {
+    alert('Could not save completion. Please check your connection and try again.');
+    return;
+  }
+
+  // Remove overlays; onSnapshot will detect orientationCompletedAt, unlock nav, navigate to dashboard
+  const quizOv = document.getElementById('hb-quiz-overlay');
+  if (quizOv) quizOv.remove();
+  const readerOv = document.getElementById('hb-reader-overlay');
+  if (readerOv) readerOv.remove();
+  if (typeof window.renderProfile === 'function') window.renderProfile();
 }
 
 // ─── Legacy module overlay (kept for backwards compat; not shown in main card) ─
