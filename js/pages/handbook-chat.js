@@ -1,6 +1,6 @@
 import { fEsc, isAdmin } from '../utils.js';
 import { isOrientationComplete } from './orientation.js';
-import { ensureMeetingBotSession, meetingBotBaseUrl } from './calendar.js';
+import { meetingBotBaseUrl } from './calendar.js';
 
 export function renderHandbookChatCard(s) {
   if (!s) return '';
@@ -83,21 +83,11 @@ export async function sendHandbookQuestion() {
   statusEl.style.display = 'block';
   if (answerArea) answerArea.style.display = 'none';
 
-  let token = '';
-  try {
-    token = await ensureMeetingBotSession();
-  } catch (err) {
-    statusEl.style.color = '#e53935';
-    statusEl.textContent = 'Could not authorize: ' + err.message;
-    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Ask'; }
-    return;
-  }
-
   let data;
   try {
-    const resp = await fetch(meetingBotBaseUrl() + '/api/ai/handbook-chat', {
+    const resp = await fetch(meetingBotBaseUrl() + '/api/ai/handbook-chat-public', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, handbookType })
     });
     if (!resp.ok) {
