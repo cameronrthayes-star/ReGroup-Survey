@@ -61,13 +61,17 @@ function parseArgs(argv) {
 
 // ─── Readline prompt ─────────────────────────────────────────────────────────
 
+// Single shared interface so piped stdin is not consumed on first close.
+let _rl = null;
+function getRL() {
+  if (!_rl) _rl = createInterface({ input: process.stdin, output: process.stdout });
+  return _rl;
+}
+function closeRL() { if (_rl) { _rl.close(); _rl = null; } }
+
 function prompt(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise(resolve => {
-    rl.question(question, answer => {
-      rl.close();
-      resolve(answer.trim());
-    });
+    getRL().question(question, answer => resolve(answer.trim()));
   });
 }
 
@@ -238,6 +242,8 @@ async function main() {
   const inputPath  = path.resolve(args['input']      || DEFAULT_INPUT);
   const collection = args['collection'] || DEFAULT_COLLECTION;
   const dryRun     = !!args.dryRun;
+  const cliApprover = args['approver'] || null;  // --approver="Name" skips name prompt
+  const cliYes      = !!args['yes'];             // --yes skips confirmation prompt
 
   console.log('\n=== TJC Handbook Chunk Approval Script ===');
   console.log(`Input file      : ${inputPath}`);
@@ -308,7 +314,13 @@ async function main() {
   if (!dryRun) {
     console.log('\nYou are about to write these chunks to Firestore.');
     console.log(`Target: ${FIRESTORE_PROJECT}/${collection}`);
-    approverName = await prompt('\nEnter your name (will be stored as approvedBy): ');
+
+    if (cliApprover) {
+      approverName = cliApprover;
+      console.log(`\nApprover (from --approver flag): "${approverName}"`);
+    } else {
+      approverName = await prompt('\nEnter your name (will be stored as approvedBy): ');
+    }
     if (!approverName || approverName.length < 2) {
       console.error('Error: Approver name is required (minimum 2 characters).');
       process.exit(1);
@@ -317,10 +329,16 @@ async function main() {
     // ── Explicit confirmation ──
     console.log(`\nAbout to write ${chunks.length} chunks as approved by "${approverName}"`);
     console.log(`to Firestore project: ${FIRESTORE_PROJECT}, collection: ${collection}`);
-    const confirm = await prompt('\nType "yes" to confirm and write to Firestore, or anything else to cancel: ');
-    if (confirm.toLowerCase() !== 'yes') {
-      console.log('\nCancelled. No data was written.');
-      process.exit(0);
+
+    if (cliYes) {
+      console.log('[--yes flag set] Skipping interactive confirmation.');
+    } else {
+      const confirm = await prompt('\nType "yes" to confirm and write to Firestore, or anything else to cancel: ');
+      closeRL();
+      if (confirm.toLowerCase() !== 'yes') {
+        console.log('\nCancelled. No data was written.');
+        process.exit(0);
+      }
     }
   } else {
     approverName = 'dry-run-user';
