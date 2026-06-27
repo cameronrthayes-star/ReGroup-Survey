@@ -1,5 +1,9 @@
-import { DB } from '../state.js';
+import { DB, db, getDocs, collection, query, orderBy } from '../state.js';
 import { fEsc, currentUserName, isAdmin } from '../utils.js';
+import { where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const STAFF_CHUNK_COUNT    = 44;
+const VOLUNTEER_CHUNK_COUNT = 16;
 
 const MODULES = {
   staff: [
@@ -220,6 +224,14 @@ const MODULES = {
   ],
 };
 
+// ─── Reader module state ──────────────────────────────────────────────────────
+let _hbChunks        = [];
+let _hbCurrent       = 0;
+let _hbMaxViewed     = 0;
+let _hbIsAdminPreview = false;
+let _hbStaffId       = null;
+let _hbQueryToken    = 0;
+
 export function orientationPct(s) {
   const type = s && s.orientationType;
   if (!type) return 0;
@@ -239,12 +251,21 @@ function myStaff() {
 }
 
 export function renderOrientationCard(s) {
-  const type = s ? (s.orientationType || '') : '';
-  const mods = type ? (MODULES[type] || MODULES.staff) : [];
-  const completed = s ? (s.completedSections || []) : [];
-  const pct = s ? orientationPct(s) : 0;
-  const allDone = type && pct >= 100;
-  const typeLabel = type ? (type.charAt(0).toUpperCase() + type.slice(1)) : '';
+  // Admins get a preview-only card — no progress tracking
+  if (isAdmin()) {
+    return '<div class="card" style="margin-bottom:18px;">' +
+      '<h3>Handbook <span style="font-size:0.7em;font-weight:400;color:#9ca3af;margin-left:6px;">Admin Preview</span></h3>' +
+      '<div style="font-size:0.8em;color:#6b7280;margin-bottom:14px;">Preview the handbook content without affecting any staff record.</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+        '<button class="btn btn-outline" onclick="openHandbookReader(\'staff\')" style="flex:1;min-width:120px;padding:11px 8px;">Preview Staff Handbook</button>' +
+        '<button class="btn btn-outline" onclick="openHandbookReader(\'volunteer\')" style="flex:1;min-width:120px;padding:11px 8px;">Preview Volunteer Handbook</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  if (!s) return '';
+
+  const type = s.orientationType || '';
   const locked = !!(window._orientationLocked);
   const lockBanner = locked
     ? '<div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;padding:14px 16px;margin-bottom:16px;">' +
@@ -268,44 +289,219 @@ export function renderOrientationCard(s) {
       '</div>';
   }
 
-  const barColor = allDone ? '#43a047' : pct > 0 ? '#f59e0b' : '#d1d5db';
-  const completedLabel = allDone && s.orientationCompletedAt
-    ? ' &mdash; completed ' + fEsc(s.orientationCompletedAt.slice(0, 10))
-    : allDone ? ' &mdash; all sections done' : '';
+  const typeLabel    = type === 'volunteer' ? 'Volunteer' : 'Staff';
+  const totalChunks  = type === 'volunteer' ? VOLUNTEER_CHUNK_COUNT : STAFF_CHUNK_COUNT;
 
-  const progressBar =
-    '<div style="background:#e5e7eb;border-radius:8px;height:8px;margin-bottom:6px;overflow:hidden;">' +
-      '<div style="width:' + pct + '%;height:100%;background:' + barColor + ';border-radius:8px;transition:width 0.3s;"></div>' +
-    '</div>' +
-    '<div style="font-size:0.78em;color:#6b7280;margin-bottom:16px;">' + pct + '% complete' + completedLabel + '</div>';
-
-  const moduleRows = mods.map(m => {
-    const done = completed.includes(type + ':' + m.id);
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6;">' +
-      '<span style="font-size:1em;color:' + (done ? '#43a047' : '#9ca3af') + ';flex-shrink:0;width:20px;text-align:center;">' + (done ? '&#10003;' : '&#9675;') + '</span>' +
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="font-weight:600;font-size:0.87em;color:#1f2937;">' + fEsc(m.title) + '</div>' +
-        '<div style="font-size:0.74em;color:#9ca3af;">~' + m.mins + ' min</div>' +
+  // Already completed — preserve existing completion for legacy users
+  if (isOrientationComplete(s)) {
+    const completedDate = s.orientationCompletedAt ? s.orientationCompletedAt.slice(0, 10) : '';
+    return '<div class="card" style="margin-bottom:18px;">' +
+      '<h3>Orientation <span style="font-size:0.7em;font-weight:400;color:#9ca3af;margin-left:6px;">' + fEsc(typeLabel) + ' track</span></h3>' +
+      '<div style="background:#f0fdf4;border-radius:10px;padding:14px 16px;border:1px solid #bbf7d0;margin-bottom:14px;display:flex;align-items:center;gap:10px;">' +
+        '<span style="color:#16a34a;font-size:1.2em;flex-shrink:0;">&#10003;</span>' +
+        '<div>' +
+          '<div style="font-weight:700;color:#15803d;font-size:0.9em;">Orientation Complete</div>' +
+          (completedDate ? '<div style="font-size:0.75em;color:#16a34a;">Completed ' + fEsc(completedDate) + '</div>' : '') +
+        '</div>' +
       '</div>' +
-      '<button class="btn ' + (done ? 'btn-outline' : 'btn-accent') + '" style="padding:7px 12px;font-size:0.76em;flex-shrink:0;min-width:64px;" onclick="openOrientationModule(\'' + fEsc(m.id) + '\')">' +
-        (done ? 'Review' : 'Start') +
-      '</button>' +
-      '</div>';
-  }).join('');
+      typeBtns +
+      '<button class="btn btn-outline" onclick="openHandbookReader(\'' + fEsc(type) + '\')" style="width:100%;padding:11px 8px;font-size:0.87em;">Review Handbook</button>' +
+    '</div>';
+  }
 
-  const footer = allDone
-    ? '<p style="font-size:0.8em;color:#43a047;font-weight:600;margin-top:12px;margin-bottom:0;">Orientation complete. Great work!</p>'
-    : '<p style="font-size:0.75em;color:#9ca3af;margin-top:12px;margin-bottom:0;">Open each section, review the content with your supervisor, and pass the knowledge check to mark it complete.</p>';
+  // In-progress reader card
+  const hbMaxViewed     = typeof s.hbMaxViewed === 'number' ? s.hbMaxViewed : -1;
+  const hbCurrentChunk  = typeof s.hbCurrentChunk === 'number' ? s.hbCurrentChunk : 0;
+  const chunksRead      = hbMaxViewed >= 0 ? hbMaxViewed + 1 : 0;
+  const pct             = Math.round(chunksRead / totalChunks * 100);
+  const barColor        = pct > 0 ? '#f59e0b' : '#d1d5db';
+  const progressLabel   = chunksRead > 0
+    ? chunksRead + ' of ' + totalChunks + ' sections read'
+    : 'Not started — open to begin';
+  const resumeNote      = chunksRead > 0
+    ? '<div style="font-size:0.76em;color:#6b7280;margin-bottom:12px;">Will resume at section ' + (hbCurrentChunk + 1) + '</div>'
+    : '';
+  const btnLabel        = chunksRead > 0 ? 'Continue Reading' : 'Open Handbook';
 
   return '<div class="card" style="margin-bottom:18px;">' +
     '<h3>Orientation <span style="font-size:0.7em;font-weight:400;color:#9ca3af;margin-left:6px;">' + fEsc(typeLabel) + ' track</span></h3>' +
     lockBanner +
     typeBtns +
-    progressBar +
-    '<div>' + moduleRows + '</div>' +
-    footer +
+    '<div style="background:#e5e7eb;border-radius:8px;height:8px;margin-bottom:6px;overflow:hidden;">' +
+      '<div style="width:' + pct + '%;height:100%;background:' + barColor + ';border-radius:8px;transition:width 0.3s;"></div>' +
+    '</div>' +
+    '<div style="font-size:0.78em;color:#6b7280;margin-bottom:10px;">' + pct + '% — ' + fEsc(progressLabel) + '</div>' +
+    resumeNote +
+    '<button class="btn btn-accent" onclick="openHandbookReader(\'' + fEsc(type) + '\')" style="width:100%;padding:13px 8px;">' + fEsc(btnLabel) + '</button>' +
+    '<p style="font-size:0.75em;color:#9ca3af;margin-top:12px;margin-bottom:0;">Read each section of the handbook. Quizzes will appear at key checkpoints.</p>' +
+  '</div>';
+}
+
+// ─── Handbook Reader ──────────────────────────────────────────────────────────
+
+export async function openHandbookReader(type) {
+  const adminPreview  = isAdmin();
+  const s             = adminPreview ? null : myStaff();
+  const handbookType  = type || (s && s.orientationType) || 'staff';
+
+  if (!adminPreview && !s) { alert('No staff record found.'); return; }
+
+  _hbIsAdminPreview = adminPreview;
+  _hbStaffId        = s ? s._id : null;
+
+  // Saved progress (ignored for admin preview)
+  const savedCurrent   = (!adminPreview && s && typeof s.hbCurrentChunk === 'number') ? s.hbCurrentChunk : 0;
+  const savedMaxViewed = (!adminPreview && s && typeof s.hbMaxViewed    === 'number') ? s.hbMaxViewed    : 0;
+
+  // Guard against double-tap / rapid re-open
+  const token = ++_hbQueryToken;
+
+  // Remove any existing reader
+  const existing = document.getElementById('hb-reader-overlay');
+  if (existing) existing.remove();
+
+  // Loading screen
+  const overlay = document.createElement('div');
+  overlay.id = 'hb-reader-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.5);display:flex;flex-direction:column;';
+  overlay.innerHTML =
+    '<div style="background:#fff;flex:1;display:flex;align-items:center;justify-content:center;">' +
+      '<div style="font-size:0.9em;color:#6b7280;">Loading handbook…</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+
+  // Fetch chunks — query by handbookType only (confirmed working); filter + sort in memory
+  let chunks;
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'handbookChunks'),
+      where('handbookType', '==', handbookType)
+    ));
+    chunks = snap.docs
+      .map(d => ({ ...d.data(), _id: d.id }))
+      .filter(c => c.approved === true)
+      .sort((a, b) => (a.chunkIndex || 0) - (b.chunkIndex || 0));
+  } catch (err) {
+    if (token !== _hbQueryToken) return;
+    overlay.remove();
+    alert('Could not load handbook. Please check your connection and try again.');
+    return;
+  }
+
+  if (token !== _hbQueryToken) return; // A newer call superseded this one
+
+  if (!chunks.length) {
+    overlay.remove();
+    alert('No approved handbook content found. Please contact an administrator.');
+    return;
+  }
+
+  _hbChunks    = chunks;
+  _hbCurrent   = Math.min(Math.max(0, savedCurrent),   chunks.length - 1);
+  _hbMaxViewed = Math.min(Math.max(0, savedMaxViewed),  chunks.length - 1);
+
+  _hbRenderChunk(overlay);
+}
+
+function _hbRenderChunk(existingOverlay) {
+  const overlay = existingOverlay || document.getElementById('hb-reader-overlay');
+  if (!overlay) return;
+
+  const chunk = _hbChunks[_hbCurrent];
+  if (!chunk) return;
+
+  // Always update maxViewed to at least current (user is now reading this chunk)
+  _hbMaxViewed = Math.max(_hbMaxViewed, _hbCurrent);
+
+  const total      = _hbChunks.length;
+  const typeLabel  = (chunk.handbookType || 'staff') === 'volunteer' ? 'Volunteer' : 'Staff';
+  const isFirst    = _hbCurrent === 0;
+  const isLast     = _hbCurrent === total - 1;
+
+  const adminBanner = _hbIsAdminPreview
+    ? '<div style="background:#fffbeb;padding:10px 16px;font-size:0.78em;color:#92400e;border-bottom:1px solid #fde68a;flex-shrink:0;font-weight:600;letter-spacing:0.01em;">Admin Preview — reading progress is not saved</div>'
+    : '';
+
+  const prevStyle = 'flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border:1.5px solid #e5e7eb;border-radius:8px;cursor:' + (isFirst ? 'default' : 'pointer') + ';background:' + (isFirst ? '#f9fafb' : '#fff') + ';color:' + (isFirst ? '#d1d5db' : '#374151') + ';';
+  const nextStyle = 'flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border-radius:8px;border:1.5px solid ' + (isLast ? '#e5e7eb' : 'var(--primary)') + ';cursor:' + (isLast ? 'default' : 'pointer') + ';background:' + (isLast ? '#f9fafb' : 'var(--primary)') + ';color:' + (isLast ? '#d1d5db' : '#fff') + ';font-weight:' + (isLast ? '400' : '600') + ';';
+
+  overlay.innerHTML =
+    '<div style="background:#fff;flex:1;display:flex;flex-direction:column;overflow:hidden;">' +
+      adminBanner +
+      // Header
+      '<div style="padding:14px 16px 12px;border-bottom:1px solid #e5e7eb;flex-shrink:0;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">' +
+          '<div style="font-size:0.78em;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+            fEsc(typeLabel) + ' Handbook' +
+            '<span style="color:#d1d5db;margin:0 6px;">•</span>' +
+            (_hbCurrent + 1) + ' of ' + total +
+          '</div>' +
+          '<button onclick="closeHandbookReader()" aria-label="Close" ' +
+            'style="background:none;border:none;font-size:1.2em;color:#9ca3af;cursor:pointer;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;">' +
+            '&#10005;' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
+      // Scrollable content
+      '<div style="flex:1;overflow-y:auto;padding:20px 16px 24px;-webkit-overflow-scrolling:touch;">' +
+        '<h2 style="font-size:1em;font-weight:700;color:var(--primary);margin:0 0 4px;word-break:break-word;overflow-wrap:break-word;">' +
+          fEsc(chunk.sectionTitle || '') +
+        '</h2>' +
+        '<div style="font-size:0.75em;color:#9ca3af;margin-bottom:16px;">Page ' + fEsc(String(chunk.pageNumber || '')) + '</div>' +
+        '<div style="font-size:0.9em;color:#1f2937;line-height:1.7;word-break:break-word;overflow-wrap:break-word;white-space:pre-line;">' +
+          fEsc(chunk.chunkText || '') +
+        '</div>' +
+        '<div style="font-size:0.72em;color:#9ca3af;margin-top:20px;padding-top:12px;border-top:1px solid #f3f4f6;word-break:break-word;overflow-wrap:break-word;">' +
+          fEsc(chunk.sourceCitation || '') +
+        '</div>' +
+      '</div>' +
+      // Footer
+      '<div style="padding:12px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;display:flex;gap:8px;">' +
+        '<button onclick="hbPrev()" ' + (isFirst ? 'disabled' : '') + ' style="' + prevStyle + '">← Previous</button>' +
+        '<button onclick="closeHandbookReader()" style="flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;cursor:pointer;">Close</button>' +
+        '<button onclick="hbNext()" ' + (isLast ? 'disabled' : '') + ' style="' + nextStyle + '">Next →</button>' +
+      '</div>' +
     '</div>';
 }
+
+export async function hbPrev() {
+  if (_hbCurrent <= 0) return;
+  _hbCurrent--;
+  _hbRenderChunk();
+  // Save position on prev so resume reflects where user is
+  _hbSaveProgress();
+}
+
+export async function hbNext() {
+  if (_hbCurrent >= _hbChunks.length - 1) return;
+  _hbCurrent++;
+  _hbMaxViewed = Math.max(_hbMaxViewed, _hbCurrent);
+  _hbRenderChunk();
+  // Save progress on next — captures new territory and current position
+  _hbSaveProgress();
+}
+
+export async function closeHandbookReader() {
+  await _hbSaveProgress();
+  const overlay = document.getElementById('hb-reader-overlay');
+  if (overlay) overlay.remove();
+  if (typeof window.renderProfile === 'function') window.renderProfile();
+}
+
+async function _hbSaveProgress() {
+  if (_hbIsAdminPreview || !_hbStaffId) return;
+  try {
+    await DB.updateRecord('staff', _hbStaffId, {
+      hbCurrentChunk:        _hbCurrent,
+      hbMaxViewed:           _hbMaxViewed,
+      orientationLastUpdated: new Date().toISOString(),
+    });
+  } catch (_) {
+    // Silently swallow — don't block reading if a write fails
+  }
+}
+
+// ─── Legacy module overlay (kept for backwards compat; not shown in main card) ─
 
 function buildQuizHTML(mod, moduleId) {
   const questions = mod.quiz.map((q, i) => {
@@ -372,9 +568,6 @@ export function openOrientationModule(moduleId) {
       '<p style="font-size:0.87em;color:#374151;margin-bottom:16px;">' + fEsc(mod.summary) + '</p>' +
       '<h4 style="font-size:0.85em;font-weight:600;color:#374151;margin:0 0 8px;">In this section:</h4>' +
       '<ul style="margin:0 0 18px;padding-left:20px;">' + subsRows + '</ul>' +
-      '<div style="background:#f9fafb;border-radius:10px;padding:14px;margin-bottom:16px;border:1px solid #e5e7eb;">' +
-        '<p style="font-size:0.8em;color:#6b7280;margin:0;">Full handbook content will be available in Phase 3C. Review the section topics with your supervisor before taking the quiz.</p>' +
-      '</div>' +
       quizContent +
       '<button class="btn btn-outline" onclick="closeOrientationModule()" style="width:100%;padding:13px 8px;">Close</button>' +
     '</div>';
@@ -451,7 +644,7 @@ export async function submitModuleQuiz(moduleId) {
     if (quizSection) {
       quizSection.innerHTML =
         '<div style="background:#fef2f2;border-radius:10px;padding:16px;border:1px solid #fecaca;margin-top:4px;">' +
-        '<div style="color:#dc2626;font-weight:700;font-size:0.87em;margin-bottom:4px;">Score: ' + score + '/' + total + ' &mdash; not all answers were correct.</div>' +
+        '<div style="color:#dc2626;font-weight:700;font-size:0.87em;margin-bottom:4px;">Score: ' + score + '/' + total + ' — not all answers were correct.</div>' +
         '<div style="font-size:0.8em;color:#7f1d1d;margin-bottom:12px;">' + wrongLabel + ' review. You must answer all questions correctly to pass.</div>' +
         '<button class="btn btn-primary" onclick="retryModuleQuiz(\'' + moduleId + '\')" style="width:100%;padding:12px;">Try Again</button>' +
         '</div>';
@@ -480,6 +673,11 @@ export async function setOrientationType(type) {
     orientationLastUpdated: now,
   };
   if (!s.orientationStartedAt) update.orientationStartedAt = now;
+  // Reset reader position when switching tracks so the index stays in range
+  if (s.orientationType && s.orientationType !== type) {
+    update.hbCurrentChunk = 0;
+    update.hbMaxViewed    = 0;
+  }
   await DB.updateRecord('staff', s._id, update);
   if (typeof window.renderProfile === 'function') window.renderProfile();
 }
@@ -505,13 +703,16 @@ export async function markSectionComplete(moduleId) {
 
 export async function resetOrientationProgress(staffId) {
   if (!isAdmin()) { alert('Admin access required.'); return; }
-  if (!confirm('Reset orientation progress for this staff member? All completed sections and quiz attempts will be cleared.')) return;
+  if (!confirm('Reset orientation progress for this staff member? All completed sections, quiz attempts, and handbook reading progress will be cleared.')) return;
   await DB.updateRecord('staff', staffId, {
-    orientationType: '',
-    orientationStartedAt: '',
+    orientationType:        '',
+    orientationStartedAt:   '',
     orientationCompletedAt: '',
-    completedSections: [],
-    quizAttempts: {},
+    completedSections:      [],
+    quizAttempts:           {},
+    hbCurrentChunk:         0,
+    hbMaxViewed:            0,
+    hbQuizzesPassed:        [],
     orientationLastUpdated: new Date().toISOString(),
   });
 }

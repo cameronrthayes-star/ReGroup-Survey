@@ -65,7 +65,8 @@ import { runGrantsAgent } from './pages/grants.js';
 import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
 import { setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
-  isOrientationComplete, resetOrientationProgress, submitModuleQuiz, retryModuleQuiz } from './pages/orientation.js';
+  isOrientationComplete, resetOrientationProgress, submitModuleQuiz, retryModuleQuiz,
+  openHandbookReader, closeHandbookReader, hbPrev, hbNext } from './pages/orientation.js';
 import { sendHandbookQuestion } from './pages/handbook-chat.js';
 
 // â"€â"€â"€ Local app-level state â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
@@ -112,6 +113,8 @@ function _checkOrientationLock() {
     } else {
       const ov = document.getElementById('orientation-module-overlay');
       if (ov) ov.remove();
+      const hbOv = document.getElementById('hb-reader-overlay');
+      if (hbOv) hbOv.remove();
       navigate('dashboard');
     }
   }
@@ -1047,6 +1050,7 @@ Object.assign(window, {
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc, saveProfileIcs,
   setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   submitModuleQuiz, retryModuleQuiz, resetOrientationProgress,
+  openHandbookReader, closeHandbookReader, hbPrev, hbNext,
   sendHandbookQuestion,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
@@ -1094,6 +1098,7 @@ Object.assign(window, {
   renderProfile, saveProfile, savePassword, resetPassword, uploadProfilePhoto, uploadProfileDoc, deleteProfileDoc, saveProfileIcs,
   setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   submitModuleQuiz, retryModuleQuiz, resetOrientationProgress,
+  openHandbookReader, closeHandbookReader, hbPrev, hbNext,
   sendHandbookQuestion,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
