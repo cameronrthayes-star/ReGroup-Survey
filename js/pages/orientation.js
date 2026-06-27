@@ -5,6 +5,331 @@ import { where } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-fires
 const STAFF_CHUNK_COUNT    = 44;
 const VOLUNTEER_CHUNK_COUNT = 16;
 
+// ─── Quiz checkpoint definitions ─────────────────────────────────────────────
+
+const QUIZ_CHECKPOINTS = {
+  staff:     [6, 13, 19, 26, 34, 43],
+  volunteer: [6, 15],
+};
+
+const QUIZ_DATA = {
+  'staff:q_after_6': {
+    label: 'Mission, At-Will Employment & Harassment Policy',
+    questions: [
+      {
+        q: "What is TJC's mission, as stated in the handbook?",
+        options: [
+          'To provide legal representation for incarcerated individuals',
+          'To promote transformative justice through personal transformation, healing, and dismantling systems of oppression',
+          'To reduce recidivism through strict supervision programs',
+          "To manage Oregon's community correction programs",
+        ],
+        correct: 1,
+        explanation: 'TJC\'s mission is "to promote transformative justice through recognition of the intersection of personal transformation, healing, and the need to dismantle systems of oppression."',
+        citation: 'TJC Staff Handbook, p. 4 — Section I. Mission',
+      },
+      {
+        q: "What does TJC's at-will employment policy mean?",
+        options: [
+          'Employees must give 30 days written notice before leaving',
+          'TJC can only terminate employees for documented cause',
+          'Employees may be terminated with or without cause, and may also leave with or without cause',
+          'Employment is guaranteed for the duration of a signed contract',
+        ],
+        correct: 2,
+        explanation: '"That means that employees may be terminated from employment with TJC with or without cause, and employees are free to leave the employment of TJC with or without cause."',
+        citation: 'TJC Staff Handbook, p. 5 — Section III. Voluntary At-Will Employment',
+      },
+      {
+        q: 'If you experience or witness harassment at TJC, what should you do?',
+        options: [
+          'Document it privately and address it when convenient',
+          'Report it only if it happens more than once',
+          'Discuss it with trusted co-workers first',
+          'Report it immediately to your supervisor or the Executive Director',
+        ],
+        correct: 3,
+        explanation: 'TJC policy requires that harassment be reported immediately. Filing a harassment complaint is protected — retaliation against those who report is also prohibited.',
+        citation: 'TJC Staff Handbook, p. 7-8 — Section V. Policy Against Workplace Harassment',
+      },
+    ],
+  },
+  'staff:q_after_13': {
+    label: 'Workplace Policies, Compensation & Performance',
+    questions: [
+      {
+        q: 'How are paychecks distributed at TJC?',
+        options: [
+          'Monthly on the 1st of each month',
+          'Weekly on Fridays',
+          'Bi-weekly on Tuesdays (or the preceding workday if a holiday)',
+          'Semi-monthly on the 1st and 15th',
+        ],
+        correct: 2,
+        explanation: '"Paychecks are distributed on the bi-weekly on Tuesdays except on holidays, in which case paychecks will be distributed on the preceding workday."',
+        citation: 'TJC Staff Handbook, p. 11 — Section IX. Position Description and Salary Administration',
+      },
+      {
+        q: 'Who must authorize overtime work for non-exempt employees?',
+        options: [
+          "The employee's direct supervisor alone",
+          'The HR department',
+          "The Executive Director or their designee, upon the supervisor's request",
+          'Any manager on duty',
+        ],
+        correct: 2,
+        explanation: '"Only the Executive Director or their designee, upon the request of an employee\'s supervisor, may authorize overtime."',
+        citation: 'TJC Staff Handbook, p. 10 — Section VII. Remote Work, Conduct, Punctuality, and Attendance',
+      },
+      {
+        q: 'How is a Full-Time Employee defined at TJC?',
+        options: [
+          'An employee who works at least 40 hours per week',
+          'An employee who works at least 38 hours per week',
+          'An employee on a permanent salaried contract',
+          'An employee approved directly by the Board of Directors',
+        ],
+        correct: 1,
+        explanation: '"A Full Time Employee regularly works at least 38 hours per week."',
+        citation: 'TJC Staff Handbook, p. 10 — Section VIII. Employment Policies and Terms',
+      },
+    ],
+  },
+  'staff:q_after_19': {
+    label: 'Leave Benefits & Work Policies',
+    questions: [
+      {
+        q: 'How many paid holidays per year are Full-Time Employees eligible for at TJC?',
+        options: ['8', '9', '11', '12'],
+        correct: 2,
+        explanation: '"Full-Time Employees are eligible for 11 holidays per year" — including New Year\'s Day, MLK Jr. Birthday, President\'s Day, Memorial Day, Juneteenth, Independence Day, Labor Day, Indigenous People\'s Day, Veteran\'s Day, Thanksgiving, and Christmas Day.',
+        citation: 'TJC Staff Handbook, p. 13 — Section XII.A Holidays',
+      },
+      {
+        q: 'What is the maximum vacation leave balance an employee can accrue at TJC?',
+        options: ['10 days', '15 days', '20 days', '30 days'],
+        correct: 3,
+        explanation: '"Employees may not accrue more than the maximum leave balance of 30 days."',
+        citation: 'TJC Staff Handbook, p. 14 — Section XII. Leave Benefits and Other Work Policies',
+      },
+      {
+        q: 'What does TJC make available to employees who experience domestic violence, sexual assault, or stalking?',
+        options: [
+          'Paid leave equal to full salary for up to six months',
+          'Statutory leave to obtain medical care, counseling, legal assistance, and other safety steps',
+          'Immediate unpaid leave with guaranteed job protection',
+          'Flexible scheduling adjustments only',
+        ],
+        correct: 1,
+        explanation: '"Statutory leave may be available to employees to obtain services or treatment relating to domestic violence, sexual assault or stalking... Purposes for this leave include obtaining medical care, counseling, and advice from legal counsel, law enforcement assistance, or other steps to help better ensure their health and safety."',
+        citation: 'TJC Staff Handbook, p. 16 — Domestic Violence and Crime Victim Leave',
+      },
+    ],
+  },
+  'staff:q_after_26': {
+    label: 'Expense Reimbursement & Separation',
+    questions: [
+      {
+        q: 'What must accompany all expense reimbursement requests at TJC?',
+        options: [
+          'Approval from the Board of Directors',
+          'A description (who, what, when, where, why) and the necessary general ledger coding',
+          'A personal letter explaining each expense',
+          'Sign-off from at least two supervisors',
+        ],
+        correct: 1,
+        explanation: '"All such expense reimbursement requests must be accompanied by a description (who, what, when, where, why) of the expense and the necessary coding for general ledger purposes."',
+        citation: 'TJC Staff Handbook, p. 17 — Section XIII.B Procedures and Policy',
+      },
+      {
+        q: 'Which of the following expenses will TJC NOT reimburse?',
+        options: [
+          'Coach airfare booked well in advance',
+          'Receipted rideshare or taxi transportation',
+          'Single hotel room costs plus tax',
+          'Childcare or pet care',
+        ],
+        correct: 3,
+        explanation: "TJC's policy explicitly lists childcare or pet care as non-reimbursable, along with personal credit card fees, motor vehicle violations, and spa or fitness club costs.",
+        citation: 'TJC Staff Handbook, p. 19 — Section XIII.B Procedures and Policy',
+      },
+      {
+        q: 'How much written notice does TJC encourage employees to give before resigning?',
+        options: [
+          '5 business days',
+          'At least 10 business days (two weeks)',
+          '30 calendar days',
+          'No notice is required',
+        ],
+        correct: 1,
+        explanation: '"Employees are encouraged to give at least 10 business days of written notice" before resigning.',
+        citation: 'TJC Staff Handbook, p. 19 — Section XIV. Separation',
+      },
+    ],
+  },
+  'staff:q_after_34': {
+    label: 'Technology Use, Credit Cards & Return of Property',
+    questions: [
+      {
+        q: 'Who is authorized to use TJC credit or debit cards for purchases?',
+        options: [
+          'Any TJC supervisor',
+          'Any full-time staff member',
+          'Staff approved by HR',
+          'Only those specifically authorized by the Executive Director',
+        ],
+        correct: 3,
+        explanation: '"Only those who have been specifically authorized by the executive director may use credit or debit cards for organizational purchases."',
+        citation: 'TJC Staff Handbook, p. 23 — Section XVII. Credit/Debit Card Policy',
+      },
+      {
+        q: 'If a TJC credit or debit card is lost or stolen, who must be notified immediately?',
+        options: [
+          'The direct supervisor only',
+          'HR and the payroll department',
+          'The issuing bank and the Board Chair or Treasurer',
+          'The Executive Director and all staff members',
+        ],
+        correct: 2,
+        explanation: '"If a credit or debit card is lost or stolen, the cardholder must report it immediately to the issuing bank and the Board Chair or Treasurer."',
+        citation: 'TJC Staff Handbook, p. 24 — Section XVII.5 Lost or Stolen Cards',
+      },
+      {
+        q: 'When must employees return TJC property and equipment?',
+        options: [
+          'Only at the end of each fiscal year',
+          'On separation from employment, or immediately upon request by the Executive Director or their designee',
+          'Within 30 days of leaving the organization',
+          'Only when the property is worth more than $500',
+        ],
+        correct: 1,
+        explanation: '"In the event of separation from employment, or immediately upon request by the Executive Director or their designee. Employees must return all TJC property that is in their possession or control."',
+        citation: 'TJC Staff Handbook, p. 24 — Section XVIII. Return of Property',
+      },
+    ],
+  },
+  'staff:q_after_43': {
+    label: 'Personnel Records, Confidentiality & Gift Acceptance',
+    questions: [
+      {
+        q: 'If you disagree with a personnel action or performance review, what is the correct first step?',
+        options: [
+          'Contact HR directly',
+          'File a formal grievance with the Board',
+          'Discuss it with your immediate supervisor',
+          'Submit a written complaint to the Executive Director',
+        ],
+        correct: 2,
+        explanation: '"Employees are expected first to discuss their concern with their immediate supervisor. If further discussion is desired, the employee may then discuss the situation with the Executive Director. The decision of the Executive Director is final."',
+        citation: 'TJC Staff Handbook, p. 24 — Section XIX. Review of Personnel Action',
+      },
+      {
+        q: "What constitutes confidential information under TJC's non-disclosure policy?",
+        options: [
+          'Only information marked "confidential" in writing',
+          'Only donor financial contribution data',
+          'Any information about TJC or its members that is not otherwise publicly available',
+          'Only individual client case files',
+        ],
+        correct: 2,
+        explanation: '"Any information that an employee learns about TJC, or its members or donors, as a result of working for TJC that is not otherwise publicly available constitutes confidential information."',
+        citation: 'TJC Staff Handbook, p. 26 — Section XXII. Non-Disclosure of Confidential Information',
+      },
+      {
+        q: 'Which criteria must a gift meet for TJC to accept it?',
+        options: [
+          'The gift must be worth at least $500',
+          'The gift must come from a current or past donor',
+          "The gift must align with TJC's mission, be legal and ethical, and not impose undue burdens",
+          'All gifts must be approved by a two-thirds Board vote',
+        ],
+        correct: 2,
+        explanation: 'TJC will accept gifts that "align with the organization\'s mission and strategic goals, are legal and ethical, can be effectively managed and utilized, and do not impose undue burdens on the organization."',
+        citation: 'TJC Staff Handbook, p. 30 — Section XXV. Gift Acceptance Policy',
+      },
+    ],
+  },
+  'volunteer:q_after_6': {
+    label: "TJC's Mission, Volunteers & Charter",
+    questions: [
+      {
+        q: "What is TJC's mission, as stated in the volunteer handbook?",
+        options: [
+          'To provide legal representation for incarcerated individuals',
+          'To promote transformative justice through personal transformation, healing, and dismantling systems of oppression',
+          'To reduce recidivism through strict supervision programs',
+          "To manage Oregon's community corrections programs",
+        ],
+        correct: 1,
+        explanation: '"TJC\'s Mission is to promote transformative justice through recognition of the intersection of personal transformation, healing, and the need to dismantle systems of oppression."',
+        citation: 'TJC Volunteer Handbook, p. 6 — What is TJC?',
+      },
+      {
+        q: 'What is the minimum age requirement to volunteer with TJC?',
+        options: ['16 years old', '18 years old', '21 years old', 'There is no age requirement'],
+        correct: 1,
+        explanation: '"There is no upper age limit to who can volunteer, but we do require that all volunteers be at least 18 years old."',
+        citation: 'TJC Volunteer Handbook, p. 8 — Who are our volunteers?',
+      },
+      {
+        q: 'According to the Volunteer Charter, what can volunteers expect from TJC?',
+        options: [
+          'A paid stipend for completed hours',
+          'Guaranteed placement in a specific program',
+          'An introduction to TJC, appropriate training, a volunteer supervisor, and fair resolution of any problems',
+          'Reimbursement for all transportation costs',
+        ],
+        correct: 2,
+        explanation: 'The Volunteer Charter states TJC will provide an introduction to TJC and its programs, training appropriate for your role, on-going support, a delegated volunteer supervisor, regular support and supervision, and fair hearing and resolution of any problems.',
+        citation: 'TJC Volunteer Handbook, p. 9 — Volunteer Charter',
+      },
+    ],
+  },
+  'volunteer:q_after_15': {
+    label: 'Volunteer Opportunities, Policies & Confidentiality',
+    questions: [
+      {
+        q: 'What must volunteers pass to work inside Oregon State Prison with the ReGroup program?',
+        options: [
+          'A medical examination',
+          'A financial background check',
+          "A Department of Corrections LEDS check or the DOC badging process",
+          'An interview with the Executive Director',
+        ],
+        correct: 2,
+        explanation: '"Parenting Classes and Programming Inside OSP: Volunteers must pass a Department of Correction\'s (DOC) LEDS check or who have gone through the DOC badging process."',
+        citation: 'TJC Volunteer Handbook, p. 10 — Volunteer Opportunities',
+      },
+      {
+        q: "What is TJC's policy on alcohol use during volunteer hours?",
+        options: [
+          'Moderate use is acceptable at off-site community events',
+          'Use is permitted only after all volunteer activities have ended',
+          'Use, possession, and being under the influence during volunteer hours are all strictly prohibited',
+          'Volunteers may consume alcohol only when not working directly with participants',
+        ],
+        correct: 2,
+        explanation: '"The use, possession, manufacture, and distribution, dispensation or sale of illegal drugs, alcohol, or any controlled substance at TJC programs... during volunteer hours is strictly prohibited. Similarly, it is prohibited for any volunteer to be under the influence... during volunteer hours."',
+        citation: 'TJC Volunteer Handbook, p. 11 — Drug-Free Workplace',
+      },
+      {
+        q: 'What must happen before confidential TJC information can be released to any party?',
+        options: [
+          'Notify your supervisor via email',
+          'Wait for a scheduled team review meeting',
+          'Obtain advance written approval from the Chief Executive Officer',
+          'Confirm the release in writing with two witnesses',
+        ],
+        correct: 2,
+        explanation: '"Release of confidential information to any unauthorized parties must be approved in advance in writing by the Chief Executive Officer."',
+        citation: 'TJC Volunteer Handbook, p. 13 — Confidentiality of Information',
+      },
+    ],
+  },
+};
+
+// ─── Legacy module data (kept for backwards compat) ──────────────────────────
+
 const MODULES = {
   staff: [
     {
@@ -225,12 +550,15 @@ const MODULES = {
 };
 
 // ─── Reader module state ──────────────────────────────────────────────────────
-let _hbChunks        = [];
-let _hbCurrent       = 0;
-let _hbMaxViewed     = 0;
+let _hbChunks         = [];
+let _hbCurrent        = 0;
+let _hbMaxViewed      = 0;
 let _hbIsAdminPreview = false;
-let _hbStaffId       = null;
-let _hbQueryToken    = 0;
+let _hbStaffId        = null;
+let _hbQueryToken     = 0;
+let _hbHandbookType   = 'staff';
+let _hbQuizzesPassed  = [];
+let _hbQuizOpen       = false;
 
 export function orientationPct(s) {
   const type = s && s.orientationType;
@@ -348,6 +676,9 @@ export async function openHandbookReader(type) {
 
   _hbIsAdminPreview = adminPreview;
   _hbStaffId        = s ? s._id : null;
+  _hbHandbookType   = handbookType;
+  _hbQuizzesPassed  = (!adminPreview && s && Array.isArray(s.hbQuizzesPassed)) ? [...s.hbQuizzesPassed] : [];
+  _hbQuizOpen       = false;
 
   // Saved progress (ignored for admin preview)
   const savedCurrent   = (!adminPreview && s && typeof s.hbCurrentChunk === 'number') ? s.hbCurrentChunk : 0;
@@ -356,9 +687,11 @@ export async function openHandbookReader(type) {
   // Guard against double-tap / rapid re-open
   const token = ++_hbQueryToken;
 
-  // Remove any existing reader
+  // Remove any existing reader or quiz
   const existing = document.getElementById('hb-reader-overlay');
   if (existing) existing.remove();
+  const existingQuiz = document.getElementById('hb-quiz-overlay');
+  if (existingQuiz) existingQuiz.remove();
 
   // Loading screen
   const overlay = document.createElement('div');
@@ -418,12 +751,30 @@ function _hbRenderChunk(existingOverlay) {
   const isFirst    = _hbCurrent === 0;
   const isLast     = _hbCurrent === total - 1;
 
+  // Quiz checkpoint awareness
+  const chunkIdx          = typeof chunk.chunkIndex === 'number' ? chunk.chunkIndex : _hbCurrent;
+  const handbookType      = chunk.handbookType || _hbHandbookType;
+  const cpList            = QUIZ_CHECKPOINTS[handbookType] || [];
+  const isCheckpointChunk = cpList.includes(chunkIdx);
+  const checkpointId      = handbookType + ':q_after_' + chunkIdx;
+  const quizPassed        = _hbIsAdminPreview || _hbQuizzesPassed.includes(checkpointId);
+  const showQuizButton    = isCheckpointChunk && !quizPassed;
+  // Next is disabled only when it is the last chunk AND no quiz needs to be taken
+  const nextDisabled      = isLast && !showQuizButton;
+  const nextLabel         = showQuizButton ? 'Take Quiz →' : 'Next →';
+
   const adminBanner = _hbIsAdminPreview
     ? '<div style="background:#fffbeb;padding:10px 16px;font-size:0.78em;color:#92400e;border-bottom:1px solid #fde68a;flex-shrink:0;font-weight:600;letter-spacing:0.01em;">Admin Preview — reading progress is not saved</div>'
     : '';
 
   const prevStyle = 'flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border:1.5px solid #e5e7eb;border-radius:8px;cursor:' + (isFirst ? 'default' : 'pointer') + ';background:' + (isFirst ? '#f9fafb' : '#fff') + ';color:' + (isFirst ? '#d1d5db' : '#374151') + ';';
-  const nextStyle = 'flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border-radius:8px;border:1.5px solid ' + (isLast ? '#e5e7eb' : 'var(--primary)') + ';cursor:' + (isLast ? 'default' : 'pointer') + ';background:' + (isLast ? '#f9fafb' : 'var(--primary)') + ';color:' + (isLast ? '#d1d5db' : '#fff') + ';font-weight:' + (isLast ? '400' : '600') + ';';
+  const nextActive = !nextDisabled;
+  const nextStyle  = 'flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border-radius:8px;border:1.5px solid ' + (nextActive ? 'var(--primary)' : '#e5e7eb') + ';cursor:' + (nextActive ? 'pointer' : 'default') + ';background:' + (nextActive ? 'var(--primary)' : '#f9fafb') + ';color:' + (nextActive ? '#fff' : '#d1d5db') + ';font-weight:' + (nextActive ? '600' : '400') + ';';
+
+  // Quiz badge shown on checkpoint chunks where quiz has been passed
+  const quizBadge = (isCheckpointChunk && quizPassed && !_hbIsAdminPreview)
+    ? '<div style="display:inline-flex;align-items:center;gap:4px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:3px 10px;font-size:0.72em;color:#15803d;font-weight:600;margin-bottom:12px;">&#10003; Quiz passed</div>'
+    : '';
 
   overlay.innerHTML =
     '<div style="background:#fff;flex:1;display:flex;flex-direction:column;overflow:hidden;">' +
@@ -454,34 +805,56 @@ function _hbRenderChunk(existingOverlay) {
         '<div style="font-size:0.72em;color:#9ca3af;margin-top:20px;padding-top:12px;border-top:1px solid #f3f4f6;word-break:break-word;overflow-wrap:break-word;">' +
           fEsc(chunk.sourceCitation || '') +
         '</div>' +
+        (quizBadge ? '<div style="margin-top:14px;">' + quizBadge + '</div>' : '') +
       '</div>' +
       // Footer
       '<div style="padding:12px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;display:flex;gap:8px;">' +
         '<button onclick="hbPrev()" ' + (isFirst ? 'disabled' : '') + ' style="' + prevStyle + '">← Previous</button>' +
         '<button onclick="closeHandbookReader()" style="flex:1;min-height:44px;padding:12px 6px;font-size:0.87em;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;cursor:pointer;">Close</button>' +
-        '<button onclick="hbNext()" ' + (isLast ? 'disabled' : '') + ' style="' + nextStyle + '">Next →</button>' +
+        '<button onclick="hbNext()" ' + (nextDisabled ? 'disabled' : '') + ' style="' + nextStyle + '">' + nextLabel + '</button>' +
       '</div>' +
     '</div>';
 }
 
 export async function hbPrev() {
+  if (_hbQuizOpen) return;
   if (_hbCurrent <= 0) return;
   _hbCurrent--;
   _hbRenderChunk();
-  // Save position on prev so resume reflects where user is
   _hbSaveProgress();
 }
 
 export async function hbNext() {
+  if (_hbQuizOpen) return;
+
+  const chunk = _hbChunks[_hbCurrent];
+  if (!chunk) return;
+
+  // Check for unfinished quiz checkpoint on the current chunk
+  if (!_hbIsAdminPreview) {
+    const handbookType = chunk.handbookType || _hbHandbookType;
+    const cpList       = QUIZ_CHECKPOINTS[handbookType] || [];
+    const chunkIdx     = typeof chunk.chunkIndex === 'number' ? chunk.chunkIndex : _hbCurrent;
+    if (cpList.includes(chunkIdx)) {
+      const checkpointId = handbookType + ':q_after_' + chunkIdx;
+      if (!_hbQuizzesPassed.includes(checkpointId)) {
+        _hbOpenQuiz(checkpointId);
+        return;
+      }
+    }
+  }
+
   if (_hbCurrent >= _hbChunks.length - 1) return;
   _hbCurrent++;
   _hbMaxViewed = Math.max(_hbMaxViewed, _hbCurrent);
   _hbRenderChunk();
-  // Save progress on next — captures new territory and current position
   _hbSaveProgress();
 }
 
 export async function closeHandbookReader() {
+  _hbQuizOpen = false;
+  const quizOv = document.getElementById('hb-quiz-overlay');
+  if (quizOv) quizOv.remove();
   await _hbSaveProgress();
   const overlay = document.getElementById('hb-reader-overlay');
   if (overlay) overlay.remove();
@@ -494,11 +867,195 @@ async function _hbSaveProgress() {
     await DB.updateRecord('staff', _hbStaffId, {
       hbCurrentChunk:        _hbCurrent,
       hbMaxViewed:           _hbMaxViewed,
+      hbQuizzesPassed:       _hbQuizzesPassed,
       orientationLastUpdated: new Date().toISOString(),
     });
   } catch (_) {
     // Silently swallow — don't block reading if a write fails
   }
+}
+
+// ─── Quiz overlay ─────────────────────────────────────────────────────────────
+
+function _hbOpenQuiz(checkpointId) {
+  const quiz = QUIZ_DATA[checkpointId];
+  if (!quiz) return;
+
+  const existing = document.getElementById('hb-quiz-overlay');
+  if (existing) existing.remove();
+
+  const qHTML = quiz.questions.map(function(q, qi) {
+    var opts = q.options.map(function(opt, oi) {
+      return '<label style="display:flex;align-items:flex-start;gap:12px;padding:12px;border-radius:8px;cursor:pointer;font-size:0.87em;color:#374151;border:1.5px solid #e5e7eb;margin-bottom:8px;min-height:44px;box-sizing:border-box;word-break:break-word;overflow-wrap:break-word;">' +
+        '<input type="radio" name="hbq-' + qi + '" value="' + oi + '" style="flex-shrink:0;width:18px;height:18px;margin-top:1px;accent-color:var(--primary);cursor:pointer;">' +
+        '<span>' + fEsc(opt) + '</span>' +
+      '</label>';
+    }).join('');
+    return '<div style="margin-bottom:20px;">' +
+      '<div style="font-weight:600;font-size:0.88em;color:#1f2937;margin-bottom:10px;line-height:1.5;word-break:break-word;overflow-wrap:break-word;">' +
+        (qi + 1) + '. ' + fEsc(q.q) +
+      '</div>' +
+      opts +
+    '</div>';
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'hb-quiz-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:1001;display:flex;flex-direction:column;';
+  overlay.innerHTML =
+    '<div style="background:#fff;flex:1;display:flex;flex-direction:column;overflow:hidden;">' +
+      '<div style="padding:14px 16px 12px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fafafa;">' +
+        '<div style="font-size:0.72em;color:#9ca3af;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:4px;">Knowledge Check</div>' +
+        '<div style="font-weight:700;font-size:0.95em;color:var(--primary);line-height:1.4;word-break:break-word;overflow-wrap:break-word;">' + fEsc(quiz.label) + '</div>' +
+        '<div style="font-size:0.76em;color:#6b7280;margin-top:4px;">Answer all 3 questions correctly to continue.</div>' +
+      '</div>' +
+      '<div style="flex:1;overflow-y:auto;padding:20px 16px 16px;-webkit-overflow-scrolling:touch;">' +
+        qHTML +
+      '</div>' +
+      '<div style="padding:12px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;">' +
+        '<div id="hb-quiz-error" style="color:#dc2626;font-size:0.82em;margin-bottom:8px;display:none;"></div>' +
+        '<button onclick="hbSubmitQuiz(\'' + checkpointId + '\')" ' +
+          'style="width:100%;min-height:48px;padding:13px;font-size:0.95em;font-weight:600;background:var(--primary);color:#fff;border:none;border-radius:10px;cursor:pointer;">Submit Answers</button>' +
+      '</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+  _hbQuizOpen = true;
+}
+
+export async function hbSubmitQuiz(checkpointId) {
+  const quiz = QUIZ_DATA[checkpointId];
+  if (!quiz) return;
+
+  // Collect answers
+  const answers = quiz.questions.map(function(_, qi) {
+    const sel = document.querySelector('input[name="hbq-' + qi + '"]:checked');
+    return sel ? parseInt(sel.value, 10) : -1;
+  });
+
+  // Validate all answered
+  if (answers.includes(-1)) {
+    const errEl = document.getElementById('hb-quiz-error');
+    if (errEl) { errEl.textContent = 'Please answer all questions before submitting.'; errEl.style.display = 'block'; }
+    return;
+  }
+
+  const total = quiz.questions.length;
+  const score = quiz.questions.reduce(function(s, q, i) { return s + (answers[i] === q.correct ? 1 : 0); }, 0);
+  const pass  = score === total;
+  const now   = new Date().toISOString();
+
+  // Save attempt to quizAttempts (keyed by checkpointId)
+  if (!_hbIsAdminPreview && _hbStaffId) {
+    const staffRec   = DB.staff().find(function(r) { return r._id === _hbStaffId; });
+    const existing   = (staffRec && staffRec.quizAttempts) ? staffRec.quizAttempts : {};
+    const prior      = Array.isArray(existing[checkpointId]) ? existing[checkpointId] : [];
+    const attempt    = { ts: now, answers: answers, score: score, total: total, pass: pass };
+    const newAttempts = Object.assign({}, existing, { [checkpointId]: [...prior, attempt] });
+    try {
+      await DB.updateRecord('staff', _hbStaffId, {
+        quizAttempts:          newAttempts,
+        orientationLastUpdated: now,
+      });
+    } catch (_) {}
+  }
+
+  if (pass) {
+    if (!_hbQuizzesPassed.includes(checkpointId)) {
+      _hbQuizzesPassed = [..._hbQuizzesPassed, checkpointId];
+    }
+    await _hbSaveProgress();
+    _hbShowQuizPass(checkpointId);
+  } else {
+    _hbShowQuizFail(checkpointId, quiz, answers, score, total);
+  }
+}
+
+function _hbShowQuizPass(checkpointId) {
+  const overlay = document.getElementById('hb-quiz-overlay');
+  if (!overlay) return;
+
+  const isLast = _hbCurrent >= _hbChunks.length - 1;
+  const continueBtn = isLast
+    ? '<button onclick="hbCloseQuizDone()" style="width:100%;min-height:48px;padding:13px;font-size:0.95em;font-weight:600;background:var(--primary);color:#fff;border:none;border-radius:10px;cursor:pointer;">Close</button>'
+    : '<button onclick="hbContinueAfterQuiz()" style="width:100%;min-height:48px;padding:13px;font-size:0.95em;font-weight:600;background:var(--primary);color:#fff;border:none;border-radius:10px;cursor:pointer;">Continue Reading →</button>';
+
+  overlay.innerHTML =
+    '<div style="background:#fff;flex:1;display:flex;flex-direction:column;overflow:hidden;">' +
+      '<div style="flex:1;display:flex;align-items:center;justify-content:center;padding:32px 24px;">' +
+        '<div style="text-align:center;max-width:320px;width:100%;">' +
+          '<div style="font-size:2.5em;margin-bottom:16px;color:#16a34a;">&#10003;</div>' +
+          '<div style="font-weight:700;font-size:1.1em;color:#15803d;margin-bottom:8px;">All correct!</div>' +
+          '<div style="font-size:0.87em;color:#6b7280;margin-bottom:24px;">' +
+            ((_hbCurrent >= _hbChunks.length - 1)
+              ? "You've passed all checkpoints. Great work reading through the handbook!"
+              : 'You passed this checkpoint. Keep reading!') +
+          '</div>' +
+          continueBtn +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+function _hbShowQuizFail(checkpointId, quiz, answers, score, total) {
+  const overlay = document.getElementById('hb-quiz-overlay');
+  if (!overlay) return;
+
+  const reviewHTML = quiz.questions.map(function(q, qi) {
+    const correct = answers[qi] === q.correct;
+    const bg      = correct ? '#f0fdf4' : '#fef2f2';
+    const border  = correct ? '#bbf7d0' : '#fecaca';
+    const icon    = correct ? '✓' : '✗';
+    const iconCol = correct ? '#15803d' : '#dc2626';
+    return '<div style="background:' + bg + ';border:1.5px solid ' + border + ';border-radius:8px;padding:12px;margin-bottom:10px;">' +
+      '<div style="font-weight:600;font-size:0.85em;color:#1f2937;margin-bottom:6px;word-break:break-word;overflow-wrap:break-word;">' +
+        '<span style="color:' + iconCol + ';margin-right:6px;">' + icon + '</span>' +
+        (qi + 1) + '. ' + fEsc(q.q) +
+      '</div>' +
+      (!correct
+        ? '<div style="font-size:0.82em;color:#7f1d1d;margin-bottom:4px;">Your answer: ' + fEsc(q.options[answers[qi]] !== undefined ? q.options[answers[qi]] : '—') + '</div>' +
+          '<div style="font-size:0.82em;color:#15803d;font-weight:600;margin-bottom:6px;">Correct: ' + fEsc(q.options[q.correct]) + '</div>' +
+          '<div style="font-size:0.8em;color:#374151;margin-bottom:4px;word-break:break-word;overflow-wrap:break-word;">' + fEsc(q.explanation) + '</div>' +
+          '<div style="font-size:0.73em;color:#9ca3af;font-style:italic;word-break:break-word;overflow-wrap:break-word;">' + fEsc(q.citation) + '</div>'
+        : ''
+      ) +
+    '</div>';
+  }).join('');
+
+  overlay.innerHTML =
+    '<div style="background:#fff;flex:1;display:flex;flex-direction:column;overflow:hidden;">' +
+      '<div style="padding:14px 16px 12px;border-bottom:1px solid #e5e7eb;flex-shrink:0;background:#fef2f2;">' +
+        '<div style="font-weight:700;font-size:0.95em;color:#dc2626;">Score: ' + score + '/' + total + ' — Not all answers were correct</div>' +
+        '<div style="font-size:0.78em;color:#6b7280;margin-top:4px;">Review the explanations below, then try again. All answers must be correct to continue.</div>' +
+      '</div>' +
+      '<div style="flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch;">' +
+        reviewHTML +
+      '</div>' +
+      '<div style="padding:12px 16px;border-top:1px solid #e5e7eb;flex-shrink:0;">' +
+        '<button onclick="hbRetryQuiz(\'' + checkpointId + '\')" ' +
+          'style="width:100%;min-height:48px;padding:13px;font-size:0.95em;font-weight:600;background:var(--primary);color:#fff;border:none;border-radius:10px;cursor:pointer;">Try Again</button>' +
+      '</div>' +
+    '</div>';
+}
+
+export function hbRetryQuiz(checkpointId) {
+  _hbOpenQuiz(checkpointId);
+}
+
+export async function hbContinueAfterQuiz() {
+  _hbQuizOpen = false;
+  const quizOv = document.getElementById('hb-quiz-overlay');
+  if (quizOv) quizOv.remove();
+  // _hbQuizzesPassed already includes this checkpoint, so hbNext() advances normally
+  await hbNext();
+}
+
+export function hbCloseQuizDone() {
+  _hbQuizOpen = false;
+  const quizOv = document.getElementById('hb-quiz-overlay');
+  if (quizOv) quizOv.remove();
+  // Re-render the reader to show the "Quiz passed" badge on the final chunk
+  _hbRenderChunk();
 }
 
 // ─── Legacy module overlay (kept for backwards compat; not shown in main card) ─

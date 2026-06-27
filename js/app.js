@@ -66,7 +66,8 @@ import { renderRJ, openRJCase, closeRJCase, rjSaveAndNext, rjBack, rjGoStep,
   rjAddCheckin, deleteRJCase } from './pages/rj.js';
 import { setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   isOrientationComplete, resetOrientationProgress, submitModuleQuiz, retryModuleQuiz,
-  openHandbookReader, closeHandbookReader, hbPrev, hbNext } from './pages/orientation.js';
+  openHandbookReader, closeHandbookReader, hbPrev, hbNext,
+  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone } from './pages/orientation.js';
 import { sendHandbookQuestion } from './pages/handbook-chat.js';
 
 // â"€â"€â"€ Local app-level state â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
@@ -1051,6 +1052,7 @@ Object.assign(window, {
   setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   submitModuleQuiz, retryModuleQuiz, resetOrientationProgress,
   openHandbookReader, closeHandbookReader, hbPrev, hbNext,
+  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone,
   sendHandbookQuestion,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
@@ -1099,6 +1101,7 @@ Object.assign(window, {
   setOrientationType, openOrientationModule, closeOrientationModule, markSectionComplete,
   submitModuleQuiz, retryModuleQuiz, resetOrientationProgress,
   openHandbookReader, closeHandbookReader, hbPrev, hbNext,
+  hbSubmitQuiz, hbRetryQuiz, hbContinueAfterQuiz, hbCloseQuizDone,
   sendHandbookQuestion,
   renderCalendar, calShiftMonth, calToday, openCalEvent, closeCalEvent, saveCalEvent, openCalDetail, closeCalDetail, editCalFromDetail, deleteCalEvent, summarizeMeeting, sendMeetingBot, retryMeetingBot, dispatchMeetingBot, autoDispatchBots, saveMeetingBotUrl, saveMeetingBotAuto, testMeetingBot, toggleMeetingRecording,
   connectGcal, saveGcalClientId, fetchGcal, checkMeetingSummaries, deliverMeetingSummary,
