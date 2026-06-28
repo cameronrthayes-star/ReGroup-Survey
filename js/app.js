@@ -213,11 +213,9 @@ onSnapshot(query(collection(db,'fundContacts'), orderBy('_createdAt','asc')), sn
   if (document.getElementById('view-fundraising')?.classList.contains('active')) renderFundraising();
   if (_fundDetailId && document.getElementById('fund-detail')?.style.display === 'flex') renderContactDetail(_fundDetailId);
 });
-onSnapshot(collection(db,'config'), snap => {
-  const d = snap.docs.find(x => x.id === 'dashboard');
-  const security = snap.docs.find(x => x.id === 'admin');
-  setDashboardConfig(d ? d.data() : null);
-  setSecurityConfig(security ? security.data() : {});
+onSnapshot(doc(db,'config','dashboard'), dashSnap => {
+  setDashboardConfig(dashSnap.exists() ? dashSnap.data() : null);
+  setSecurityConfig({});
   _onReady();
   if (document.getElementById('view-dashboard')?.classList.contains('active')) renderDashboard();
 });
