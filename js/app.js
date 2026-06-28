@@ -337,20 +337,35 @@ function promptAdminPIN(onSuccess) {
   window._pinCallback = onSuccess;
 }
 
-function submitPIN() {
+async function submitPIN() {
   const entered = document.getElementById('pin-input').value;
-  if (entered === getAdminPIN()) {
+  const errEl = document.getElementById('pin-error');
+  errEl.textContent = '';
+  let valid = false;
+  try {
+    const r = await fetch(meetingBotBaseUrl() + '/api/session/verify-admin-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: entered })
+    });
+    if (r.status === 429) { errEl.textContent = '⚠️ Too many attempts. Please wait and try again.'; return; }
+    const d = await r.json();
+    valid = !!d.valid;
+  } catch (_) {
+    errEl.textContent = '⚠️ Could not reach server. Check your connection.';
+    return;
+  }
+  if (valid) {
     _adminUnlocked = true;
     document.getElementById('pin-overlay').style.display = 'none';
     if (window._pinCallback) window._pinCallback();
     window._pinCallback = null;
   } else {
-    document.getElementById('pin-error').textContent = 'âŒ Incorrect PIN. Try again.';
+    errEl.textContent = '❌ Incorrect PIN. Try again.';
     document.getElementById('pin-input').value = '';
     document.getElementById('pin-input').focus();
   }
 }
-
 function cancelPIN() {
   document.getElementById('pin-overlay').style.display = 'none';
   window._pinCallback = null;
@@ -412,15 +427,30 @@ function restoreSession(){
   } catch(e){}
 }
 
-function submitAppLogin() {
+async function submitAppLogin() {
   const entered = (document.getElementById('app-password-input').value||'').trim();
   const err = document.getElementById('app-login-error');
   if (!entered) return;
-  // Admin login: shared admin PIN. Default is 12345678 until an admin changes it.
-  if (entered === getAdminPIN()){
-    setCurrentUser({name:'Administrator', firstName:'Admin', isAdmin:true});
-    document.getElementById('app-password-input').value=''; return;
-  }
+  // Admin login: verify via backend
+  try {
+    const r = await fetch(meetingBotBaseUrl() + '/api/session/verify-admin-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: entered })
+    });
+    if (r.status === 429) {
+      if (err) { err.style.color = '#ef5350'; err.textContent = '⚠️ Too many attempts. Please wait before trying again.'; }
+      return;
+    }
+    if (r.ok) {
+      const d = await r.json();
+      if (d.valid) {
+        setCurrentUser({name:'Administrator', firstName:'Admin', isAdmin:true});
+        document.getElementById('app-password-input').value='';
+        return;
+      }
+    }
+  } catch (_) { /* backend unreachable — fall through to staff check */ }
   // Staff login: custom password if set, otherwise FirstName + 1234 (e.g. Cameron1234)
   const staff = DB.staff().find(s => s.password
     ? entered === s.password
@@ -430,27 +460,14 @@ function submitAppLogin() {
     document.getElementById('app-password-input').value=''; return;
   }
   if (err) err.style.color = '#ef5350';
-  if (!DB.staff().length){ err.textContent='â³ Still loading staff â€" wait a moment and try again.'; return; }
-  err.textContent='âŒ Incorrect. Your password is your first name + 1234 (e.g. Cameron1234).';
+  if (!DB.staff().length){ err.textContent='⏳ Still loading staff — wait a moment and try again.'; return; }
+  err.textContent='❌ Incorrect. Your password is your first name + 1234 (e.g. Cameron1234).';
   document.getElementById('app-password-input').value='';
   document.getElementById('app-password-input').focus();
 }
-
-async function changeAdminPIN() {
-  const current = prompt('Enter current PIN:');
-  if (current !== getAdminPIN()) { alert('Incorrect current PIN.'); return; }
-  const next = prompt('Enter new PIN (4â€"8 digits):');
-  if (!next || !/^\d{4,8}$/.test(next)) { alert('PIN must be 4â€"8 digits.'); return; }
-  const confirm2 = prompt('Confirm new PIN:');
-  if (next !== confirm2) { alert('PINs do not match.'); return; }
-  try {
-    await DB.setAdminPIN(next);
-    alert('âœ… PIN changed successfully for all devices.');
-  } catch (error) {
-    alert('Could not save the admin PIN. Check your connection and try again.');
-  }
+function changeAdminPIN() {
+  alert('Admin PIN changes are managed via the Render environment variable (ADMIN_PIN). Contact the system administrator to update it.');
 }
-
 function showAdminPasswordPage() {
   _postLoginView = 'settings';
   logout();
