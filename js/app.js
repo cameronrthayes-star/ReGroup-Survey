@@ -1184,6 +1184,19 @@ onAuthStateChanged(auth, async (firebaseUser) => {
           _storeAdminUnlocked(!!c.isAdmin);
           try { localStorage.setItem('rg_current_user', JSON.stringify(u)); } catch(_) {}
         }
+      } else {
+        // Claims absent: token was refreshed before setCustomUserClaims was in place
+        // (sessions created before the backend fix). Fall back to the safe display
+        // cache so existing sessions restore without forcing a re-login.
+        try {
+          const cached = JSON.parse(localStorage.getItem('rg_current_user') || 'null');
+          if (cached && cached.name) {
+            const u = { name: cached.name, firstName: cached.firstName || firstNameOf(cached.name), isAdmin: !!cached.isAdmin };
+            const loginVisible = document.getElementById('app-login')?.style.display !== 'none';
+            if (loginVisible) { setCurrentUser(u); }
+            else { _storeCurrentUser(u); _storeAdminUnlocked(!!u.isAdmin); }
+          }
+        } catch(_) {}
       }
     } catch(_) {
       _storeCurrentUser(null); _storeAdminUnlocked(false);
