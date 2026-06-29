@@ -6,6 +6,9 @@ import {
   getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc,
   query, orderBy, onSnapshot, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import {
+  getAuth, signInWithCustomToken, onAuthStateChanged, signOut
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBKu0fINl9bCadihzeeS1Nd2CzdkqxB0bI",
@@ -17,11 +20,14 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+export const db   = getFirestore(app);
+export const auth = getAuth(app);
 
 // Re-export Firestore helpers so page modules only need to import from here
 export { collection, addDoc, getDocs, doc, setDoc, deleteDoc,
          query, orderBy, onSnapshot, serverTimestamp };
+// Re-export Firebase Auth helpers
+export { signInWithCustomToken, onAuthStateChanged, signOut };
 
 // ─── Shared state (live bindings) ────────────────────────────────────────────
 export let _sessions         = [];

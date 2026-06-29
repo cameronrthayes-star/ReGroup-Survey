@@ -8,7 +8,8 @@ import { db, DB,
   setDashboardConfig, setSecurityConfig, setMessages, setCalendar, setRjCases, setServicePlans,
   setCurrentUser as _storeCurrentUser, setAdminUnlocked as _storeAdminUnlocked,
   _currentUser, _adminUnlocked, _securityConfig,
-  collection, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, addDoc, deleteDoc
+  collection, onSnapshot, query, orderBy, serverTimestamp, doc, setDoc, addDoc, deleteDoc,
+  auth, signInWithCustomToken, onAuthStateChanged, signOut
 } from './state.js';
 import { uuid, calcHours, currentUserName, isAdmin, firstNameOf, fmtDate, fEsc,
          getDate, profileEmails, primaryProfileEmail
@@ -124,6 +125,10 @@ function _checkOrientationLock() {
 
 
 // â"€â"€â"€ Firestore real-time listeners â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+let _listenersAttached = false;
+function _attachFirestoreListeners() {
+  if (_listenersAttached) return;
+  _listenersAttached = true;
 onSnapshot(query(collection(db,'sessions'),   orderBy('dateOfService','asc')),   snap => {
   setSessions(snap.docs.map(d => ({...d.data(), _id:d.id, _type:'client'})));
   _onReady();
@@ -229,6 +234,7 @@ onSnapshot(query(collection(db,'messages'), orderBy('_createdAt','asc')), snap =
   updateMentorInboxNav();
   if (_msgMentor && document.getElementById('msg-modal')?.style.display === 'flex') renderMessageThread();
 });
+}
 
 // â"€â"€â"€ VIEW_TITLES â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 const VIEW_TITLES = {
@@ -398,8 +404,10 @@ function logout(){
   _storeCurrentUser(null); _storeAdminUnlocked(false);
   clearMeetingBotSession();
   try { localStorage.removeItem('rg_current_user'); } catch(e){}
-  const inp = document.getElementById('app-password-input'); if (inp) inp.value='';
-  const err = document.getElementById('app-login-error'); if (err && !_postLoginView) err.textContent='';
+  signOut(auth).catch(() => {});
+  const ni = document.getElementById('app-name-input');     if (ni) ni.value='';
+  const pi = document.getElementById('app-password-input'); if (pi) pi.value='';
+  const err = document.getElementById('app-login-error');   if (err && !_postLoginView) err.textContent='';
   document.getElementById('app-login').style.display = 'flex';
 }
 function updateUserChrome(){
@@ -418,50 +426,47 @@ function updateMentorInboxNav(){
   link.style.color = unread ? '#22c55e' : '';
   link.style.fontWeight = unread ? '700' : '';
 }
-function restoreSession(){
-  try {
-    const u = JSON.parse(localStorage.getItem('rg_current_user')||'null');
-    if (u && u.name){ _storeCurrentUser(u); _storeAdminUnlocked(!!u.isAdmin); document.getElementById('app-login').style.display='none'; updateUserChrome(); }
-  } catch(e){}
-}
-
 async function submitAppLogin() {
-  const entered = (document.getElementById('app-password-input').value||'').trim();
-  const err = document.getElementById('app-login-error');
-  if (!entered) return;
-  // Admin login: verify via backend
+  const nameVal  = (document.getElementById('app-name-input')?.value  || '').trim();
+  const passVal  = (document.getElementById('app-password-input')?.value || '').trim();
+  const err      = document.getElementById('app-login-error');
+  const btn      = document.getElementById('app-login-btn');
+
+  if (!passVal) return;
+  if (err) { err.textContent = ''; err.style.color = '#ef5350'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; btn.style.opacity = '0.7'; }
+
   try {
-    const r = await fetch(meetingBotBaseUrl() + '/api/session/verify-admin-pin', {
-      method: 'POST',
+    const isStaff  = !!nameVal;
+    const endpoint = isStaff ? '/api/session/staff-login' : '/api/session/admin-login';
+    const body     = isStaff ? { name: nameVal, password: passVal } : { pin: passVal };
+
+    const r = await fetch(meetingBotBaseUrl() + endpoint, {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin: entered })
+      body:    JSON.stringify(body)
     });
+
     if (r.status === 429) {
-      if (err) { err.style.color = '#ef5350'; err.textContent = '⚠️ Too many attempts. Please wait before trying again.'; }
+      if (err) err.textContent = '⚠️ Too many attempts. Please wait before trying again.';
       return;
     }
-    if (r.ok) {
-      const d = await r.json();
-      if (d.valid) {
-        setCurrentUser({name:'Administrator', firstName:'Admin', isAdmin:true});
-        document.getElementById('app-password-input').value='';
-        return;
-      }
+
+    const data = await r.json();
+    if (!r.ok || !data.customToken) {
+      if (err) err.textContent = '❌ ' + (data.error || 'Login failed. Please try again.');
+      return;
     }
-  } catch (_) { /* backend unreachable — fall through to staff check */ }
-  // Staff login: custom password if set, otherwise FirstName + 1234 (e.g. Cameron1234)
-  const staff = DB.staff().find(s => s.password
-    ? entered === s.password
-    : (firstNameOf(s.name).toLowerCase()+'1234') === entered.toLowerCase());
-  if (staff){
-    setCurrentUser({name:staff.name, firstName:firstNameOf(staff.name), isAdmin:!!staff.isAdmin});
-    document.getElementById('app-password-input').value=''; return;
+
+    await signInWithCustomToken(auth, data.customToken);
+    // onAuthStateChanged fires -> setCurrentUser -> hides login screen
+    const ni = document.getElementById('app-name-input');     if (ni) ni.value = '';
+    const pi = document.getElementById('app-password-input'); if (pi) pi.value = '';
+  } catch (e) {
+    if (err) err.textContent = '⚠️ Could not reach the login server. Check your connection.';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In →'; btn.style.cursor = 'pointer'; btn.style.opacity = '1'; }
   }
-  if (err) err.style.color = '#ef5350';
-  if (!DB.staff().length){ err.textContent='⏳ Still loading staff — wait a moment and try again.'; return; }
-  err.textContent='❌ Incorrect. Your password is your first name + 1234 (e.g. Cameron1234).';
-  document.getElementById('app-password-input').value='';
-  document.getElementById('app-password-input').focus();
 }
 function changeAdminPIN() {
   alert('Admin PIN changes are managed via the Render environment variable (ADMIN_PIN). Contact the system administrator to update it.');
@@ -1043,7 +1048,6 @@ try {
   document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   injectExamplePanels();
   initForms();
-  restoreSession();
   // Poll the meeting backend so finished summaries reach attendee inboxes even when off the Calendar tab
   setInterval(()=>{ if(_currentUser){ try{ checkMeetingSummaries(); autoDispatchBots(); }catch(e){} } }, 120000);
 } catch(e) {
@@ -1154,11 +1158,42 @@ Object.assign(window, {
 window._formEditId = _formEditId;
 window.readImagesCompressed = readImagesCompressed;
 
-// Enable the Sign In button once all global functions are wired
+// Enable the Sign In button and start Firebase Auth session check
 (function() {
   clearTimeout(window._loginReadyTimeout);
-  const btn = document.getElementById('app-login-btn');
+  const btn    = document.getElementById('app-login-btn');
   const status = document.getElementById('app-login-status');
   if (btn) { btn.disabled = false; btn.textContent = 'Sign In →'; btn.style.cursor = 'pointer'; btn.style.opacity = '1'; }
-  if (status) status.style.display = 'none';
+  if (status) { status.textContent = 'Checking session…'; status.style.display = ''; status.style.color = '#8899b0'; }
 })();
+
+// Firebase Auth state listener — attaches Firestore listeners only after auth is confirmed
+onAuthStateChanged(auth, async (firebaseUser) => {
+  if (firebaseUser) {
+    try {
+      const result = await firebaseUser.getIdTokenResult();
+      const c = result.claims;
+      if (c.name) {
+        const u = { name: c.name, firstName: c.firstName || firstNameOf(c.name), isAdmin: !!c.isAdmin };
+        const loginVisible = document.getElementById('app-login')?.style.display !== 'none';
+        if (loginVisible) {
+          setCurrentUser(u);
+        } else {
+          // Background token refresh — update state without navigating
+          _storeCurrentUser(u);
+          _storeAdminUnlocked(!!c.isAdmin);
+          try { localStorage.setItem('rg_current_user', JSON.stringify(u)); } catch(_) {}
+        }
+      }
+    } catch(_) {
+      _storeCurrentUser(null); _storeAdminUnlocked(false);
+    }
+    _attachFirestoreListeners();
+  } else {
+    _storeCurrentUser(null); _storeAdminUnlocked(false);
+    try { localStorage.removeItem('rg_current_user'); } catch(_) {}
+    document.getElementById('app-login').style.display = 'flex';
+    const s = document.getElementById('app-login-status');
+    if (s) { s.textContent = ''; s.style.display = 'none'; }
+  }
+});
