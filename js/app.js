@@ -441,7 +441,6 @@ async function submitAppLogin() {
     const endpoint = isStaff ? '/api/session/staff-login' : '/api/session/admin-login';
     const body     = isStaff ? { name: nameVal, password: passVal } : { pin: passVal };
 
-    console.log('[login] posting to', meetingBotBaseUrl() + endpoint);
     const r = await fetch(meetingBotBaseUrl() + endpoint, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -455,23 +454,21 @@ async function submitAppLogin() {
     }
 
     const data = await r.json();
-    console.log('[login] response ok:', r.ok, 'hasCustomToken:', !!data.customToken, 'error:', data.error || null);
     if (!r.ok || !data.customToken) {
+      console.warn('[login] login rejected:', data.error || 'no customToken');
       if (err) err.textContent = '❌ ' + (data.error || 'Login failed. Please try again.');
       return;
     }
 
-    console.log('[login] calling signInWithCustomToken');
     await signInWithCustomToken(auth, data.customToken);
     console.log('[login] signInWithCustomToken resolved');
     // onAuthStateChanged fires -> setCurrentUser -> hides login screen
     const ni = document.getElementById('app-name-input');     if (ni) ni.value = '';
     const pi = document.getElementById('app-password-input'); if (pi) pi.value = '';
   } catch (e) {
-    console.error('[login] caught error:', e.code || e.message);
+    console.error('[login] error:', e.code || e.message);
     if (err) err.textContent = '⚠️ Could not reach the login server. Check your connection.';
   } finally {
-    console.log('[login] finally: resetting button');
     if (btn) { btn.disabled = false; btn.textContent = 'Sign In →'; btn.style.cursor = 'pointer'; btn.style.opacity = '1'; }
   }
 }
@@ -1176,13 +1173,12 @@ window.readImagesCompressed = readImagesCompressed;
 
 // Firebase Auth state listener — attaches Firestore listeners only after auth is confirmed
 onAuthStateChanged(auth, async (firebaseUser) => {
-  console.log('[auth] onAuthStateChanged fired, user uid:', firebaseUser ? firebaseUser.uid : null);
   if (firebaseUser) {
     try {
       const result = await firebaseUser.getIdTokenResult();
       const c = result.claims;
-      console.log('[auth] claims present:', !!c.name, 'isAdmin:', !!c.isAdmin);
       if (c.name) {
+        console.log('[auth] session restored via Firebase claims, regroupApp:', !!c.regroupApp);
         const u = { name: c.name, firstName: c.firstName || firstNameOf(c.name), isAdmin: !!c.isAdmin };
         const loginVisible = document.getElementById('app-login')?.style.display !== 'none';
         if (loginVisible) {
@@ -1197,6 +1193,7 @@ onAuthStateChanged(auth, async (firebaseUser) => {
         // Claims absent: token was refreshed before setCustomUserClaims was in place
         // (sessions created before the backend fix). Fall back to the safe display
         // cache so existing sessions restore without forcing a re-login.
+        console.warn('[auth] no claims in token — using localStorage fallback');
         try {
           const cached = JSON.parse(localStorage.getItem('rg_current_user') || 'null');
           if (cached && cached.name) {
